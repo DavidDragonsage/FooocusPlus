@@ -1061,7 +1061,6 @@ with common.GRADIO_ROOT:
                     System RAM: {int(ldm_patched.modules.model_management.get_sysram())} MB,\
                     Video RAM: {int(ldm_patched.modules.model_management.get_vram())} MB<br>\
                     Python {platform.python_version()}, Comfy {comfy.comfy_version.version}<br>\
-                    Fooocus {fooocus_version.version}, SimpleSDXL2 {version.get_simplesdxl_ver()}<br>\
                     FooocusPlus {version.get_fooocusplus_ver()}<br><br>')
 
             iclight_enable.change(lambda x: [gr.update(interactive=x, value='' if not x else comfy_task.iclight_source_names[0]), gr.update(value=flags.add_ratio('1024*1024') if not x else modules.config.default_aspect_ratio)], inputs=iclight_enable, outputs=[iclight_source_radio, aspect_ratios_selections[0]], queue=False, show_progress=False)
