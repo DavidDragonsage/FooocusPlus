@@ -362,6 +362,10 @@ def parse_meta_from_preset(preset_content):
             if settings_key in items:
                 loras = items[settings_key]
             for index, lora in enumerate(loras[:modules.config.default_max_lora_number]):
+                if len(lora) == 2:
+                    lora[0] = lora[0].replace('\\', os.sep).replace('/', os.sep)
+                elif  len(lora) == 3:
+                    lora[1] = lora[1].replace('\\', os.sep).replace('/', os.sep)
                 preset_prepared[f'lora_combined_{index + 1}'] = ' : '.join(map(str, lora))
         elif settings_key == "default_aspect_ratio":
             if settings_key in items and items[settings_key] is not None:
