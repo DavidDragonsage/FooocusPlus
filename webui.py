@@ -250,7 +250,7 @@ with common.GRADIO_ROOT:
                         default_prompt = modules.config.default_prompt
                         if isinstance(default_prompt, str) and default_prompt != '':
                             common.GRADIO_ROOT.load(lambda: default_prompt, outputs=prompt)
-                    with gr.Column(scale=2, min_width=0):
+                    with gr.Column(scale=2, min_width=0, visible=False):
                         if (args_manager.args.language=='cn'):
                             random_button = gr.Button(value="Random Prompt", elem_classes='type_row_third', size="sm", min_width = 75)
                             translator_button = gr.Button(visible=True, value="Translator", elem_classes='type_row_third', size='sm', min_width = 75)
@@ -728,7 +728,7 @@ with common.GRADIO_ROOT:
 
                     return gr.update(value=f'<a href="file={get_current_html_path(output_format)}" target="_blank">\U0001F4DA History Log</a>')
 
-                history_link = gr.HTML()
+                history_link = gr.HTML(visible=False)
                 common.GRADIO_ROOT.load(update_history_link, outputs=history_link, queue=False, show_progress=False)
 
                 with gr.Tabs():
@@ -740,8 +740,10 @@ with common.GRADIO_ROOT:
                                 describe_methods = gr.CheckboxGroup(
                                     label='Content Type',
                                     choices=flags.describe_types,
-                                    value=modules.config.default_describe_content_type)
-                                describe_apply_styles = gr.Checkbox(label='Apply Styles', value=modules.config.default_describe_apply_prompts_checkbox)
+                                    value=modules.config.default_describe_content_type,
+                                    visible=False
+                                    )
+                                describe_apply_styles = gr.Checkbox(label='Apply Styles', value=modules.config.default_describe_apply_prompts_checkbox, visible=False)
                                 describe_btn = gr.Button(value='Describe this Image into Prompt')
                                 describe_image_size = gr.Textbox(label='Original Size / Recommended Size', elem_id='describe_image_size', visible=False)
                                 gr.HTML('<a href="https://github.com/lllyasviel/Fooocus/discussions/1363" target="_blank">\U0001F4D4 Documentation</a>')
@@ -1296,7 +1298,7 @@ with common.GRADIO_ROOT:
 
         model_check = [prompt, negative_prompt, base_model, refiner_model] + lora_ctrls
         nav_bars = [bar_title] + bar_buttons
-        protections = [random_button, translator_button, super_prompter, background_theme, image_tools_checkbox]
+        protections = [background_theme, image_tools_checkbox]
         generate_button.click(topbar.process_before_generation, inputs=[state_topbar, params_backend] + ehps, outputs=[stop_button, skip_button, generate_button, gallery, state_is_generating, index_radio, image_toolbox, prompt_info_box] + protections + [params_backend], show_progress=False) \
             .then(fn=refresh_seed, inputs=[seed_random, image_seed], outputs=image_seed) \
             .then(fn=get_task, inputs=ctrls, outputs=currentTask) \
