@@ -148,9 +148,13 @@ def get_path_output() -> str:
     Checking output path argument and overriding default path.
     """
     global config_dict
-    path_output = 'outputs'
+    path_output = '..\Outputs'
     if args_manager.args.output_path:
         path_output = args_manager.args.output_path
+        path_output_abs = os.path.abspath(path_output)
+        config_dict['path_outputs'] = path_output_abs
+    elif config_dict['path_outputs']:
+        path_output = config_dict['path_outputs']
         path_output_abs = os.path.abspath(path_output)
         config_dict['path_outputs'] = path_output_abs
     path_output = get_dir_or_set_default('path_outputs', f'../{path_output}')

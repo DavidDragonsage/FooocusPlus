@@ -13,6 +13,7 @@ import enhanced.gallery as gallery
 import enhanced.version as version
 import modules.flags as flags
 import modules.meta_parser as meta_parser
+from modules.auth import auth_enabled
 
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
@@ -159,13 +160,13 @@ def toggle_toolbox(state, state_params):
         return [gr.update(visible=False)] 
 
 
-def toggle_prompt_info(state_params):
+def toggle_prompt_info(state_params, request: gr.Request):
     infobox_state = state_params["infobox_state"]
     infobox_state = not infobox_state
     state_params.update({"infobox_state": infobox_state})
     #print(f'[ToolBox] Toggle_image_info: {infobox_state}')
     [choice, selected] = state_params["prompt_info"]
-    prompt_info = gallery.get_images_prompt(choice, selected, state_params["__max_per_page"])
+    prompt_info = gallery.get_images_prompt(choice, selected, state_params["__max_per_page"], user=request.username)
     return gr.update(value=make_infobox_markdown(prompt_info, state_params['__theme']), visible=infobox_state), state_params
 
 
@@ -231,14 +232,17 @@ def toggle_note_box_preset(*args):
 
 filename_regex = re.compile(r'\<div id=\"(.*?)_png\"')
 
-def delete_image(state_params):
+def delete_image(state_params, request: gr.Request):
+    output_path = config.path_outputs
+    if(auth_enabled):
+        output_path = output_path.replace("[user]", request.username)
     [choice, selected] = state_params["prompt_info"]
     max_per_page = state_params["__max_per_page"]
     max_catalog = state_params["__max_catalog"]
-    info = gallery.get_images_prompt(choice, selected, max_per_page)
+    info = gallery.get_images_prompt(choice, selected, max_per_page, user=request.username)
     file_name = info["Filename"]
     output_index = choice.split('/')
-    dir_path = os.path.join(config.path_outputs, "20{}".format(output_index[0]))
+    dir_path = os.path.join(output_path, "20{}".format(output_index[0]))
     
     log_path = os.path.join(dir_path, 'log.html')
     if os.path.exists(log_path):
@@ -280,12 +284,12 @@ def delete_image(state_params):
         os.remove(file_path)
     print(f'[ToolBox] Delete image file: {file_path}')
 
-    image_list_nums = len(gallery.refresh_images_catalog(output_index[0], True))
+    image_list_nums = len(gallery.refresh_images_catalog(output_index[0], True, user=request.username))
     if image_list_nums<=0:
         os.remove(log_path)
         os.rmdir(dir_path)
         index = state_params["__output_list"].index(choice)
-        output_list, finished_nums, finished_pages = gallery.refresh_output_list(max_per_page, max_catalog)
+        output_list, finished_nums, finished_pages = gallery.refresh_output_list(max_per_page, max_catalog, user=request.username)
         state_params.update({"__output_list": output_list})
         state_params.update({"__finished_nums_pages": f'{finished_nums},{finished_pages}'})
         if index>= len(state_params["__output_list"]):
@@ -309,7 +313,7 @@ def delete_image(state_params):
                 choice = output_index[0]
             else:
                 choice = output_index[0] + '/' + str(page)
-            output_list, finished_nums, finished_pages = gallery.refresh_output_list(max_per_page, max_catalog)
+            output_list, finished_nums, finished_pages = gallery.refresh_output_list(max_per_page, max_catalog, user=request.username)
             state_params.update({"__output_list": output_list})
             state_params.update({"__finished_nums_pages": f'{finished_nums},{finished_pages}'})
         else:
@@ -319,7 +323,7 @@ def delete_image(state_params):
             state_params.update({"__finished_nums_pages": f'{finished_nums},{finished_pages}'})
 
     state_params.update({"prompt_info":[choice, selected]})
-    images_gallery = gallery.get_images_from_gallery_index(choice, max_per_page)
+    images_gallery = gallery.get_images_from_gallery_index(choice, max_per_page, user=request.username)
     state_params.update({"note_box_state": ['',0,0]})
     return gr.update(value=images_gallery), gr.update(choices=state_params["__output_list"], value=choice), gr.update(visible=False), gr.update(visible=False), state_params
 
