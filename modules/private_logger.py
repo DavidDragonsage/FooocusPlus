@@ -6,6 +6,7 @@ import urllib.parse
 import enhanced.all_parameters as ads
 import enhanced.enhanced_parameters as ehs
 import enhanced.toolbox as toolbox
+from modules.auth import auth_enabled
 
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
@@ -16,16 +17,23 @@ from modules.util import generate_temp_filename
 log_cache = {}
 
 
-def get_current_html_path(output_format=None):
+def get_current_html_path(output_format=None, user=None):
     output_format = output_format if output_format else modules.config.default_output_format
-    date_string, local_temp_filename, only_name = generate_temp_filename(folder=modules.config.path_outputs,
+    path_outputs = modules.config.path_outputs
+    if(auth_enabled):
+        path_outputs = path_outputs.replace("[user]", user)
+    os.makedirs(path_outputs, exist_ok=True)
+    date_string, local_temp_filename, only_name = generate_temp_filename(folder=path_outputs,
                                                                          extension=output_format)
     html_name = os.path.join(os.path.dirname(local_temp_filename), 'log.html')
     return html_name
 
 
-def log(img, metadata, metadata_parser: MetadataParser | None = None, output_format=None, task=None, persist_image=True) -> str:
+def log(img, metadata, metadata_parser: MetadataParser | None = None, output_format=None, user=None, task=None, persist_image=True) -> str:
     path_outputs = modules.config.temp_path if args_manager.args.disable_image_log or not persist_image else modules.config.path_outputs
+    if(auth_enabled):
+        path_outputs = path_outputs.replace("[user]", user)
+    os.makedirs(path_outputs, exist_ok=True)
     output_format = output_format if output_format else modules.config.default_output_format
     date_string, local_temp_filename, only_name = generate_temp_filename(folder=path_outputs, extension=output_format)
     os.makedirs(os.path.dirname(local_temp_filename), exist_ok=True)

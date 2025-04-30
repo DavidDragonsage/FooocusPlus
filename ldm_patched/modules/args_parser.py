@@ -41,7 +41,7 @@ parser.add_argument("--web-upload-size", type=float, default=100)
 parser.add_argument("--hf-mirror", type=str, default=None)
 
 parser.add_argument("--external-working-path", type=str, default=None, metavar="PATH", nargs='+', action='append')
-parser.add_argument("--output-path", type=str, default=os.path.join(os.pardir, 'Outputs'))
+parser.add_argument("--output-path", type=str, default=None)
 parser.add_argument("--temp-path", type=str, default=None)
 parser.add_argument("--cache-path", type=str, default=None)
 parser.add_argument("--in-browser", action="store_true")

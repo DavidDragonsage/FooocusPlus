@@ -16,6 +16,7 @@ import modules.flags as flags
 import modules.gradio_hijack as grh
 import modules.style_sorter as style_sorter
 import modules.meta_parser
+import modules.config
 import args_manager
 import copy
 import ldm_patched
@@ -42,12 +43,15 @@ from enhanced.simpleai import comfyd
 print()
 print('Initializing user interface...')
 
-def get_task(*args):
+def get_task(request: gr.Request, *args):
     args = list(args)
     args.pop(0)
-    return worker.AsyncTask(args=args)
+    task = worker.AsyncTask(args=args)
+    if auth_enabled and hasattr(request, 'username'):
+       task.user = request.username
+    return task
 
-def generate_clicked(task: worker.AsyncTask):
+def generate_clicked(request: gr.Request,task: worker.AsyncTask):  
     import ldm_patched.modules.model_management as model_management
 
     with model_management.interrupt_processing_mutex:
@@ -722,11 +726,10 @@ with common.GRADIO_ROOT:
                 seed_random.change(random_checked, inputs=[seed_random], outputs=[image_seed],
                                    queue=False, show_progress=False)
 
-                def update_history_link():
+                def update_history_link(request: gr.Request):
                     if args_manager.args.disable_image_log:
                         return gr.update(value='')
-
-                    return gr.update(value=f'<a href="file={get_current_html_path(output_format)}" target="_blank">\U0001F4DA History Log</a>')
+                    return gr.update(value=f'<a href="file={get_current_html_path(output_format, user=request.username)}" target="_blank">\U0001F4DA History Log</a>')
 
                 history_link = gr.HTML()
                 common.GRADIO_ROOT.load(update_history_link, outputs=history_link, queue=False, show_progress=False)
@@ -1442,6 +1445,7 @@ common.GRADIO_ROOT.launch(
     inbrowser=args_manager.args.in_browser,
     server_name=args_manager.args.listen,
     server_port=args_manager.args.port,
+    auth=check_auth if auth_enabled else None,
     root_path=args_manager.args.webroot,
     allowed_paths=[modules.config.path_outputs],
     blocked_paths=[constants.AUTH_FILENAME]
