@@ -22,6 +22,7 @@ import enhanced.comfy_task as comfy_task
 from args_manager import args
 from enhanced.simpleai import comfyd
 from modules.model_loader import load_file_from_url
+from modules.auth import auth_enabled
 
 # hard-coded limit to topbar preset display
 # the value inherited from SimpeSDXL2 was 14
@@ -259,7 +260,7 @@ def init_nav_bars(state_params, request: gr.Request):
         state_params.update({"__max_catalog": config.default_image_catalog_max_number })
     max_per_page = state_params["__max_per_page"]
     max_catalog = state_params["__max_catalog"]
-    output_list, finished_nums, finished_pages = gallery_util.refresh_output_list(max_per_page, max_catalog)
+    output_list, finished_nums, finished_pages = gallery_util.refresh_output_list(max_per_page, max_catalog, user=request.username)
     state_params.update({"__output_list": output_list})
     state_params.update({"__finished_nums_pages": f'{finished_nums},{finished_pages}'})
     state_params.update({"infobox_state": 0})
@@ -333,12 +334,13 @@ def process_before_generation(state_params, backend_params, backfill_prompt, tra
     return results
 
 
-def process_after_generation(state_params):
+def process_after_generation(state_params, request: gr.Request):
     #if "__max_per_page" not in state_params.keys():
     #    state_params.update({"__max_per_page": 18})
     max_per_page = state_params["__max_per_page"]
     max_catalog = state_params["__max_catalog"]
-    output_list, finished_nums, finished_pages = gallery_util.refresh_output_list(max_per_page, max_catalog)
+    output_list, finished_nums, finished_pages = gallery_util.refresh_output_list(max_per_page, max_catalog, user=request.username)
+
     state_params.update({"__output_list": output_list})
     state_params.update({"__finished_nums_pages": f'{finished_nums},{finished_pages}'})
     # generate_button, stop_button, skip_button, state_is_generating
@@ -352,8 +354,8 @@ def process_after_generation(state_params):
     
     if len(state_params["__output_list"]) > 0:
         output_index = state_params["__output_list"][0].split('/')[0]
-        gallery_util.refresh_images_catalog(output_index, True)
-        gallery_util.parse_html_log(output_index, True)
+        gallery_util.refresh_images_catalog(output_index, True, user=request.username)
+        gallery_util.parse_html_log(output_index, True, user=request.username)
     
     return results
 
