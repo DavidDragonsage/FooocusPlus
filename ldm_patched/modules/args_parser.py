@@ -40,6 +40,9 @@ parser.add_argument("--disable-header-check", type=str, default=None, metavar="O
 parser.add_argument("--web-upload-size", type=float, default=100)
 parser.add_argument("--hf-mirror", type=str, default=None)
 
+parser.add_argument("--path-loras", type=str, default=None)
+parser.add_argument("--path-performance-loras", type=str, default=None)
+
 parser.add_argument("--external-working-path", type=str, default=None, metavar="PATH", nargs='+', action='append')
 parser.add_argument("--output-path", type=str, default=None)
 parser.add_argument("--temp-path", type=str, default=None)

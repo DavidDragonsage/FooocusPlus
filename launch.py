@@ -144,7 +144,7 @@ def download_models(default_model, previous_default_models, checkpoint_downloads
         load_file_from_url(url=url, model_dir=config.path_embeddings, file_name=file_name)
         
     for file_name, url in lora_downloads.items():
-        model_dir = os.path.dirname(get_file_from_folder_list(file_name, config.paths_loras))
+        model_dir = os.path.dirname(get_file_from_folder_list(file_name, config.paths_loras + '\common'))
         load_file_from_url(url=url, model_dir=model_dir, file_name=file_name)
         
     for file_name, url in vae_downloads.items():

@@ -833,7 +833,14 @@ with common.GRADIO_ROOT:
 
                 with gr.Group():
                     lora_ctrls = []
-
+                    
+                    def update_files_with_user(request: gr.Request):
+                        username = request.username if hasattr(request, 'username') else None
+                        model_filenames, lora_filenames, vae_filenames = modules.config.update_files(user=username)
+                        return [gr.update(interactive=True),
+                                gr.update(choices=['None'] + lora_filenames),
+                                gr.update()] * modules.config.default_max_lora_number
+                    
                     for i, (enabled, filename, weight) in enumerate(modules.config.default_loras):
                         with gr.Row():
                             lora_enabled = gr.Checkbox(label='Enable', value=enabled,
@@ -845,7 +852,8 @@ with common.GRADIO_ROOT:
                                                     maximum=modules.config.default_loras_max_weight, step=0.01, value=weight,
                                                     elem_classes='lora_weight', scale=5)
                             lora_ctrls += [lora_enabled, lora_model, lora_weight]
-
+                    common.GRADIO_ROOT.load(update_files_with_user, outputs=lora_ctrls, queue=False, show_progress=False)
+                
                 with gr.Row():
                     refresh_files = gr.Button(label='Refresh', value='\U0001f504 Refresh All Files')
 
@@ -1001,12 +1009,13 @@ with common.GRADIO_ROOT:
                 dev_mode.change(dev_mode_checked, inputs=[dev_mode], outputs=[dev_tools],
                                         queue=False, show_progress=False)
 
-                def refresh_files_clicked(state_params):
+                def refresh_files_clicked(state_params, request: gr.Request):
                     print()
                     print('Refreshing all files...')
                     engine = state_params.get('engine', 'Fooocus')
                     task_method = state_params.get('task_method', None)
-                    model_filenames, lora_filenames, vae_filenames = modules.config.update_files(engine, task_method)
+                    username = request.username if hasattr(request, 'username') else None
+                    model_filenames, lora_filenames, vae_filenames = modules.config.update_files(engine, task_method, user=username)
                     results = [gr.update(choices=model_filenames)]
                     results += [gr.update(choices=['None'] + model_filenames)]
                     results += [gr.update(choices=[flags.default_vae] + vae_filenames)]

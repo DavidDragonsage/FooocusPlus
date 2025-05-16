@@ -224,6 +224,7 @@ def get_dir_or_set_default(key, default_value, as_array=False, make_directory=Fa
 path_models_root = get_path_models_root()
 paths_checkpoints = get_dir_or_set_default('path_checkpoints', [f'{path_models_root}/checkpoints/', '../models/checkpoints/'], True)
 paths_loras = get_dir_or_set_default('path_loras', [f'{path_models_root}/loras/', '../models/loras/'], True)
+paths_performance_loras = get_dir_or_set_default('path_performance_loras', [f'{path_models_root}/loras/performance/', '../models/loras/performance/'], True)
 path_embeddings = get_dir_or_set_default('path_embeddings', f'{path_models_root}/embeddings/')
 path_vae_approx = get_dir_or_set_default('path_vae_approx', f'{path_models_root}/vae_approx/')
 path_vae = get_dir_or_set_default('path_vae', f'{path_models_root}/vae/')
@@ -1002,11 +1003,11 @@ def get_base_model_list(engine='Fooocus', task_method=None):
         base_model_list = [f for f in base_model_list if ("hyp8" in f or "hyp16" in f or "flux" in f) and f.endswith("gguf")]
     return base_model_list
 
-def update_files(engine='Fooocus', task_method=None):
+def update_files(engine='Fooocus', task_method=None, user: str = None):
     global modelsinfo, model_filenames, lora_filenames, vae_filenames, wildcard_filenames, available_presets
     modelsinfo.refresh_from_path()
     model_filenames = get_base_model_list(engine, task_method)
-    lora_filenames = modelsinfo.get_model_names('loras')
+    lora_filenames = modelsinfo.get_model_names('loras', user=user)
     vae_filenames = modelsinfo.get_model_names('vae')
     wildcard_filenames = get_files_from_folder(path_wildcards, ['.txt'])
     available_presets = get_presets()
@@ -1054,28 +1055,28 @@ def downloading_inpaint_models(v):
 def downloading_sdxl_lcm_lora():
     load_file_from_url(
         url='https://huggingface.co/lllyasviel/misc/resolve/main/sdxl_lcm_lora.safetensors',
-        model_dir=paths_loras[0],
+        model_dir=paths_performance_loras[0],
         file_name=modules.flags.PerformanceLoRA.EXTREME_SPEED.value
     )
-    return modules.flags.PerformanceLoRA.EXTREME_SPEED.value
+    return f"performance/{modules.flags.PerformanceLoRA.EXTREME_SPEED.value}"
 
 
 def downloading_sdxl_lightning_lora():
     load_file_from_url(
         url='https://huggingface.co/mashb1t/misc/resolve/main/sdxl_lightning_4step_lora.safetensors',
-        model_dir=paths_loras[0],
+        model_dir=paths_performance_loras[0],
         file_name=modules.flags.PerformanceLoRA.LIGHTNING.value
     )
-    return modules.flags.PerformanceLoRA.LIGHTNING.value
+    return f"performance/{modules.flags.PerformanceLoRA.LIGHTNING.value}"
 
 
 def downloading_sdxl_hyper_sd_lora():
     load_file_from_url(
         url='https://huggingface.co/mashb1t/misc/resolve/main/sdxl_hyper_sd_4step_lora.safetensors',
-        model_dir=paths_loras[0],
+        model_dir=paths_performance_loras[0],
         file_name=modules.flags.PerformanceLoRA.HYPER_SD.value
     )
-    return modules.flags.PerformanceLoRA.HYPER_SD.value
+    return f"performance/{modules.flags.PerformanceLoRA.HYPER_SD.value}"
 
 
 def downloading_controlnet_canny():

@@ -1,6 +1,7 @@
 import os
 import json
 from . import utils
+from modules.auth import auth_enabled
 
 default_models_info = {
     "checkpoints/albedobaseXL_v21.safetensors": {
@@ -676,13 +677,20 @@ class ModelsInfo:
                 return self.m_info[model_key]['file'][0]
         return ''
 
-    def get_model_names(self, catalog, filters=[], casesensitive=False, reverse=False):
+    def get_model_names(self, catalog, filters=[], casesensitive=False, reverse=False, user=None):
         result = []
         result_reverse = []
         for f in self.m_info.keys():
             cata = f.split('/')[0]
             m_path_or_file = f[len(cata) + 1:].replace('/', os.sep)
             if catalog and cata == catalog:
+                if catalog =="loras":
+                    model_type = m_path_or_file.split(os.sep)[0]
+                    new = m_path_or_file[len(model_type) + 1:].replace('/', os.sep)
+                    if (auth_enabled and user is not None and user != model_type and "common" != model_type) or model_type == "performance":
+                        continue
+                    elif not auth_enabled and "common" != model_type:
+                        continue
                 result_reverse.append(m_path_or_file)
                 if len(filters) > 0:
                     for item in filters:
