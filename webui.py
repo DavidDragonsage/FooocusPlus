@@ -51,7 +51,7 @@ def get_task(request: gr.Request, *args):
        task.user = request.username
     return task
 
-def generate_clicked(request: gr.Request,task: worker.AsyncTask):  
+def generate_clicked(request: gr.Request, task: worker.AsyncTask):  
     import ldm_patched.modules.model_management as model_management
 
     with model_management.interrupt_processing_mutex:
@@ -212,13 +212,13 @@ with common.GRADIO_ROOT:
                         #bar_dropdown = gr.Dropdown(show_label=False, choices=['self','preset1','preset2','preset3'], value='self')
 
                 with gr.Row():
-                    progress_window = grh.Image(label='Preview', show_label=False, visible=True, height=768, elem_id='preview_generating',
-                                            elem_classes=['main_view'], value="enhanced/attached/welcome.png")
+                    progress_window = grh.Image(label='Preview', show_label=True, visible=False, height=768,
+                                            elem_classes=['main_view'])
                     progress_gallery = gr.Gallery(label='Image Gallery', show_label=True, object_fit='contain', elem_id='finished_gallery',
                                               height=520, visible=False, elem_classes=['main_view', 'image_gallery'])
                 progress_html = gr.HTML(value=modules.html.make_progress_html(32, 'Progress 32%'), visible=False,
                                     elem_id='progress-bar', elem_classes='progress-bar')
-                gallery = gr.Gallery(label='Gallery', show_label=True, object_fit='contain', visible=False, height=768,
+                gallery = gr.Gallery(label='Gallery', show_label=True, object_fit='contain', visible=True, height=768,
                                  elem_classes=['resizable_area', 'main_view', 'final_gallery', 'image_gallery'],
                                  elem_id='final_gallery', preview=True )
                 prompt_info_box = gr.Markdown(toolbox.make_infobox_markdown(None, args_manager.args.theme), visible=False, elem_id='infobox', elem_classes='infobox')
@@ -1302,7 +1302,20 @@ with common.GRADIO_ROOT:
         model_check = [prompt, negative_prompt, base_model, refiner_model] + lora_ctrls
         nav_bars = [bar_title] + bar_buttons
         protections = [background_theme, image_tools_checkbox]
-        generate_button.click(topbar.process_before_generation, inputs=[state_topbar, params_backend] + ehps, outputs=[stop_button, skip_button, generate_button, gallery, state_is_generating, index_radio, image_toolbox, prompt_info_box] + protections + [params_backend], show_progress=False) \
+        generate_button.click(lambda: (gr.update(visible=True, interactive=True),
+                            gr.update(visible=True, interactive=True),
+                            gr.update(visible=False, interactive=False),
+                            [],
+                            True),
+                            outputs=[stop_button, skip_button, generate_button, gallery, state_is_generating],
+                            queue=True
+                            ) \
+            .then(
+                topbar.process_before_generation,
+                inputs=[state_topbar, params_backend] + ehps,
+                outputs=[index_radio, image_toolbox, prompt_info_box] + protections + [params_backend],
+                queue=True
+            ) \
             .then(fn=refresh_seed, inputs=[seed_random, image_seed], outputs=image_seed) \
             .then(fn=get_task, inputs=ctrls, outputs=currentTask) \
             .then(fn=enhanced_parameters.set_all_enhanced_parameters, inputs=ehps) \
