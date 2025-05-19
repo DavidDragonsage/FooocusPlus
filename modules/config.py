@@ -163,6 +163,26 @@ def get_path_output() -> str:
     print('Loading support files...')
     return path_output
 
+def get_loras_path() -> str:
+    global config_dict
+    path_loras = [f'{path_models_root}/loras/', '../models/loras/']
+    if args_manager.args.path_loras:
+        if isinstance(args_manager.args.path_loras, list):
+            path_loras = args_manager.args.path_loras
+        else:
+            path_loras = [args_manager.args.path_loras, args_manager.args.path_loras]
+        config_dict['path_loras'] = args_manager.args.path_loras
+    elif 'path_loras' in config_dict and config_dict['path_loras']:
+        if isinstance(config_dict['path_loras'], list):
+            path_loras = config_dict['path_loras']
+        else:
+            path_loras = [config_dict['path_loras'], config_dict['path_loras']]
+        
+        path_loras = get_dir_or_set_default('path_loras', path_loras, True)
+
+    print(f'Loras will be stored in path: {path_loras}')
+    return path_loras
+
 def get_path_models_root() -> str:
     global config_dict
     models_root = 'models'
@@ -223,8 +243,8 @@ def get_dir_or_set_default(key, default_value, as_array=False, make_directory=Fa
 
 path_models_root = get_path_models_root()
 paths_checkpoints = get_dir_or_set_default('path_checkpoints', [f'{path_models_root}/checkpoints/', '../models/checkpoints/'], True)
-paths_loras = get_dir_or_set_default('path_loras', [f'{path_models_root}/loras/', '../models/loras/'], True)
-paths_performance_loras = get_dir_or_set_default('path_performance_loras', [f'{path_models_root}/loras/performance/', '../models/loras/performance/'], True)
+paths_loras = get_loras_path()
+paths_performance_loras = [f'{path_models_root}/loras/performance/', '../models/loras/performance/']
 path_embeddings = get_dir_or_set_default('path_embeddings', f'{path_models_root}/embeddings/')
 path_vae_approx = get_dir_or_set_default('path_vae_approx', f'{path_models_root}/vae_approx/')
 path_vae = get_dir_or_set_default('path_vae', f'{path_models_root}/vae/')
@@ -1058,7 +1078,7 @@ def downloading_sdxl_lcm_lora():
         model_dir=paths_performance_loras[0],
         file_name=modules.flags.PerformanceLoRA.EXTREME_SPEED.value
     )
-    return f"performance/{modules.flags.PerformanceLoRA.EXTREME_SPEED.value}"
+    return f"{modules.flags.PerformanceLoRA.EXTREME_SPEED.value}"
 
 
 def downloading_sdxl_lightning_lora():
@@ -1067,7 +1087,7 @@ def downloading_sdxl_lightning_lora():
         model_dir=paths_performance_loras[0],
         file_name=modules.flags.PerformanceLoRA.LIGHTNING.value
     )
-    return f"performance/{modules.flags.PerformanceLoRA.LIGHTNING.value}"
+    return f"{modules.flags.PerformanceLoRA.LIGHTNING.value}"
 
 
 def downloading_sdxl_hyper_sd_lora():
@@ -1076,7 +1096,7 @@ def downloading_sdxl_hyper_sd_lora():
         model_dir=paths_performance_loras[0],
         file_name=modules.flags.PerformanceLoRA.HYPER_SD.value
     )
-    return f"performance/{modules.flags.PerformanceLoRA.HYPER_SD.value}"
+    return f"{modules.flags.PerformanceLoRA.HYPER_SD.value}"
 
 
 def downloading_controlnet_canny():
