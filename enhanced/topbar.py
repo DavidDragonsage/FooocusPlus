@@ -322,10 +322,10 @@ def process_before_generation(state_params, backend_params, backfill_prompt, tra
         'translation_methods': translation_methods,
         'comfyd_active_checkbox': comfyd_active_checkbox,
         'preset': state_params["__preset"],
-        })
-    # stop_button, skip_button, generate_button, gallery, state_is_generating, index_radio, image_toolbox, prompt_info_box
-    results = [gr.update(visible=True, interactive=True), gr.update(visible=True, interactive=True), gr.update(visible=False, interactive=False), [], True, gr.update(visible=False, open=False), gr.update(visible=False), gr.update(visible=False)]
-    # prompt, random_button, translator_button, super_prompter, background_theme, image_tools_checkbox, bar0_button, bar1_button, bar2_button, bar3_button, bar4_button, bar5_button, bar6_button, bar7_button, bar8_button
+    })
+    results = [gr.update(visible=False, open=False),
+              gr.update(visible=False),
+              gr.update(visible=False)]
     preset_nums = len(state_params["__nav_name_list"].split(','))
     results += [gr.update(interactive=False)] * (preset_nums + 6)
     results += [gr.update()] * (topbar_limit-preset_nums)
