@@ -122,7 +122,7 @@ def refresh_images_catalog(choice: str, passthrough = False, user = None):
     output_path = config.path_outputs
     if(auth_enabled):
         output_path = output_path.replace("[user]", user)
-    if not passthrough and choice in images_list_keys:
+    if not passthrough and choice in images_list_keys and not auth_enabled:
         images_list_keys.remove(choice)
         images_list_keys.append(choice)
         #print(f'[Gallery] Refresh_images_list: hit cache {len(images_list[choice])} image_items of {choice}.')
