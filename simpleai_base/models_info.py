@@ -677,7 +677,9 @@ class ModelsInfo:
                 return self.m_info[model_key]['file'][0]
         return ''
 
-    def get_model_names(self, catalog, filters=[], casesensitive=False, reverse=False, user=None):
+    def get_model_names(self, catalog, filters=None, casesensitive=False, reverse=False, user=None):
+        if filters is None:
+            filters = []
         result = []
         result_reverse = []
         for f in self.m_info.keys():
