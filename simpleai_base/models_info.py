@@ -688,10 +688,10 @@ class ModelsInfo:
             if catalog and cata == catalog:
                 if catalog =="loras":
                     model_type = m_path_or_file.split(os.sep)[0]
-                    new = m_path_or_file[len(model_type) + 1:].replace('/', os.sep)
-                    if (auth_enabled and user is not None and user != model_type and "common" != model_type) or model_type == "performance":
-                        continue
-                    elif not auth_enabled and "common" != model_type:
+                    if auth_enabled and user is not None:
+                        if model_type != "common" and model_type != user or model_type == "performance":
+                            continue
+                    elif not auth_enabled and model_type != "common":
                         continue
                 result_reverse.append(m_path_or_file)
                 if len(filters) > 0:
