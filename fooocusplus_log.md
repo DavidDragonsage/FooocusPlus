@@ -1,4 +1,4 @@
-# 0.9.6 Beta7
+# 0.9.6 Beta8
 
 * introduced support for 4GB SDXL compatible models
 * system defaults to a 4GB version of SAI SDXL if VRAM<6GB
@@ -18,6 +18,7 @@
 * in Beta5, the two 4GB presets now correctly download the specified base models
 * in Beta6, added clip_model error control to comfy_task and added clip_model parameter to Flux1S_GGUF
 * in Beta7, corrected a bug with "Refresh All Files" and also gave it a realistically sized button
+* in Beta8, disabled all further updating to reduce the possibility of corruption by FooocusPlus 1.0.0
 
 
 # 0.9.5
