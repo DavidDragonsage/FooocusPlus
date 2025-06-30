@@ -89,7 +89,7 @@ default_models_info = {
         "hash": "f99f3dec38a09b4834a4a073bdc45aabd42b422b4d327f5e8001afcb5ffb5f45",
         "muid": "5d99d6fc4fbf"
     },
-    "checkpoints/realisticVisionV60B1_v51VAE.safetensors": {
+    "checkpoints/serenity_v21Safetensors.safetensors": {
         "size": 2132625894,
         "hash": "15012c538f503ce2ebfc2c8547b268c75ccdaff7a281db55399940ff1d70e21d",
         "muid": "5da06f78b3c8"
@@ -214,10 +214,10 @@ default_models_info = {
         "hash": "2eff895bdad33abb2f647c35ccb0c2d70173031effa4f126b335a815442af1e3",
         "muid": "2eff895bda"
     },
-    "controlnet/control-lora-canny-rank128.safetensors": {
-        "size": 395733680,
-        "hash": "56389dbb245ca44de91d662529bd4298abc55ce2318f60bc19454fb72ff68247",
-        "muid": "44f83205f6"
+    "controlnet/xinsir-canny-sdxl-1.0-v2.safetensors": {
+        "size": 2502139104,
+        "hash": "B3E4AC47BC814019D50DC842F579301440DEB6D8F09EE1B91A30F527ACE1B852",
+        "muid": "B3E4AC47BC"
     },
     "controlnet/detection_Resnet50_Final.pth": {
         "size": 109497761,
@@ -229,10 +229,10 @@ default_models_info = {
         "hash": "d7caedfb46780825895718c7c8e9ee077e675c935ddfcf272f1c01a4fc8ea72d",
         "muid": "4682603510"
     },
-    "controlnet/fooocus_xl_cpds_128.safetensors": {
-        "size": 395706528,
-        "hash": "eec3fd8209a65b41341ea9f415de66909c97b30fb4d20965b3304e8e5251c2f1",
-        "muid": "aa82117d38"
+    "controlnet/xinsir-scribble-sdxl-1.0-.safetensors": {
+        "size": 2502139104,
+        "hash": "b3e4ac47bc814019d50dc842f579301440deb6d8f09ee1b91a30f527ace1b852",
+        "muid": "b3e4ac47bc"
     },
     "controlnet/ip-adapter-plus-face_sdxl_vit-h.bin": {
         "size": 1013454761,

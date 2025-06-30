@@ -494,7 +494,8 @@ def worker():
             cn_img = resize_image(HWC3(cn_img), width=width, height=height)
 
             if not async_task.skipping_cn_preprocessor:
-                cn_img = preprocessors.canny_pyramid(cn_img, async_task.canny_low_threshold,
+                #using standard canny instead of pyramid canny because we switched from lora canny to xinsir canny
+                cn_img = preprocessors.canny_standard(cn_img, async_task.canny_low_threshold,
                                                      async_task.canny_high_threshold)
 
             cn_img = HWC3(cn_img)
@@ -506,7 +507,7 @@ def worker():
             cn_img = resize_image(HWC3(cn_img), width=width, height=height)
 
             if not async_task.skipping_cn_preprocessor:
-                cn_img = preprocessors.cpds(cn_img)
+                cn_img = preprocessors.simple_scribble_detector(cn_img)
 
             cn_img = HWC3(cn_img)
             task[0] = core.numpy_to_pytorch(cn_img)

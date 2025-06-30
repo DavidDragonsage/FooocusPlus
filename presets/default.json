@@ -1,11 +1,11 @@
 {
   "preset category": "Favorite",
-  "default_model": "elsewhereXL_v10.safetensors",
+  "default_model": "juggernautXL_ragnarokBy.safetensors",
   "default_refiner": "None",
   "default_refiner_switch": 0.6,
   "default_loras": [
-    [false, "common\\SDXLFaeTastic2400.safetensors", 0.7],
-    [false, "common\\SDXL_black_and_color_Sa_May.safetensors", 1.0],
+    [true, "None", 1.0],
+    [true, "None", 1.0],
     [true, "None", 1.0],
     [true, "None", 1.0],
     [true, "None", 1.0]
@@ -21,12 +21,9 @@
   "default_describe_content_type": ["Photograph"],
   "default_aspect_ratio": "1024*1024",
   "checkpoint_downloads": {
-    "elsewhereXL_v10.safetensors": "https://civitai.com/api/download/models/1110155?type=Model&format=SafeTensor&size=pruned&fp=fp16"
+    "juggernautXL_ragnarokBy.safetensors": "https://civitai.com/api/download/models/1759168?type=Model&format=SafeTensor&size=full&fp=fp16"
   },
   "embeddings_downloads": {},
-  "lora_downloads": {
-    "SDXLFaeTastic2400.safetensors": "https://civitai.com/api/download/models/293991?type=Model&format=SafeTensor",
-    "SDXL_black_and_color_Sa_May.safetensors": "https://civitai.com/api/download/models/191463?type=Model&format=SafeTensor"
-  },
+  "lora_downloads": {},
   "previous_default_models": []
 }

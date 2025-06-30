@@ -137,7 +137,7 @@ genders = ["all", "male", "female"]
 qualitymodelist = ["highest", "gated"]
 qualitykeeplist = ["keep used", "keep all"]
 
-promptenhancelist = ["none", "hyperprompt"]
+promptenhancelist = ["none"]
 
 generatevehicle = True
 generateobject = True
@@ -588,11 +588,11 @@ def ui_onebutton(prompt, run_event, random_button):
                         show_label=False,
                         placeholder="Name of new preset",
                         interactive=True,
-                        visible=True,
+                        visible=False
                     )
                     obp_preset_save = gr.Button(
                         value="Save as preset",
-                        visible=True,
+                        visible=False
                     )
         
         # End of this part of presets

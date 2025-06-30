@@ -1,7 +1,7 @@
 {
   "2": {
     "inputs": {
-      "ckpt_name": "realisticVisionV60B1_v51VAE.safetensors"
+      "ckpt_name": "serenity_v21Safetensors.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {

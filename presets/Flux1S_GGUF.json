@@ -20,12 +20,12 @@
       "clip_model": "t5xxl_fp8_e4m3fn.safetensors"
     }
   },
-  "default_model": "Flux\\flux1-schnell-Q8_0.gguf",
+  "default_model": "Flux\\flux1-shuttle-3-diffusion-Q8_0.gguf",
   "default_refiner": "None",
   "default_refiner_switch": 0.6,
   "default_loras": [
-    [false, "common\\Flux\\Hyper-FLUX.1-dev-8steps-lora.safetensors", 0.125],
-    [false, "common\\Flux\\AntiBlur.safetensors", 3.0],
+    [true, "None", 1.0],
+    [true, "None", 1.0],
     [true, "None", 1.0],
     [true, "None", 1.0],
     [true, "None", 1.0]
@@ -35,17 +35,14 @@
   "default_sampler": "euler",
   "default_scheduler": "simple",
   "default_performance": "Speed",
-  "default_styles": ["Fooocus V2"],
+  "default_styles": [],
   "default_aspect_ratio": "1024*1024",
   "default_overwrite_step": 4,
   "checkpoint_downloads": {
-    "Flux\\flux1-schnell-Q8_0.gguf": "https://huggingface.co/city96/FLUX.1-schnell-gguf/resolve/main/flux1-schnell-Q8_0.gguf?download=true"
+    "Flux\\flux1-shuttle-3-diffusion-Q8_0.gguf": "https://huggingface.co/shuttleai/shuttle-3-diffusion-GGUF/resolve/main/shuttle-3-diffusion-Q8_0.gguf?download=true"
   },
   "embeddings_downloads": {},
-  "lora_downloads": {
-    "Flux\\Hyper-FLUX.1-dev-8steps-lora.safetensors": "https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-FLUX.1-dev-8steps-lora.safetensors",
-    "Flux\\AntiBlur.safetensors": "https://civitai.com/api/download/models/824514?type=Model&format=SafeTensor"
-  },
+  "lora_downloads": {},
   "vae_downloads": {
     "ae.safetensors": "https://huggingface.co/lovis93/testllm/resolve/ed9cf1af7465cebca4649157f118e331cf2a084f/ae.safetensors?download=true"
   }

@@ -55,7 +55,7 @@
         "Node name for S&R": "CheckpointLoaderSimple"
       },
       "widgets_values": [
-        "realisticVisionV60B1_v51VAE.safetensors"
+        "serenity_v21Safetensors.safetensors"
       ]
     },
     {

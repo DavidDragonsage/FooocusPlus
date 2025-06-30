@@ -62,6 +62,8 @@ def canny_pyramid(x, canny_low_threshold, canny_high_threshold):
 
     return norm255(result, low=1, high=99).clip(0, 255).astype(np.uint8)
 
+def canny_standard(x, canny_low_threshold, canny_high_threshold):
+    return cv2.Canny(x, int(canny_low_threshold), int(canny_high_threshold))
 
 def cpds(x):
     # cv2.decolor is not "decolor", it is Cewu Lu's method
@@ -82,3 +84,40 @@ def cpds(x):
 
 
 
+def simple_scribble_detector(ndarray_image, threshold=127):
+    """
+    Scribble detector that mimics ComfyUI's 'Scribble' node behavior.
+
+    Args:
+        ndarray_image (numpy.ndarray): HWC format, uint8, RGB or BGR.
+        threshold (int): Brightness threshold to detect dark lines (default=127).
+
+    Returns:
+        numpy.ndarray: Binary scribble image, HWC, uint8, white background with black lines.
+    """
+    # Ensure image is uint8
+    if ndarray_image.dtype != np.uint8:
+        img = (np.clip(ndarray_image, 0, 1) * 255).astype(np.uint8)
+    else:
+        img = ndarray_image.copy()
+
+    # If image is BGR (OpenCV style), convert to RGB if needed
+    if img.shape[2] == 3:
+        rgb = img
+    else:
+        raise ValueError("Input image must have 3 channels (RGB or BGR).")
+
+    # Create blank image
+    detected_map = np.zeros((rgb.shape[0], rgb.shape[1]), dtype=np.uint8)
+
+    # Apply brightness threshold (line detection)
+    mask = (np.min(rgb, axis=2) < threshold)
+    detected_map[mask] = 255  # White lines on black
+
+    # Invert to get black lines on white background
+    detected_map = 255 - detected_map
+
+    # Convert back to 3-channel
+    scribble = cv2.merge([detected_map, detected_map, detected_map])
+
+    return scribble

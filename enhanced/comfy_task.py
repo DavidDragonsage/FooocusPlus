@@ -38,7 +38,7 @@ def is_lowlevel_device():
 def is_highlevel_device():
     return ldm_patched.modules.model_management.get_vram()>VRAM16G
 
-default_base_SD15_name = 'SD1.5\realisticVisionV60B1_v51VAE.safetensors'
+default_base_SD15_name = 'serenity_v21Safetensors.safetensors'
 default_base_SD3m_name_list = ['SD3x\sd3_medium_incl_clips.safetensors', 'SD3x\sd3_medium_incl_clips_t5xxlfp8.safetensors', 'SD3x\sd3_medium_incl_clips_t5xxlfp16.safetensors']
 default_base_SD3x_name_list = ['SD3x\stableDiffusion35_large.safetensors', 'SD3x\sd3_medium_incl_clips_t5xxlfp8.safetensors', 'SD3x\sd3_medium_incl_clips_t5xxlfp16.safetensors']
 

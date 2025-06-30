@@ -17,7 +17,7 @@
       "tiled_offset_y": 0
     }
   },
-  "default_model": "juggernautXL_juggXIByRundiffusion.safetensors",
+  "default_model": "juggernautXL_ragnarokBy.safetensors",
   "default_refiner": "None",
   "default_refiner_switch": 0.6,
   "default_loras": [
@@ -33,22 +33,13 @@
   "default_scheduler": "karras",
   "default_performance": "Speed",
   "default_prompt_negative": "",
-  "default_styles": ["Fooocus V2", "Fooocus Enhance", "Fooocus Sharp"],
+  "default_styles": [],
   "default_aspect_ratio": "1024*1024",
   "default_overwrite_step": 30,
   "checkpoint_downloads": {
-    "juggernautXL_juggXIByRundiffusion.safetensors": "https://civitai.com/api/download/models/782002?type=Model&format=SafeTensor&size=full&fp=fp16"
+    "juggernautXL_ragnarokBy.safetensors": "https://civitai.com/api/download/models/1759168?type=Model&format=SafeTensor&size=full&fp=fp16"
   },
   "embeddings_downloads": {},
   "lora_downloads": {},
-  "previous_default_models": [
-    "juggernautXL_v9Rundiffusionphoto2.safetensors",
-    "juggernautXL_v8Rundiffusion.safetensors",
-    "juggernautXL_version8Rundiffusion.safetensors",
-    "juggernautXL_version7Rundiffusion.safetensors",
-    "juggernautXL_v7Rundiffusion.safetensors",
-    "juggernautXL_version6Rundiffusion.safetensors",
-    "juggernautXL_v6Rundiffusion.safetensors"
-  ],
   "default_save_metadata_to_images": true
 }

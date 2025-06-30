@@ -1035,7 +1035,7 @@ with common.GRADIO_ROOT:
                                     refresh_files_output + lora_ctrls,
                                     queue=False, show_progress=False)
 
-            with gr.Tab(label='Extras', elem_id="scrollable-box"):
+            with gr.Tab(label='Extras', elem_id="scrollable-box", render=False):
                 with gr.Row(visible=False):
                     binding_id_button = gr.Button(value='Binding Identity', visible=False)
                 with gr.Row():

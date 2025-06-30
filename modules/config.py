@@ -1101,20 +1101,20 @@ def downloading_sdxl_hyper_sd_lora():
 
 def downloading_controlnet_canny():
     load_file_from_url(
-        url='https://huggingface.co/lllyasviel/misc/resolve/main/control-lora-canny-rank128.safetensors',
+        url='https://huggingface.co/xinsir/controlnet-canny-sdxl-1.0/resolve/main/diffusion_pytorch_model_V2.safetensors',
         model_dir=paths_controlnet[0],
-        file_name='control-lora-canny-rank128.safetensors'
+        file_name='xinsir-canny-sdxl-1.0-v2.safetensors'
     )
-    return os.path.join(paths_controlnet[0], 'control-lora-canny-rank128.safetensors')
+    return os.path.join(paths_controlnet[0], 'xinsir-canny-sdxl-1.0-v2.safetensors')
 
 
 def downloading_controlnet_cpds():
     load_file_from_url(
-        url='https://huggingface.co/lllyasviel/misc/resolve/main/fooocus_xl_cpds_128.safetensors',
+        url='https://huggingface.co/xinsir/controlnet-scribble-sdxl-1.0/resolve/main/diffusion_pytorch_model.safetensors',
         model_dir=paths_controlnet[0],
-        file_name='fooocus_xl_cpds_128.safetensors'
+        file_name='xinsir-scribble-sdxl-1.0-.safetensors'
     )
-    return os.path.join(paths_controlnet[0], 'fooocus_xl_cpds_128.safetensors')
+    return os.path.join(paths_controlnet[0], 'xinsir-scribble-sdxl-1.0-.safetensors')
 
 
 def downloading_ip_adapters(v):
@@ -1236,11 +1236,11 @@ def downloading_sd35_large_model():
 
 def downloading_base_sd15_model():
     load_file_from_url(
-        url='https://huggingface.co/metercai/SimpleSDXL2/resolve/main/ckpt/realisticVisionV60B1_v51VAE.safetensors',
+        url='https://huggingface.co/hfmaster/models-moved/resolve/18d17f62a033811945460640fd8e0fc48c9e3580/1-5/serenity_v21Safetensors.safetensors',
         model_dir=paths_checkpoints[0] + '\SD1.5',
-        file_name='realisticVisionV60B1_v51VAE.safetensors'
+        file_name='serenity_v21Safetensors.safetensors'
     )
-    return os.path.join(paths_checkpoints[0] + '\SD1.5', 'realisticVisionV60B1_v51VAE.safetensors')
+    return os.path.join(paths_checkpoints[0] + '\SD1.5', 'serenity_v21Safetensors.safetensors')
 
 def downloading_hydit_model():
     load_file_from_url(
