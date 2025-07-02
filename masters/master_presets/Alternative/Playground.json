@@ -1,5 +1,5 @@
 {
-    "default_model": "Alternative\\playground-v2.5-1024px-aesthetic.fp16.safetensors",
+    "default_model": "Alternative/playground-v2.5-1024px-aesthetic.fp16.safetensors",
     "default_refiner": "None",
     "default_refiner_switch": 0.6,
     "default_loras": [
@@ -44,7 +44,7 @@
     ],
     "default_aspect_ratio": "0*0",
     "checkpoint_downloads": {
-        "Alternative\\playground-v2.5-1024px-aesthetic.fp16.safetensors": "https://huggingface.co/mashb1t/fav_models/resolve/main/fav/playground-v2.5-1024px-aesthetic.fp16.safetensors"
+        "Alternative/playground-v2.5-1024px-aesthetic.fp16.safetensors": "https://huggingface.co/mashb1t/fav_models/resolve/main/fav/playground-v2.5-1024px-aesthetic.fp16.safetensors"
     },
     "embeddings_downloads": {},
     "lora_downloads": {

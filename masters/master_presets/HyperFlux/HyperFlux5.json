@@ -8,18 +8,18 @@
             "clip_model": "t5xxl_fp8_e4m3fn.safetensors"
             }
     	},
-    "default_model": "FluxDev\\hyperfluxDiversity_q5KS.gguf",
+    "default_model": "FluxDev/hyperfluxDiversity_q5KS.gguf",
     "default_refiner": "None",
     "default_refiner_switch": 0.6,
     "default_loras": [
         [
             false,
-            "Flux\\FluxDFaeTasticDetails.safetensors",
+            "Flux/FluxDFaeTasticDetails.safetensors",
             0.8
         ],
         [
             false,
-            "Flux\\Flux_BlackColor_SaMay.safetensors",
+            "Flux/Flux_BlackColor_SaMay.safetensors",
             0.7
         ],
         [
@@ -49,12 +49,12 @@
     "default_aspect_ratio": "0*0",
     "default_overwrite_step": 20,
     "checkpoint_downloads": {
-        "FluxDev\\hyperfluxDiversity_q5KS.gguf": "https://civitai.com/api/download/models/1147912?type=Model&format=GGUF&size=pruned&fp=fp8"
+        "FluxDev/hyperfluxDiversity_q5KS.gguf": "https://civitai.com/api/download/models/1147912?type=Model&format=GGUF&size=pruned&fp=fp8"
     },
     "embeddings_downloads": {},
     "lora_downloads": {
-        "Flux\\FluxDFaeTasticDetails.safetensors": "https://civitai.com/api/download/models/720252?type=Model&format=SafeTensor",
-        "Flux\\Flux_BlackColor_SaMay.safetensors": "https://civitai.com/api/download/models/789575?type=Model&format=SafeTensor"
+        "Flux/FluxDFaeTasticDetails.safetensors": "https://civitai.com/api/download/models/720252?type=Model&format=SafeTensor",
+        "Flux/Flux_BlackColor_SaMay.safetensors": "https://civitai.com/api/download/models/789575?type=Model&format=SafeTensor"
     },
     "vae_downloads": {
         "ae.safetensors": "https://huggingface.co/lovis93/testllm/resolve/ed9cf1af7465cebca4649157f118e331cf2a084f/ae.safetensors?download=true"

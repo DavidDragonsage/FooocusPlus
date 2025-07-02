@@ -8,6 +8,9 @@ upscale_15 = 'Upscale (1.5x)'
 upscale_2 = 'Upscale (2x)'
 upscale_fast = 'Upscale (Fast 2x)'
 
+# set by modules.config:
+custom_performance = 15
+
 uov_list = [disabled, subtle_variation, upscale_15, upscale_2, upscale_fast]
 
 enhancement_uov_before = "Before First Enhancement"
@@ -104,7 +107,7 @@ translation_methods = ['Slim Model', 'Third APIs']
 COMFY_KSAMPLER_NAMES = ["euler", "euler_cfg_pp", "euler_ancestral", "euler_ancestral_cfg_pp", "heun", "heunpp2","dpm_2", "dpm_2_ancestral",
                   "lms", "dpm_fast", "dpm_adaptive", "dpmpp_2s_ancestral", "dpmpp_sde", "dpmpp_sde_gpu",
                   "dpmpp_2m", "dpmpp_2m_sde", "dpmpp_2m_sde_gpu", "dpmpp_3m_sde", "dpmpp_3m_sde_gpu", "ddpm", "lcm",
-                  "ipndm", "ipndm_v", "deis"]   
+                  "ipndm", "ipndm_v", "deis"]
 comfy_scheduler_list = COMFY_SCHEDULER_NAMES = ["normal", "karras", "exponential", "sgm_uniform", "simple", "ddim_uniform", "beta"]
 comfy_sampler_list = COMFY_SAMPLER_NAMES = COMFY_KSAMPLER_NAMES + ["ddim", "uni_pc", "uni_pc_bh2"]
 
@@ -124,7 +127,7 @@ task_class_mapping = {
             'Comfy'  : 'SDXL-Comfy',
             'Kolors' : 'Kwai-Kolors',
             'Kolors+': 'Kwai-Kolors+',
-            'SD3m'   : 'SD3m',  
+            'SD3m'   : 'SD3m',
             'SD3x'   : 'SD3.5x',
             'HyDiT'  : 'Hunyuan-DiT',
             'HyDiT+' : 'Hunyuan-DiT+',
@@ -226,7 +229,7 @@ default_class_params = {
         'available_sampler_name': sampler_list,
         'available_scheduler_name': scheduler_list,
         "backend_params": {"task_method": "SD_SIMPLE"}
-        },    
+        },
     }
 
 get_engine_default_params = lambda x: default_class_params['Fooocus'] if x not in default_class_params else default_class_params[x]
@@ -253,19 +256,21 @@ class OutputFormat(Enum):
 
 
 class PerformanceLoRA(Enum):
-    QUALITY = None
-    SPEED = None
-    EXTREME_SPEED = 'sdxl_lcm_lora.safetensors'
-    LIGHTNING = 'sdxl_lightning_4step_lora.safetensors'
-    HYPER_SD = 'sdxl_hyper_sd_4step_lora.safetensors'
+    Quality = None
+    Speed = None
+    Custom = None
+    Extreme_Speed = 'sdxl_lcm_lora.safetensors'
+    Lightning = 'sdxl_lightning_4step_lora.safetensors'
+    Hyper_SD = 'sdxl_hyper_sd_4step_lora.safetensors'
 
 
 class Steps(IntEnum):
-    QUALITY = 60
-    SPEED = 30
-    EXTREME_SPEED = 8
-    LIGHTNING = 4
-    HYPER_SD = 4
+    Quality = 60
+    Speed = 30
+    Custom = custom_performance # from modules.config
+    Extreme_Speed = 8
+    Lightning = 4
+    Hyper_SD = 4
 
     @classmethod
     def keys(cls) -> list:
@@ -273,19 +278,21 @@ class Steps(IntEnum):
 
 
 class StepsUOV(IntEnum):
-    QUALITY = 36
-    SPEED = 18
-    EXTREME_SPEED = 8
-    LIGHTNING = 4
-    HYPER_SD = 4
+    Quality = 36
+    Speed = 18
+    Custom = 12
+    Extreme_Speed = 8
+    Lightning = 4
+    Hyper_SD = 4
 
 
 class Performance(Enum):
-    QUALITY = 'Quality'
-    SPEED = 'Speed'
-    EXTREME_SPEED = 'Extreme Speed'
-    LIGHTNING = 'Lightning'
-    HYPER_SD = 'Hyper-SD'
+    Quality = 'Quality'
+    Speed = 'Speed'
+    Custom = 'Custom'
+    Extreme_Speed = 'Extreme Speed'
+    Lightning = 'Lightning'
+    Hyper_SD = 'Hyper-SD'
 
     @classmethod
     def list(cls) -> list:
@@ -303,7 +310,7 @@ class Performance(Enum):
     def has_restricted_features(cls, x) -> bool:
         if isinstance(x, Performance):
             x = x.value
-        return x in [cls.EXTREME_SPEED.value, cls.LIGHTNING.value, cls.HYPER_SD.value]
+        return x in [cls.Extreme_Speed.value, cls.Lightning.value, cls.Hyper_SD.value]
 
     def steps(self) -> int | None:
         return Steps[self.name].value if self.name in Steps.__members__ else None

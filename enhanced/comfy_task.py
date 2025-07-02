@@ -38,13 +38,13 @@ def is_lowlevel_device():
 def is_highlevel_device():
     return ldm_patched.modules.model_management.get_vram()>VRAM16G
 
-default_base_SD15_name = 'SD1.5\realisticVisionV60B1_v51VAE.safetensors'
+default_base_SD15_name = 'SD1.5\\realisticVisionV60B1_v51VAE.safetensors'
 default_base_SD3m_name_list = ['SD3x\sd3_medium_incl_clips.safetensors', 'SD3x\sd3_medium_incl_clips_t5xxlfp8.safetensors', 'SD3x\sd3_medium_incl_clips_t5xxlfp16.safetensors']
 default_base_SD3x_name_list = ['SD3x\stableDiffusion35_large.safetensors', 'SD3x\sd3_medium_incl_clips_t5xxlfp8.safetensors', 'SD3x\sd3_medium_incl_clips_t5xxlfp16.safetensors']
 
 default_base_Flux_name_list = ['flux1-schnell-bnb-nf4.safetensors', 'flux1-dev-bnb-nf4.safetensors', 'flux-hyp8-Q5_K_M.gguf']
 flux_model_urls = {
-    "flux1-schnell-bnb-nf4.safetensors": "https://huggingface.co/silveroxides/flux1-nf4-weights/resolve/main/flux1-schnell-bnb-nf4.safetensors?download=true",    
+    "flux1-schnell-bnb-nf4.safetensors": "https://huggingface.co/silveroxides/flux1-nf4-weights/resolve/main/flux1-schnell-bnb-nf4.safetensors?download=true",
     "flux1-dev-bnb-nf4-v2.safetensors": "https://huggingface.co/lllyasviel/flux1-dev-bnb-nf4/resolve/main/flux1-dev-bnb-nf4-v2.safetensors?download=true",
     "Flux\\hyperfluxDiversity_q5KS.gguf": "https://civitai.com/api/download/models/1147912?type=Model&format=GGUF&size=pruned&fp=fp8"
     }
@@ -123,7 +123,7 @@ def get_comfy_task(task_name, task_method, default_params, input_images, options
         if 'base_model_dtype' in default_params:
             comfy_params.delete_params(['base_model_dtype'])
         return ComfyTask(task_method, comfy_params)
-    
+
     elif task_name in ['Kolors+', 'Kolors']:
         comfy_params = ComfyTaskParams(default_params)
         total_vram = ldm_patched.modules.model_management.get_vram()
@@ -135,13 +135,13 @@ def get_comfy_task(task_name, task_method, default_params, input_images, options
         if task_name == 'Kolors':
             comfy_params.delete_params(['sampler'])
         return ComfyTask(task_method, comfy_params)
-    
+
     elif task_name in ['HyDiT+', 'HyDiT']:
         comfy_params = ComfyTaskParams(default_params)
         if not common.MODELS_INFO.exists_model(catalog="checkpoints", model_path=default_params["base_model"]):
             config.downloading_hydit_model()
         return ComfyTask(task_method, comfy_params)
-    
+
     elif task_name == 'Flux':
         comfy_params = ComfyTaskParams(default_params)
         base_model = default_params['base_model']
@@ -159,7 +159,7 @@ def get_comfy_task(task_name, task_method, default_params, input_images, options
             if not common.MODELS_INFO.exists_model(catalog="checkpoints", model_path=base_model) and common.MODELS_INFO.exists_model(catalog="checkpoints", model_path=model_hyp8):
                 base_model = model_hyp8
                 default_params['steps'] = 12
-            default_params['base_model'] = base_model  
+            default_params['base_model'] = base_model
         base_model_key = f'checkpoints/{base_model}'
         if 'nf4' in base_model.lower() and 'bnb' in base_model.lower():
             if total_vram<VRAM8G:
@@ -207,7 +207,7 @@ def get_comfy_task(task_name, task_method, default_params, input_images, options
         #check_download_base_model(default_params["base_model"])
         return ComfyTask(task_method, comfy_params)
 
-def fixed_width_height(width, height, factor): 
+def fixed_width_height(width, height, factor):
     fixed_width = int(((height // factor + 1) * factor * width)/height)
     fixed_width = fixed_width if fixed_width % factor == 0 else int((fixed_width // factor + 1) * factor )
     width = width if height % factor == 0 else fixed_width
@@ -250,7 +250,7 @@ def check_download_kolors_model(path_root):
         if os.path.exists(downfile): os.remove(downfile)
         if os.path.exists(path_temp) and os.path.isdir(path_temp):
             shutil.rmtree(path_temp)
-    
+
     if not common.MODELS_INFO.exists_model_key(check_model_file[1]):
         path_dst = os.path.join(config.paths_diffusers[0], 'Kolors/unet/diffusion_pytorch_model.fp16.safetensors')
         path_org = os.path.join(config.path_unet, 'kolors_unet_fp16.safetensors')
@@ -262,8 +262,8 @@ def check_download_kolors_model(path_root):
         path_org = os.path.join(config.path_vae, 'sdxl_fp16.vae.safetensors')
         print(f'model file copy: {path_org} to {path_dst}')
         shutil.copy(path_org, path_dst)
-   
-    common.MODELS_INFO.refresh_from_path()  
+
+    common.MODELS_INFO.refresh_from_path()
     return
 
 def check_download_base_model(base_model):

@@ -10,7 +10,7 @@
                 "base_model_dtype": "auto"
 	    }
     	},
-    "default_model": "FluxSchnell\\flux1-schnell-bnb-nf4.safetensors",
+    "default_model": "FluxSchnell/flux1-schnell-bnb-nf4.safetensors",
     "default_refiner": "None",
     "default_refiner_switch": 0.5,
     "default_loras": [
@@ -51,7 +51,7 @@
     "default_aspect_ratio": "0*0",
     "default_overwrite_step": 4,
     "checkpoint_downloads": {
-        "FluxSchnell\\flux1-schnell-bnb-nf4.safetensors": "https://huggingface.co/silveroxides/flux1-nf4-weights/resolve/main/flux1-schnell-bnb-nf4.safetensors?download=true"
+        "FluxSchnell/flux1-schnell-bnb-nf4.safetensors": "https://huggingface.co/silveroxides/flux1-nf4-weights/resolve/main/flux1-schnell-bnb-nf4.safetensors?download=true"
     },
     "embeddings_downloads": {},
     "lora_downloads": {},

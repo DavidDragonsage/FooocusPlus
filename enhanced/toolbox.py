@@ -6,17 +6,19 @@ import math
 import shutil
 import time
 import gradio as gr
-import args_manager as args
+import args_manager
 import modules.config as config
 import modules.preset_resource as PR
 import modules.sdxl_styles as sdxl_styles
 import modules.ui_support as UIS
+import modules.user_structure as US
 import enhanced.all_parameters as ads
 import enhanced.gallery as gallery
 import enhanced.version as version
 import modules.flags as flags
 import modules.meta_parser as meta_parser
 
+from pathlib import Path
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 from enhanced.backend import sync_model_info
@@ -442,7 +444,6 @@ def save_preset(*args):
         preset["default_styles"] = style_selections
         preset["default_aspect_ratio"] = "0*0"
         preset["default_overwrite_step"] = overwrite_step
-#        preset["default_aspect_ratio"] = aspect_ratios_selection.split(' ')[0].replace(u'\u00d7','*')
         preset["checkpoint_downloads"] = {}
         preset["embeddings_downloads"] = {}
         preset["lora_downloads"] = {}
@@ -450,17 +451,22 @@ def save_preset(*args):
         preset["default_vae"] = vae_name
         preset["default_inpaint_engine"] = {} # "inpaint_engine" causes junk to be added
 
-        save_path = f'presets/{PR.category_selection}/{save_name}.json'
-        user_category = f'{args.user_dir}/user_presets/{PR.category_selection}'
-        user_path = f'{args.user_dir}/user_presets/{PR.category_selection}/{save_name}.json'
-        os.makedirs(user_category, exist_ok = True)
-        with open(save_path, "w", encoding="utf-8") as json_file:
-            json.dump(preset, json_file, indent=4) # temp. save to working presets
-        shutil.copy(save_path, user_path)          # perm. save to user presets
-        print(f'[ToolBox] Saved the current parameters to {os.path.abspath(user_path)}')
-        state_params.update({"__preset": save_name})
+        path_presets = Path('presets')
+        path_user = Path(args_manager.args.user_dir)
+        save_path = Path(path_presets/f'{PR.category_selection}/{save_name}.json')
+        user_category = Path(path_user/f'user_presets/{PR.category_selection}')
+
+        # temp. save to working presets:
+        US.save_json(preset, save_path)
+        # perm. save to user presets
+        user_path = US.mkdir_copy_file(save_path, user_category)
+        if user_path:
+            print(f'[ToolBox] Saved the current parameters to {user_path.resolve()}')
+            state_params.update({"__preset": save_name})
+            PR.current_preset = save_name
+        else:
+            print(f'Could not save the new {save_name} preset')
     state_params.update({"note_box_state": ['',0,0]})
-    PR.current_preset = save_name
     results = [gr.update(visible=False)] * 3 + [state_params]
     results += UIS.refresh_nav_bars(state_params)
     return results

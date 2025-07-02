@@ -3,6 +3,7 @@ import json
 import math
 import numbers
 import args_manager
+import common
 import enhanced.all_parameters as ads
 import modules.aspect_ratios as AR
 import modules.flags
@@ -11,7 +12,6 @@ import modules.user_structure as US
 import tempfile
 
 from pathlib import Path
-from common import ROOT
 from modules.extra_utils import makedirs_with_log, get_files_from_folder, try_eval_env_var
 from modules.flags import OutputFormat, Performance, MetadataScheme
 from modules.model_loader import load_file_from_url
@@ -44,13 +44,13 @@ def get_dir_or_set_default(key, default_value, as_array=False, make_directory=Fa
 
     if isinstance(v, str):
         if make_directory:
-            makedirs_with_log(v)
+            US.make_dir(v)
         if os.path.exists(v) and os.path.isdir(v):
             return v if not as_array else [v]
     elif isinstance(v, list):
         if make_directory:
             for d in v:
-                makedirs_with_log(d)
+                US.make_dir(d)
         if all([os.path.exists(d) and os.path.isdir(d) for d in v]):
             return v
 
@@ -96,40 +96,6 @@ def get_config_path(config_file):
     config_path = os.path.abspath(f'{config_path}/{config_file}')
     return config_path
 
-def get_config_item_or_set_default(key, default_value, validator, disable_empty_as_none=False, expected_type=None):
-    global config_dict, visited_keys
-
-    if key not in visited_keys:
-        visited_keys.append(key)
-
-    v = os.getenv(key)
-    if v is not None:
-        v = try_eval_env_var(v, expected_type)
-        print(f"Environment: {key} = {v}")
-        config_dict[key] = v
-
-    if key not in config_dict:
-        config_dict[key] = default_value
-        return default_value
-
-    v = config_dict.get(key, None)
-    if not disable_empty_as_none:
-        if v is None or v == '':
-            v = 'None'
-
-    if validator(v):
-        return v
-    else:
-        if v is not None:
-            if 'fooocus' in v.lower():
-                default_value = MetadataScheme.SIMPLE.value
-            elif 'a1111' in v.lower():
-                default_value = MetadataScheme.A1111.value
-            else:
-                print(f'Failed to load config key: {json.dumps({key:v})} is invalid; will use {json.dumps({key:default_value})} instead.')
-        config_dict[key] = default_value
-        return default_value
-
 config_dict.update(PR.get_initial_preset_content())
 theme = args_manager.args.theme
 
@@ -153,25 +119,7 @@ except Exception as e:
     print(f'1. The file "{config_path}" is a valid text file, and you have access to read it.')
     print('2. Use "\\\\" instead of "\\" when describing paths.')
     print('3. There is no "," before the last "}".')
-    print('4. All key/value formats are correct.')
-
-def init_temp_path(path: str | None, default_path: str) -> str:
-    if args_manager.args.temp_path:
-        path = args_manager.args.temp_path
-
-    if path != '' and path != default_path:
-        try:
-            if not os.path.isabs(path):
-                path = os.path.abspath(path)
-            os.makedirs(path, exist_ok=True)
-            print(f'Using temp path {path}')
-            return path
-        except Exception as e:
-            print(f'Could not create temp path {path}. Reason: {e}')
-            print(f'Using default temp path {default_path} instead.')
-
-    os.makedirs(default_path, exist_ok=True)
-    return default_path
+    print('4. All key and value formats are correct.')
 
 if args_manager.args.models_root:
     get_dir_or_set_default('path_models_root', Path(args_manager.args.models_root))
@@ -220,13 +168,66 @@ modelsinfo = init_modelsinfo(path_models_root, dict(
 
 US.create_model_structure(paths_checkpoints, paths_loras)
 
-default_temp_path = os.path.join(tempfile.gettempdir(), 'fooocus')
+def get_config_item_or_set_default(key, default_value, validator, disable_empty_as_none=False, expected_type=None):
+    global config_dict, visited_keys
+
+    if key not in visited_keys:
+        visited_keys.append(key)
+
+    v = os.getenv(key)
+    if v is not None:
+        v = try_eval_env_var(v, expected_type)
+        print(f"Environment: {key} = {v}")
+        config_dict[key] = v
+
+    if key not in config_dict:
+        config_dict[key] = default_value
+        return default_value
+
+    v = config_dict.get(key, None)
+    if not disable_empty_as_none:
+        if v is None or v == '':
+            v = 'None'
+
+    if validator(v):
+        return v
+    else:
+        if v is not None:
+            if 'fooocus' in v.lower():
+                default_value = MetadataScheme.SIMPLE.value
+            elif 'a1111' in v.lower():
+                default_value = MetadataScheme.A1111.value
+            else:
+                print(f'Failed to load config key: {json.dumps({key:v})} is invalid; will use {json.dumps({key:default_value})} instead.')
+        config_dict[key] = default_value
+        return default_value
+
+
+def init_temp_path(temp_path: str | None, default_path: str) -> str:
+    if args_manager.args.temp_path:
+        temp_path = Path(args_manager.args.temp_path)
+
+    if temp_path != '' and \
+        (Path(temp_path) != Path(default_path)):
+        try:
+            temp_path = Path(temp_path).resolve()
+            US.make_dir(temp_path)
+            print(f'Using temp path {temp_path}')
+            return str(temp_path)
+        except Exception as e:
+            print(f'Could not create temp path {temp_path}. Reason: {e}')
+            print(f'Using default temp path {default_path} instead.')
+
+    US.make_dir(default_path)
+    return str(default_path)
+
+temp_file = Path(tempfile.gettempdir())
+default_temp_path = str(Path(temp_file/'fooocusplus'))
 temp_path = init_temp_path(get_config_item_or_set_default(
     key='temp_path',
     default_value=default_temp_path,
     validator=lambda x: isinstance(x, str),
-    expected_type=str
-), default_temp_path)
+    expected_type=str), default_temp_path)
 temp_path_cleanup_on_launch = get_config_item_or_set_default(
     key='temp_path_cleanup_on_launch',
     default_value=True,
@@ -277,12 +278,6 @@ default_low_vram_presets = get_config_item_or_set_default(
     expected_type=bool
 )
 
-default_image_catalog_max_number = get_config_item_or_set_default(
-    key='default_image_catalog_max_number',
-    default_value=ads.default['image_catalog_max_number'],
-    validator=lambda x: isinstance(x, int),
-    expected_type=int
-)
 default_image_prompt_checkbox = get_config_item_or_set_default(
     key='default_image_prompt_checkbox',
     default_value=False,
@@ -316,21 +311,33 @@ default_image_prompt_advanced_checkbox = get_config_item_or_set_default(
 
 default_performance = get_config_item_or_set_default(
     key='default_performance',
-    default_value=Performance.SPEED.value,
+    default_value=Performance.Speed.value,
     validator=lambda x: x in Performance.values(),
     expected_type=str
 )
+custom_performance_steps = get_config_item_or_set_default(
+    key='custom_performance_steps',
+    default_value=15,
+    validator=lambda x: isinstance(x, int) and 1 <= x <= 200,
+    expected_type=int
+)
+default_overwrite_step = get_config_item_or_set_default(
+    key='default_overwrite_step',
+    default_value=ads.default['overwrite_step'],
+    validator=lambda x: isinstance(x, int),
+    expected_type=int
+)
 
-default_max_image_number = get_config_item_or_set_default(
-    key='default_max_image_number',
-    default_value=ads.default['max_image_number'],
+default_max_image_quantity = get_config_item_or_set_default(
+    key='default_max_image_quantity',
+    default_value=ads.default['max_image_quantity'],
     validator=lambda x: isinstance(x, int) and x >= 1,
     expected_type=int
 )
-default_image_number = get_config_item_or_set_default(
-    key='default_image_number',
-    default_value=ads.default['image_number'],
-    validator=lambda x: isinstance(x, int) and 1 <= x <= default_max_image_number,
+default_image_quantity = get_config_item_or_set_default(
+    key='default_image_quantity',
+    default_value=ads.default['image_quantity'],
+    validator=lambda x: isinstance(x, int) and 1 <= x <= default_max_image_quantity,
     expected_type=int
 )
 
@@ -474,13 +481,13 @@ previous_default_models = get_config_item_or_set_default(
     validator=lambda x: isinstance(x, list) and all(isinstance(k, str) for k in x),
     expected_type=list
 )
+
 default_refiner_model_name = default_refiner = get_config_item_or_set_default(
     key='default_refiner',
     default_value='None',
     validator=lambda x: isinstance(x, str),
     expected_type=str
 ).replace('\\', os.sep).replace('/', os.sep)
-
 default_refiner_switch = get_config_item_or_set_default(
     key='default_refiner_switch',
     default_value=0.60,
@@ -551,18 +558,13 @@ default_cfg_scale = get_config_item_or_set_default(
     validator=lambda x: isinstance(x, numbers.Number),
     expected_type=numbers.Number
 )
-default_overwrite_step = get_config_item_or_set_default(
-    key='default_overwrite_step',
-    default_value=ads.default['overwrite_step'],
-    validator=lambda x: isinstance(x, int),
-    expected_type=int
-)
 default_sample_sharpness = get_config_item_or_set_default(
     key='default_sample_sharpness',
     default_value=2.0,
     validator=lambda x: isinstance(x, numbers.Number),
     expected_type=numbers.Number
 )
+
 default_sampler = get_config_item_or_set_default(
     key='default_sampler',
     default_value='dpmpp_2m_sde_gpu',
@@ -580,6 +582,25 @@ default_vae = get_config_item_or_set_default(
     default_value=modules.flags.default_vae,
     validator=lambda x: isinstance(x, str),
     expected_type=str
+)
+default_clip_skip = get_config_item_or_set_default(
+    key='default_clip_skip',
+    default_value=2,
+    validator=lambda x: isinstance(x, int) and 1 <= x <= modules.flags.clip_skip_max,
+    expected_type=int
+)
+
+default_cfg_tsnr = get_config_item_or_set_default(
+    key='default_cfg_tsnr',
+    default_value=ads.default['adaptive_cfg'],
+    validator=lambda x: isinstance(x, numbers.Number),
+    expected_type=numbers.Number
+)
+default_overwrite_switch = get_config_item_or_set_default(
+    key='default_overwrite_switch',
+    default_value=ads.default['overwrite_switch'],
+    validator=lambda x: isinstance(x, int),
+    expected_type=int
 )
 
 checkpoint_downloads = get_config_item_or_set_default(
@@ -682,24 +703,7 @@ default_inpaint_method = get_config_item_or_set_default(
     validator=lambda x: x in modules.flags.inpaint_options,
     expected_type=str
 )
-default_cfg_tsnr = get_config_item_or_set_default(
-    key='default_cfg_tsnr',
-    default_value=ads.default['adaptive_cfg'],
-    validator=lambda x: isinstance(x, numbers.Number),
-    expected_type=numbers.Number
-)
-default_clip_skip = get_config_item_or_set_default(
-    key='default_clip_skip',
-    default_value=2,
-    validator=lambda x: isinstance(x, int) and 1 <= x <= modules.flags.clip_skip_max,
-    expected_type=int
-)
-default_overwrite_switch = get_config_item_or_set_default(
-    key='default_overwrite_switch',
-    default_value=ads.default['overwrite_switch'],
-    validator=lambda x: isinstance(x, int),
-    expected_type=int
-)
+
 default_overwrite_upscale = get_config_item_or_set_default(
     key='default_overwrite_upscale',
     default_value=0.382,
@@ -797,6 +801,17 @@ default_comfyd_active_checkbox = get_config_item_or_set_default(
     default_value=ads.default['comfyd_active_checkbox'],
     validator=lambda x: isinstance(x, bool)
 )
+default_image_catalog_checkbox = get_config_item_or_set_default(
+    key='default_image_catalog_checkbox',
+    default_value=True,
+    validator=lambda x: isinstance(x, bool)
+)
+default_image_catalog_max_number = get_config_item_or_set_default(
+    key='default_image_catalog_max_number',
+    default_value=ads.default['image_catalog_max_number'],
+    validator=lambda x: isinstance(x, int),
+    expected_type=int
+)
 default_backfill_prompt = get_config_item_or_set_default(
     key='default_backfill_prompt',
     default_value=ads.default['backfill_prompt'],
@@ -892,7 +907,7 @@ possible_preset_keys = {
     "default_overwrite_step": "steps",
     "default_overwrite_switch": "overwrite_switch",
     "default_performance": "performance",
-    "default_image_number": "image_number",
+    "default_image_quantity": "image_quantity",
     "default_prompt": "prompt",
     "default_prompt_negative": "negative_prompt",
     "default_extra_variation": "extra_variation",
@@ -907,7 +922,7 @@ possible_preset_keys = {
     # "default_inpaint_method": "inpaint_method", # disabled so inpaint mode doesn't refresh after every preset change
     "default_inpaint_engine_version": "inpaint_engine_version",
 
-    "default_max_image_number": "max_image_number",
+    "default_max_image_quantity": "max_image_quantity",
     "default_freeu": "freeu",
     "default_adm_guidance": "adm_guidance",
     "default_output_format": "output_format",
@@ -929,7 +944,7 @@ allow_missing_preset_key = [
     "default_aspect_ratio"
     "default_prompt",
     "default_prompt_negative",
-    "default_image_number"
+    "default_image_quantity"
     "default_output_format",
     "input_image_checkbox",
     "styles_definition",
@@ -949,14 +964,15 @@ if not os.path.exists(config_path):
 # Always write to the tutorial
 with open(config_example_path, "w", encoding="utf-8") as json_file:
     cpa = config_path.replace("\\", "\\\\")
-    json_file.write(f'You can modify your "{cpa}" using the below keys, formats, and examples.\n'
-                    f'Do not modify this file. Modifications in this file will not take effect.\n'
-                    f'This file is a tutorial and example. Please edit "{cpa}" to really change any settings.\n'
-                    + 'Remember to split the paths with "\\\\" rather than "\\", '
-                      'and there is no "," before the last "}". \n\n\n')
+    json_file.write(f'You can modify your "{cpa}" using the examples below.\n'
+                    f'This file is an example tutorial and modifications to this file will have no effect.\n'
+                    f'Please edit "{cpa}" to actually change the settings.\n'
+                    'Remember to split the paths with "\\\\" rather than "\\", '
+                    'and there is no "," before the last "}". \n\n')
     json.dump({k: config_dict[k] for k in visited_keys}, json_file, indent=4)
 
-config_comfy_path = os.path.join(ROOT,'comfy/extra_model_paths.yaml')
+
+config_comfy_path = os.path.join(common.ROOT,'comfy/extra_model_paths.yaml')
 config_comfy_formatted_text = '''
 comfyui:
      models_root: {models_root}
@@ -1231,6 +1247,25 @@ def downloading_superprompter_model():
     )
     return os.path.join(path_superprompter, 'model.safetensors')
 
+
+def downloading_hydit_model():
+    load_file_from_url(
+        url='https://huggingface.co/comfyanonymous/hunyuan_dit_comfyui/resolve/main/hunyuan_dit_1.2.safetensors',
+        model_dir=paths_checkpoints[0] + '\Alternative',
+        file_name='hunyuan_dit_1.2.safetensors'
+    )
+    return os.path.join(paths_checkpoints[0] + '\Alternative', 'hunyuan_dit_1.2.safetensors')
+
+def downloading_base_sd15_model():
+    model_path = Path(user_dir/'models/checkpoints/SD1.5/')
+    model_file_name = 'realisticVisionV60B1_v51VAE.safetensors'
+    load_file_from_url(
+        url= 'https://huggingface.co/moiu2998/mymo/resolve/3c3093fa083909be34a10714c93874ce5c9dabc4/realisticVisionV60B1_v51VAE.safetensors?download=true',
+        model_dir = model_path,
+        file_name = model_file_name
+    )
+    return str(Path(model_path/model_file_name))
+
 def downloading_sd3_medium_model():
     load_file_from_url(
         url='https://huggingface.co/lone682/sd3/resolve/2d024507b65a18772e10825f4dd383cdc3800a9f/sd3_medium_incl_clips_t5xxlfp8.safetensors?download=true',
@@ -1247,21 +1282,6 @@ def downloading_sd35_large_model():
     )
     return os.path.join(paths_checkpoints[0] + '\SD3x', 'stableDiffusion35_large.safetensors')
 
-def downloading_base_sd15_model():
-    load_file_from_url(
-        url='https://huggingface.co/moiu2998/mymo/resolve/3c3093fa083909be34a10714c93874ce5c9dabc4/realisticVisionV60B1_v51VAE.safetensors?download=true',
-        model_dir=paths_checkpoints[0] + '\SD1.5',
-        file_name='realisticVisionV60B1_v51VAE.safetensors'
-    )
-    return os.path.join(paths_checkpoints[0] + '\SD1.5', 'realisticVisionV60B1_v51VAE.safetensors')
-
-def downloading_hydit_model():
-    load_file_from_url(
-        url='https://huggingface.co/comfyanonymous/hunyuan_dit_comfyui/resolve/main/hunyuan_dit_1.2.safetensors',
-        model_dir=paths_checkpoints[0] + '\Alternative',
-        file_name='hunyuan_dit_1.2.safetensors'
-    )
-    return os.path.join(paths_checkpoints[0] + '\Alternative', 'hunyuan_dit_1.2.safetensors')
 
 update_files()
 
@@ -1278,7 +1298,13 @@ AR.available_pixart_aspect_ratios = available_pixart_aspect_ratios
 
 AR.AR_shortlist = enable_shortlist_aspect_ratios
 
+# Common support, typically for Gradio errors in updating system dictionary
+common.refiner_slider = default_refiner_switch
+
 # Preset Resource support
-PR.default_sampler = default_sampler
 PR.default_bar_category = default_bar_category
 PR.preset_bar_length = preset_bar_length
+PR.default_sampler = default_sampler
+
+# Flags support
+modules.flags.custom_performance = custom_performance_steps

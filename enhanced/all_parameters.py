@@ -15,7 +15,7 @@ def get_diff_from_default(mode, *ctrls):
     loras = apply_enabled_loras([[bool(ctrls[all_args['loras']+i*3]), str(ctrls[all_args['loras']+1+i*3]), float(ctrls[all_args['loras']+2+i*3]) ] for i in range(max_lora_number)])
     if len(loras)>0:
         diff_dict.update({'loras':loras})
-    #ip_ctrls =  
+    #ip_ctrls =
 
     if mode == 'log':
         log_ext = {}
@@ -85,8 +85,8 @@ default = {
     'loras_min_weight': -2,
     'loras_max_weight': 3,
     'max_lora_number': 5,
-    'max_image_number': 50,
-    'image_number': 4,
+    'max_image_quantity': 50,
+    'image_quantity': 4,
     'output_format': 'png',
     'save_metadata_to_images': True,
     'metadata_scheme': 'fooocus',
@@ -105,12 +105,12 @@ default = {
 
 def init_all_params_index(lora_number, disable_metadata):
     global all_args, max_lora_number, flag_disable_metadata
-    
+
     max_lora_number = lora_number
     flag_disable_metadata = disable_metadata
     c = 0
     a = c + lora_number * 3
-    b = a + (0 if disable_metadata else 2) 
+    b = a + (0 if disable_metadata else 2)
 
     all_args = {
         'prompt': 0+c,
@@ -118,7 +118,7 @@ def init_all_params_index(lora_number, disable_metadata):
         'style_selections': 2+c,
         'performance_selection': 3+c,
         'aspect_ratios_selection': 4+c,
-        'image_number': 5+c,
+        'image_quantity': 5+c,
         'output_format': 6+c,
         'image_seed': 7+c,
         'read_wildcards_in_order': 8+c,
@@ -168,16 +168,16 @@ def init_all_params_index(lora_number, disable_metadata):
         'controlnet_softness': 51+a,
         'freeu_enabled': 52+a,
         'freeu_b1': 53+a,
-        'freeu_b2': 54+a, 
-        'freeu_s1': 55+a, 
+        'freeu_b2': 54+a,
+        'freeu_s1': 55+a,
         'freeu_s2': 56+a,
         'ging_inpaint_preprocessor': 57+a,
-        'inpaint_disable_initial_latent': 58+a, 
-        'inpaint_engine': 59+a, 
-        'inpaint_strength': 60+a, 
-        'inpaint_respective_field': 61+a, 
-        'inpaint_advanced_masking_checkbox': 62+a, 
-        'invert_mask_checkbox': 63+a, 
+        'inpaint_disable_initial_latent': 58+a,
+        'inpaint_engine': 59+a,
+        'inpaint_strength': 60+a,
+        'inpaint_respective_field': 61+a,
+        'inpaint_advanced_masking_checkbox': 62+a,
+        'invert_mask_checkbox': 63+a,
         'inpaint_erode_or_dilate': 64+a,
         'params_backend': 65+a,
         'save_metadata_to_images': 66+a,

@@ -4,6 +4,7 @@ import os
 import time
 import mimetypes
 import logging
+from pathlib import Path # FooocusPlus_Comfymod
 from typing import Set, List, Dict, Tuple, Literal
 from collections.abc import Collection
 
@@ -12,7 +13,13 @@ supported_pt_extensions: set[str] = {'.ckpt', '.pt', '.bin', '.pth', '.safetenso
 folder_names_and_paths: dict[str, tuple[list[str], set[str]]] = {}
 
 base_path = os.path.dirname(os.path.realpath(__file__))
-models_dir = os.path.join(os.path.dirname(base_path), "models")
+
+# FooocusPlus_Comfymod: set to valid model dirs:
+#models_dir = os.path.join(os.path.dirname(base_path), "models")
+current_dir = Path.cwd()
+user_models_dir = Path(current_dir.resolve().parent/'UserDir/models')
+models_dir = user_models_dir
+
 
 def reset_folder_names_and_paths(models_root):
     global models_dir, folder_names_and_paths

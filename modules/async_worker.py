@@ -1,4 +1,5 @@
 import threading
+import common
 import modules.config
 import modules.aspect_ratios as AR
 import modules.preset_resource as PR
@@ -51,7 +52,7 @@ class AsyncTask:
         self.base_model_name = args.pop()
         self.refiner_model_name = args.pop()
         self.refiner_switch = args.pop()
-        self.refiner_switch = PR.refiner_switch
+        self.refiner_switch = common.refiner_slider
         self.loras = get_enabled_loras([(bool(args.pop()), str(args.pop()),
              float(args.pop())) for _ in range(default_max_lora_number)])
         self.input_image_checkbox = args.pop()
@@ -230,7 +231,6 @@ def worker():
     import random
     import copy
     import cv2
-    import common
     import modules.default_pipeline as pipeline
     import modules.core as core
     import modules.flags as flags
@@ -269,7 +269,7 @@ def worker():
     ldm_patched.modules.model_management.print_memory_info()
 
     def progressbar(async_task, number, text):
-        print(f'[Fooocus] {text}')
+        print(f'[Generative Worker] {text}')
         async_task.yields.append(['preview', (number, text, None)])
 
     def yield_result(async_task, imgs, progressbar_index, black_out_nsfw, censor=True, do_not_show_finished_images=False):
@@ -1230,11 +1230,11 @@ def worker():
             async_task.refiner_model_name = 'None'
 
         current_progress = 0
-        if async_task.performance_selection == Performance.EXTREME_SPEED:
+        if async_task.performance_selection == Performance.Extreme_Speed:
             set_lcm_defaults(async_task, current_progress, advance_progress=True)
-        elif async_task.performance_selection == Performance.LIGHTNING:
+        elif async_task.performance_selection == Performance.Lightning:
             set_lightning_defaults(async_task, current_progress, advance_progress=True)
-        elif async_task.performance_selection == Performance.HYPER_SD:
+        elif async_task.performance_selection == Performance.Hyper_SD:
             set_hyper_sd_defaults(async_task, current_progress, advance_progress=True)
 
         print(f'[Parameters] Aspect Ratio = {async_task.aspect_ratios_selection}')

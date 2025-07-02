@@ -1,16 +1,16 @@
 {
-    "default_model": "LowVRAM\\segmind-vega.safetensors",
+    "default_model": "LowVRAM/segmind-vega.safetensors",
     "default_refiner": "None",
     "default_refiner_switch": 0.75,
     "default_loras": [
         [
-            true,
-            "None",
-            1.0
+            false,
+            "SDXLFaeTastic2400.safetensors",
+            0.7
         ],
         [
-            true,
-            "None",
+            false,
+            "SDXL_black_and_color_Sa_May.safetensors",
             1.0
         ],
         [
@@ -43,7 +43,7 @@
     "default_aspect_ratio": "0*0",
     "default_overwrite_step": 25,
     "checkpoint_downloads": {
-        "LowVRAM\\segmind-vega.safetensors": "https://huggingface.co/segmind/Segmind-Vega/resolve/main/segmind-vega.safetensors?download=true"
+        "LowVRAM/segmind-vega.safetensors": "https://huggingface.co/segmind/Segmind-Vega/resolve/main/segmind-vega.safetensors?download=true"
     },
     "embeddings_downloads": {},
     "lora_downloads": {

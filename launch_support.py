@@ -1,10 +1,11 @@
 import os
 import glob
-from pathlib import Path
 import platform
 import shutil
 import sys
 import args_manager
+import modules.user_structure as US
+from pathlib import Path
 
 current_dir = Path.cwd()
 win32_root = current_dir.resolve().parent
@@ -55,8 +56,8 @@ def dependency_resolver():
     torchvision_default = "0.22.1"
     torchaudio_default = "2.7.1"
     xformers_default = "0.0.30"
-    pytorchlightning_default = "2.5.1.post0"
-    lightningfabric_default = "2.5.1"
+    pytorchlightning_default = "2.5.2"
+    lightningfabric_default = "2.5.2"
     torch_platform_default = "cu128"
 
     torch_ver = torch_default # initialize torch to the default
@@ -203,20 +204,16 @@ def get_torch_base_path(): # the config.txt user_dir
     return torch_base_path
 
 def read_torch_base():     # the file auto-closes
-    torch_base_path = Path(get_torch_base_path())
-    try:
-        torch_base_text = torch_base_path.read_text(encoding="utf-8")
+    torch_base_text = US.load_textfile(get_torch_base_path())
+    if torch_base_text == False:
+        torch_base_ver = 'needs to be installed'
+    else:
         torch_base_text = torch_base_text.strip()
         torch_base_ver = get_split_value(torch_base_text)
-    except:
-        torch_base_ver = 'needs to be installed'
-        return torch_base_ver
-    if torch_base_ver == '':
-       torch_base_ver = 'is undefined'
+        if torch_base_ver == '':
+            torch_base_ver = 'is undefined'
     return torch_base_ver
 
 def write_torch_base(torch_base_ver): # the file auto-closes
-    torch_base_path = Path(get_torch_base_path())
-    with torch_base_path.open('w') as torch_base_text:
-        torch_base_text.write(f"Torch base version = {torch_base_ver}")
+    US.save_textfile(f"Torch base version = {torch_base_ver}", get_torch_base_path())
     return

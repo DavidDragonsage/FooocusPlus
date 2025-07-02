@@ -1,6 +1,6 @@
 import os
 import json
-import websocket 
+import websocket
 import uuid
 import random
 import httpx
@@ -94,7 +94,7 @@ def get_images(ws, prompt, callback=None):
                     images_output = output_images.get(prompt[current_node]['_meta']['title'], [])
                     images_output.append(out[8:])
                     output_images[prompt[current_node]['_meta']['title']] = images_output[0]
-            continue  
+            continue
 
     output_images = {k: np.array(Image.open(BytesIO(v))) for k, v in output_images.items()}
     print(f'[ComfyClient] The ComfyTask:{prompt_id} has finished: {len(output_images)}')
@@ -185,5 +185,5 @@ WORKFLOW_DIR = 'workflows'
 COMFYUI_ENDPOINT_IP = '127.0.0.1'
 COMFYUI_ENDPOINT_PORT = '8187'
 server_address = f'{COMFYUI_ENDPOINT_IP}:{COMFYUI_ENDPOINT_PORT}'
-client_id = str(uuid.uuid4())  
+client_id = str(uuid.uuid4())
 ws = None

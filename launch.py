@@ -109,8 +109,8 @@ def prepare_environment():
         cmds = get_pip_commands(cmds)
         run_commands(cmds)
 
-        verify_installed_version('pytorch-lightning', pytorchlightning_ver, False)
-        verify_installed_version('lightning-fabric', lightningfabric_ver, False)
+    verify_installed_version('pytorch-lightning', pytorchlightning_ver, False)
+    verify_installed_version('lightning-fabric', lightningfabric_ver, False)
 
     if REINSTALL_ALL or not is_installed("xformers"):
         if platform.python_version().startswith("3.10"):
@@ -140,6 +140,7 @@ args = ini_args()
 cleanup_structure(args.directml, python_embedded_path)
 
 prepare_environment()
+print('Analyzing the graphics system...')
 build_launcher()
 args = ini_args()
 
@@ -167,7 +168,7 @@ write_torch_base(torch_ver)
 
 if config.temp_path_cleanup_on_launch:
     print()
-    print(f'Attempting to cleanup the temporary directory: {config.temp_path}')
+    print(f'Attempting to cleanup the temporary directory: {Path(config.temp_path).resolve()}')
     result = empty_dir(config.temp_path)
     if result:
         print("Cleanup successful")

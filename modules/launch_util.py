@@ -210,7 +210,6 @@ def requirements_met(requirements_file):
             except Exception:
                 met_diff.update({package:'-'})
                 if package == 'cmake' or package=='https':
-                    result = True
                     continue
                 else:
                     print()

@@ -1,9 +1,10 @@
 import os
 import folder_paths
+import json
+from pathlib import Path # FooocusPlus_Comfymod
 from urllib.parse import urlparse
 from typing import Optional
 
-import json
 
 def load_file_from_url(
         url: str,
@@ -13,7 +14,6 @@ def load_file_from_url(
         file_name: Optional[str] = None,
 ) -> str:
     """Download a file from `url` into `model_dir`, using the file present if possible.
-
     Returns the path to the downloaded file.
     """
     os.makedirs(model_dir, exist_ok=True)
@@ -30,6 +30,7 @@ def load_file_from_url(
 
     return cached_file
 
+
 def load_model_for_path(models_url, root_name):
     models_root = folder_paths.get_folder_paths(root_name)[0]
     for model_path in models_url:
@@ -39,18 +40,16 @@ def load_model_for_path(models_url, root_name):
                 url=models_url[model_path], model_dir=models_root, file_name=model_path
             )
 
+
+# FooocusPlus_Comfymod: set IC-Light paths:
+default_base_SD15_name = str(Path(folder_paths.user_models_dir/'checkpoints/SD1.5/realisticVisionV60B1_v51VAE.safetensors'))
+default_unet_SD15_name = str(Path(folder_paths.user_models_dir/'unet/iclight_sd15_fc_unet_ldm.safetensors'))
+
+# FooocusPlus_Comfymod: # fake out model downloading: its done in modules.config
 def load_model_for_iclight():
-    models_url = dict({
-        "iclight_sd15_fc_unet_ldm.safetensors": "https://huggingface.co/huchenlei/IC-Light-ldm/resolve/main/iclight_sd15_fc_unet_ldm.safetensors",
-        #"iclight_sd15_fbc_unet_ldm.safetensors": "https://huggingface.co/huchenlei/IC-Light-ldm/resolve/main/iclight_sd15_fbc_unet_ldm.safetensors",
-        })
-    load_model_for_path(models_url, "unet")
-
-    models_url = dict({
-        "realisticVisionV60B1_v51VAE.safetensors": "https://huggingface.co/metercai/SimpleSDXL2/resolve/main/ckpt/realisticVisionV60B1_v51VAE.safetensors"
-        })
-    load_model_for_path(models_url, "checkpoints")
-
-
-
-
+    global default_base_SD15_name, default_unet_SD15_name
+    models_path = default_unet_SD15_name
+    model_full_path = Path(default_unet_SD15_name)
+    models_path = default_base_SD15_name
+    model_full_path = Path(default_base_SD15_name)
+    return

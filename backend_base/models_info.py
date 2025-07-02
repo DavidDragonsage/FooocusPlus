@@ -3,6 +3,16 @@ import json
 from . import utils
 
 default_models_info = {
+    "checkpoints/Alternative/hunyuan_dit_1.2.safetensors": {
+        "size": 8240228270,
+        "hash": "4fb84f84079cda457d171b3c6b15d1be95b5a3e5d9825703951a99ddf92d1787",
+        "muid": "8c4c0098ac"
+    },
+    "checkpoints/Alternative/playground-v2.5-1024px.safetensors": {
+        "size": 6938040576,
+        "hash": "bcaa7dd6780974f000b17b5a6c63e6f867a75c51ffa85c67d6b196882c69b992",
+        "muid": "d0e21c789d50"
+    },
     "checkpoints/albedobaseXL_v21.safetensors": {
         "size": 6938041042,
         "hash": "1718b5bb2da1ef4815fee8af8a7fc2fa8ab8f467b279eded4d991ea0cce59a6d",
@@ -18,22 +28,42 @@ default_models_info = {
         "hash": "896faa18cd6852ccf977e2dec76191c38f256d031204e233cb3ed76f6088d55b",
         "muid": "239e9199aa"
     },
-    "checkpoints/flux1-dev.safetensors": {
+    "checkpoints/FluxDev/flux1-dev.safetensors": {
         "size": 23802932552,
         "hash": "4610115bb0c89560703c892c59ac2742fa821e60ef5871b33493ba544683abd7",
         "muid": "2f3c5caac0"
     },
-    "checkpoints/flux1-schnell.safetensors": {
-        "size": 23782506688,
-        "hash": "9403429e0052277ac2a87ad800adece5481eecefd9ed334e1f348723621d2a0a",
-        "muid": "d314672fc6"
-    },
-    "checkpoints/flux1-dev-fp8.safetensors": {
+    "checkpoints/FluxDev/flux1-dev-fp8.safetensors": {
         "size": 17246524772,
         "hash": "8e91b68084b53a7fc44ed2a3756d821e355ac1a7b6fe29be760c1db532f3d88a",
         "muid": "7f89b4dd65"
     },
-    "checkpoints/flux1-schnell-fp8.safetensors": {
+    "checkpoints/FluxDev/flux1-dev-bnb-nf4.safetensors": {
+        "size": 11489884113,
+        "hash": "c5e25d12d720e30a277598ce9ded9db406ee54f63419fe0c801b283d4ea146e2",
+        "muid": "6487417fee"
+    },
+    "checkpoints/FluxDev/flux1-dev-bnb-nf4-v2.safetensors": {
+        "size": 12044280207,
+        "hash": "fef37763b8f2c8cc3463139bbb6d91aa517c605b654d4e5c540de52813f30306",
+        "muid": "8c53267ff9"
+    },
+    "checkpoints/FluxDev/flux-hyp8-Q5_K_M.gguf": {
+        "size": 8421981408,
+        "hash": "a0dac309ffb497fde0d1bbfa0291f5371d0d05c66173df830318bc475777c68a",
+        "muid": "a0dac309ff"
+    },
+    "checkpoints/FluxDev/fluxunchained-dev-Q5_K_M.gguf": {
+        "size": 8428152160,
+        "hash": "ee5df99febf1aebd63137672d3396407a6e89f771ca9e83bc13c475c5d57a521",
+        "muid": "ee5df99feb"
+    },
+    "checkpoints/FluxSchnell/flux1-schnell.safetensors": {
+        "size": 23782506688,
+        "hash": "9403429e0052277ac2a87ad800adece5481eecefd9ed334e1f348723621d2a0a",
+        "muid": "d314672fc6"
+    },
+    "checkpoints/FluxSchnell/flux1-schnell-fp8.safetensors": {
         "size": 17236328572,
         "hash": "ead426278b49030e9da5df862994f25ce94ab2ee4df38b556ddddb3db093bf72",
         "muid": "8f031d049d"
@@ -43,42 +73,17 @@ default_models_info = {
         "hash": "0dc649761fba58625f57f596738e76422df9424c4c8801ca70c53ad6998c905b",
         "muid": "6661979a94"
     },
-    "checkpoints/flux1-schnell-bnb-nf4.safetensors": {
+    "checkpoints/FluxSchnell/flux1-schnell-bnb-nf4.safetensors": {
         "size": 11484555394,
         "hash": "e6cba6afca8b2f5599879111e1a5f3dabebe69bcc3ee4a6af46807447adc6d09",
         "muid": "0eaea6dc0d"
-    },
-    "checkpoints/flux1-dev-bnb-nf4.safetensors": {
-        "size": 11489884113,
-        "hash": "c5e25d12d720e30a277598ce9ded9db406ee54f63419fe0c801b283d4ea146e2",
-        "muid": "6487417fee"
-    },
-    "checkpoints/flux1-dev-bnb-nf4-v2.safetensors": {
-        "size": 12044280207,
-        "hash": "fef37763b8f2c8cc3463139bbb6d91aa517c605b654d4e5c540de52813f30306",
-        "muid": "8c53267ff9"
-    },
-    "checkpoints/hunyuan_dit_1.2.safetensors": {
-        "size": 8240228270,
-        "hash": "4fb84f84079cda457d171b3c6b15d1be95b5a3e5d9825703951a99ddf92d1787",
-        "muid": "8c4c0098ac"
-    },
-    "checkpoints/juggernaut-X-RunDiffusion-NSFW.safetensors": {
-        "size": 7105348672,
-        "hash": "d91d35736d8f2be038f760a9b0009a771ecf0a417e9b38c244a84ea4cb9c0c45",
-        "muid": "039986f26f01"
     },
     "checkpoints/Juggernaut-XL_v9_RunDiffusionPhoto_v2.safetensors": {
         "size": 7105348188,
         "hash": "c9e3e68f89b8e38689e1097d4be4573cf308de4e3fd044c64ca697bdb4aa8bca",
         "muid": "393f61fcec"
     },
-    "checkpoints/playground-v2.5-1024px.safetensors": {
-        "size": 6938040576,
-        "hash": "bcaa7dd6780974f000b17b5a6c63e6f867a75c51ffa85c67d6b196882c69b992",
-        "muid": "d0e21c789d50"
-    },
-    "checkpoints/ponyDiffusionV6XL.safetensors": {
+    "checkpoints/Pony/ponyDiffusionV6XL.safetensors": {
         "size": 6938041050,
         "hash": "67ab2fd8ec439a89b3fedb15cc65f54336af163c7eb5e4f2acc98f090a29b0b3",
         "muid": "e023c14343"
@@ -93,17 +98,17 @@ default_models_info = {
         "hash": "15012c538f503ce2ebfc2c8547b268c75ccdaff7a281db55399940ff1d70e21d",
         "muid": "5da06f78b3c8"
     },
-    "checkpoints/sd3_medium_incl_clips.safetensors": {
+    "checkpoints/SD3x/sd3_medium_incl_clips.safetensors": {
         "size": 5973224240,
         "hash": "3bb7f21bc5fb450220f4eb78a2f276b15422309d5166a4bdeb8c3b763a3a0581",
         "muid": "bb3cbb3221ef"
     },
-    "checkpoints/sd3_medium_incl_clips_t5xxlfp16.safetensors": {
+    "checkpoints/SD3x/sd3_medium_incl_clips_t5xxlfp16.safetensors": {
         "size": 15761074532,
         "hash": "69a950c5d143ce782a7423c532c8a12b75da6a37b0e6f26a322acf4e76208912",
         "muid": "c3a45b17d217"
     },
-    "checkpoints/sd3_medium_incl_clips_t5xxlfp8.safetensors": {
+    "checkpoints/SD3x/sd3_medium_incl_clips_t5xxlfp8.safetensors": {
         "size": 10867168284,
         "hash": "92db4295e9c9ab8401ef60566d975656a35b0bd0f6d9ce0d083725171f7b3174",
         "muid": "41d49489bc24"
@@ -353,16 +358,6 @@ default_models_info = {
         "hash": "aeb7e9e6897a1e58b10494bd989d001e3d4bc9b634633cd7b559838f612c2867",
         "muid": "f84d1c1e05d4"
     },
-    "checkpoints/flux-hyp8-Q5_K_M.gguf": {
-        "size": 8421981408,
-        "hash": "a0dac309ffb497fde0d1bbfa0291f5371d0d05c66173df830318bc475777c68a",
-        "muid": "a0dac309ff"
-    },
-    "checkpoints/fluxunchained-dev-Q5_K_M.gguf": {
-        "size": 8428152160,
-        "hash": "ee5df99febf1aebd63137672d3396407a6e89f771ca9e83bc13c475c5d57a521",
-        "muid": "ee5df99feb"
-    },
     "checkpoints/juggernautXL_juggXIByRundiffusion.safetensors": {
         "size": 7105350536,
         "hash": "33e58e86686f6b386c526682b5da9228ead4f91d994abd4b053442dc5b42719e",
@@ -390,6 +385,7 @@ default_models_info = {
     },
 }
 
+is_calc_hash = False # flag to print json update message
 
 def sync_model_info(downurls):
     print(f'downurls:{downurls}')
@@ -455,11 +451,9 @@ class ModelsInfo:
         del_file_key = []
 
         self.scan_models_hash = scan_hash
-        #print(f'refresh m_info_key:{self.m_info.keys()}')
         for path in self.path_map.keys():
             if self.path_map[path]:
                 path_filenames = self.get_path_filenames(path)
-                #print(f'path_filenames_{path}:{path_filenames}')
                 for (p, k) in path_filenames:
                     model_key = f"{path}/{k.replace(os.sep, '/')}"
                     file_path = os.path.join(p, k)
@@ -566,6 +560,7 @@ class ModelsInfo:
                 del self.m_muid[muid]
 
     def calculate_model_info(self, model_key, file_path):
+        global is_calc_hash
         if os.path.isdir(file_path):
             size = utils.get_size_subfolders(file_path)
         else:
@@ -574,6 +569,7 @@ class ModelsInfo:
             hash = default_models_info[model_key]["hash"]
             muid = default_models_info[model_key]["muid"]
         elif self.scan_models_hash:
+            is_calc_hash = True
             print(f'[ModelInfo] Calculate hash for {file_path}')
             if os.path.isdir(file_path):
                 hash = utils.calculate_sha256_subfolder(file_path)
@@ -592,16 +588,18 @@ class ModelsInfo:
         return size, hash, muid
 
     def save_model_info(self):
+        global is_calc_hash
         try:
             with open(self.info_path, "w", encoding="utf-8") as json_file:
                 json.dump(self.m_info, json_file, indent=4)
-                #print(f'[ModelInfo] Models info update and saved to {self.info_path}.')
+                if is_calc_hash:
+                    print(f'[ModelInfo] Models info updated and saved to {self.info_path}')
         except PermissionError:
-            print(f'[ModelInfo] Models info update and save failed: Permission denied, {self.info_path}.')
+            print(f'[ModelInfo] Models info update and save failed: Permission denied, {self.info_path}')
         except json.JSONDecodeError:
-            print(f'[ModelInfo] Models info update and save failed: JSON decode error, {self.info_path}.')
+            print(f'[ModelInfo] Models info update and save failed: JSON decode error, {self.info_path}')
         except Exception as e:
-            print(f'[ModelInfo Models info update and save failed: {e}, {self.info_path}.')
+            print(f'[ModelInfo Models info update and save failed: {e}, {self.info_path}')
 
     def refresh_file(self, action, file_path, url=None):
         if action not in ['add', 'delete']:

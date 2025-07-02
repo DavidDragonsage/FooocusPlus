@@ -707,15 +707,15 @@ with common.GRADIO_ROOT:
                         performance_selection = gr.Radio(label='Performance',
                             choices=flags.Performance.values(),
                             value=modules.config.default_performance,
-                            info='Quality=60 Steps, Speed=30 Steps',
+                            info='Quality=60 Steps, Speed=30 Steps, Custom=15 Steps default',
                             elem_classes=['performance_selection'])
                         overwrite_step = gr.Slider(label='Forced Overwrite of Sampling Step',
                             minimum=-1, maximum=200, step=1,
                             value=modules.config.default_overwrite_step,
                             info='Set to -1 to disable.')
 
-                    image_number = gr.Slider(label='Image Quantity', minimum=1, maximum=modules.config.default_max_image_number,\
-                        step=1, value=modules.config.default_image_number)
+                    image_number = gr.Slider(label='Image Quantity', minimum=1, maximum=modules.config.default_max_image_quantity,\
+                        step=1, value=modules.config.default_image_quantity)
 
                     AR.AR_template_init()
                     with gr.Accordion(label=AR.add_template_ratio(AR.current_AR), open=False,\
@@ -934,16 +934,40 @@ with common.GRADIO_ROOT:
 
                         refiner_model = gr.Dropdown(label='Refiner (SDXL or SD 1.5)', choices=['None'] + modules.config.model_filenames, value=modules.config.default_refiner_model_name, allow_custom_value=True, show_label=True)
 
-                    refiner_switch = gr.Slider(label='Refiner Switch At', minimum=0.1, maximum=1.0, step=0.0001,
-                                info='Use 0.4 for SD1.5 realistic models; '
-                                     'or 0.667 for SD1.5 anime models; '
-                                     'or 0.8 for XL-refiners; '
-                                     'or any value for switching two SDXL models.',
-                                value=modules.config.default_refiner_switch,
-                                visible=modules.config.default_refiner_model_name != 'None')
+                    # not used, only to satisfy system dictionary coding
+                    refiner_switch = gr.Slider(label='Refiner Switch At',
+                        minimum=0.1, maximum=1.0, step=0.001,
+                        value=0.6, visible=False, interactive = False)
 
-                    refiner_model.change(lambda x: gr.update(visible=x != 'None'),
-                                inputs=refiner_model, outputs=refiner_switch, show_progress=False, queue=False)
+                    # the replacement refiner switch slider
+                    refiner_slider = gr.Slider(label='Refiner Switch At',
+                        minimum=0.1, maximum=1.0, step=0.001,
+                        info='Use 0.4 for SD1.5 realistic models; '
+                            'or 0.667 for SD1.5 anime models; '
+                            'or 0.8 for XL-refiners; '
+                            'or any value for switching two SDXL models.',
+                            value=modules.config.default_refiner_switch,
+                            visible=modules.config.default_refiner_model_name != 'None')
+
+                    def set_refiner_slider(arg_refiner_slider):
+                        common.refiner_slider = arg_refiner_slider
+                        return
+
+                    refiner_slider.change(set_refiner_slider,
+                        inputs=refiner_slider,
+                        show_progress=False, queue=False)
+
+                    def set_refiner_model(arg_refiner_model):
+                        if arg_refiner_model == 'None':
+                            is_visible = False
+                        else:
+                            is_visible = True
+                        return gr.update(visible = is_visible),\
+                        gr.update(value=modules.config.default_refiner_switch)
+
+                    refiner_model.change(set_refiner_model, inputs=refiner_model,
+                        outputs=[refiner_slider, refiner_slider],
+                        show_progress=False, queue=False)
 
                 with gr.Group():
                     lora_ctrls = []
@@ -977,19 +1001,23 @@ with common.GRADIO_ROOT:
                 with gr.Column(visible=modules.config.default_expert_mode_checkbox) as dev_tools:
                     with gr.Tab(label='Expert Tools'):
 
-                        secret_name = gr.Dropdown(label='', choices=flags.sampler_list, \
+                        secret_name = gr.Dropdown(label='', choices=flags.sampler_list,
                             value=modules.config.default_sampler, interactive=False, visible=False,
                             allow_custom_value=True)
-                        sampler_name = gr.Dropdown(label='Sampler', choices=flags.sampler_list, \
-                            value=modules.config.default_sampler, interactive=True, visible=True, \
+                        sampler_name = gr.Dropdown(label='Sampler',
+                            choices=flags.sampler_list,
+                            value=modules.config.default_sampler, interactive=True,
+                            visible=True, allow_custom_value=True)
+                        scheduler_name = gr.Dropdown(label='Scheduler',
+                            choices=flags.scheduler_list,
+                            value=modules.config.default_scheduler,
                             allow_custom_value=True)
-                        scheduler_name = gr.Dropdown(label='Scheduler', choices=flags.scheduler_list, \
-                            value=modules.config.default_scheduler, allow_custom_value=True)
                         vae_name = gr.Dropdown(label='VAE', choices=[modules.flags.default_vae] + modules.config.vae_filenames, \
                             value=modules.config.default_vae, show_label=True, allow_custom_value=True)
 
-                        clip_skip = gr.Slider(label='CLIP Skip', minimum=1, maximum=flags.clip_skip_max, step=1, \
-                            value=modules.config.default_clip_skip, \
+                        clip_skip = gr.Slider(label='CLIP Skip', minimum=1,
+                            maximum=flags.clip_skip_max, step=1,
+                            value=modules.config.default_clip_skip,
                             info='Bypass CLIP layers to avoid overfitting (use 1 to not skip any layers, 2 is recommended).')
 
                         adm_scaler_positive = gr.Slider(label='Positive ADM Guidance Scaler', minimum=0.1, maximum=3.0, \
@@ -999,28 +1027,30 @@ with common.GRADIO_ROOT:
                         adm_scaler_end = gr.Slider(label='ADM Guidance End At Step', minimum=0.0, maximum=1.0, \
                             step=0.001, value=0.3, info='When to end the guidance from positive/negative ADM. ')
 
-                        refiner_swap_method = gr.Dropdown(label='Refiner Swap Method', value=flags.refiner_swap_method, \
-                            choices=['joint', 'separate', 'vae'], allow_custom_value=True)
-
                         adaptive_cfg = gr.Slider(label='CFG Mimicking from TSNR', minimum=1.0, maximum=30.0, step=0.01, \
                             value=modules.config.default_cfg_tsnr, \
                             info='Enabling Fooocus\'s implementation of CFG mimicking for TSNR ' \
                                 '(effective when real CFG > mimicked CFG).')
 
-                        generate_image_grid = gr.Checkbox(label='Generate Image Grid for Each Batch',
-                                info='(Experimental) This may cause performance problems on some computers and certain internet conditions.',
-                                value=False)
+                        refiner_swap_method = gr.Dropdown(label='Refiner Swap Method',
+                            value=flags.refiner_swap_method,
+                            choices=['joint', 'separate', 'vae'],
+                            allow_custom_value=True)
                         overwrite_switch = gr.Slider(label='Forced Overwrite of Refiner Switch Step',
                                 minimum=-1, maximum=200, step=1,
                                 value=modules.config.default_overwrite_switch,
                                 info='Set to -1 to disable.')
+
+                        generate_image_grid = gr.Checkbox(label='Generate Image Grid for Each Batch',
+                                info='(Experimental) This may cause performance problems on some computers and certain internet conditions.',
+                                value=False)
 
                         disable_preview = gr.Checkbox(label='Disable Preview', value=modules.config.default_black_out_nsfw,
                                                 interactive=not modules.config.default_black_out_nsfw,
                                                 info='Disable preview during generation.')
                         disable_intermediate_results = gr.Checkbox(label='Disable Intermediate Results',
                                                 value=flags.Performance.has_restricted_features(modules.config.default_performance),
-                                                info='Disable intermediate results during generation, only show final gallery.')
+                                                info='Disable intermediate results during generation, only show the final gallery.')
 
                         black_out_nsfw = gr.Checkbox(label='Black Out NSFW', value=modules.config.default_black_out_nsfw,
                                             interactive=not modules.config.default_black_out_nsfw,
@@ -1118,7 +1148,7 @@ with common.GRADIO_ROOT:
                     US.create_model_structure(modules.config.paths_checkpoints, modules.config.paths_loras)
                     engine = state_params.get('engine', 'Fooocus')
                     task_method = state_params.get('task_method', None)
-                    model_filenames, lora_filenames, vae_filenames = modules.config.update_files(engine, task_method)
+                    model_filenames, sd_model_filenames, lora_filenames, vae_filenames = modules.config.update_files(engine, task_method)
                     results = [gr.update(choices=model_filenames)]
                     results += [gr.update(choices=['None'] + model_filenames)]
                     results += [gr.update(choices=[flags.default_vae] + vae_filenames)]
@@ -1154,10 +1184,10 @@ with common.GRADIO_ROOT:
                 with gr.Group():
                     comfyd_active_checkbox = gr.Checkbox(label='Enable Comfyd Always Active', value=not args_manager.args.disable_comfyd,\
                         info='Enabling will improve execution speed but occupy some memory.')
-                    image_tools_checkbox = gr.Checkbox(label='Enable Gallery Toolbox', value=True,\
-                        info='Located on the main canvas, use the Toolbox to View Info, Regenerate or Delete an image from the gallery')
+                    image_tools_checkbox = gr.Checkbox(label='Enable Catalog Toolbox', value=True,\
+                        info='Located on the main canvas, use the Toolbox to View Info, Regenerate or Delete an image from the catalog')
                     backfill_prompt = gr.Checkbox(label='Copy Prompts While Switching Images', value=modules.config.default_backfill_prompt,\
-                        interactive=True, info='Fill the positive and and negative prompts from the gallery images.')
+                        interactive=True, info='Fill the positive and and negative prompts from the catalog images.')
                     if (args_manager.args.language=='cn'):
                         translation_methods = gr.Radio(visible=True, label='Translation Methods',\
                             choices=modules.flags.translation_methods, value=modules.config.default_translation_methods,\

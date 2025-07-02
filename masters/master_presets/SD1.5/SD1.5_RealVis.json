@@ -5,7 +5,7 @@
 	"disinteractive": ["input_image_checkbox", "enhance_checkbox", "performance_selection", "loras", "refiner_model"],
 	"backend_params": {"task_method": "SD_SIMPLE"}
 		  },
-"default_model": "SD1.5\\realisticVisionV60B1_v51VAE.safetensors",
+"default_model": "SD1.5/realisticVisionV60B1_v51VAE.safetensors",
 "default_refiner": "None",
 "default_refiner_switch": 0.6,
     "default_loras": [
@@ -46,7 +46,7 @@
 	"Fooocus Enhance"
 ],
 "default_aspect_ratio": "0*0",
-"checkpoint_downloads": {"SD1.5\\realisticVisionV60B1_v51VAE.safetensors": "https://civitai.com/api/download/models/245598?type=Model&format=SafeTensor&size=pruned&fp=fp16"},
+"checkpoint_downloads": {"SD1.5/realisticVisionV60B1_v51VAE.safetensors": "https://civitai.com/api/download/models/245598?type=Model&format=SafeTensor&size=pruned&fp=fp16"},
 "embeddings_downloads": {},
 "lora_downloads": {}
 }

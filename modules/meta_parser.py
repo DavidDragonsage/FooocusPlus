@@ -105,7 +105,7 @@ def load_parameter_button_click(raw_metadata: dict | str, is_generating: bool, i
 
     results = [True] if len(loaded_parameter_dict) > 0 else [gr.update()]
 
-    get_image_number('image_number', 'Image Number', loaded_parameter_dict, results)
+    get_image_number('image_quantity', 'Image Quantity', loaded_parameter_dict, results)
     get_str('prompt', 'Prompt', loaded_parameter_dict, results)
     get_str('negative_prompt', 'Negative Prompt', loaded_parameter_dict, results)
     get_list('styles', 'Styles', loaded_parameter_dict, results)
@@ -190,8 +190,8 @@ def get_image_number(key: str, fallback: str | None, source_dict: dict, results:
         h = source_dict.get(key, source_dict.get(fallback, default))
         assert h is not None
         h = int(h)
-        h = min(h, modules.config.default_max_image_number)
-        m = int(source_dict.get('max_image_number', ads.default["max_image_number"]))
+        h = min(h, modules.config.default_max_image_quantity)
+        m = int(source_dict.get('max_image_quantity', ads.default["max_image_quantity"]))
         results.append(gr.update(value=h, maximum=m))
     except:
         results.append(1)
@@ -409,9 +409,10 @@ def parse_meta_from_preset(preset_content):
             preset_prepared[meta_key] = (width, height)
         elif settings_key == "default_refiner_switch":
             try:
-                PR.refiner_switch = items[settings_key]
+                common.refiner_slider = items[settings_key]
             except:
-                PR.refiner_switch = modules.config.default_refiner_switch
+                if type(common.refiner_slider) != 'float':
+                    common.refiner_slider = modules.config.default_refiner_switch
         elif settings_key == "default_sampler":
             try:
                 PR.default_sampler = items[settings_key]
@@ -436,7 +437,7 @@ class MetadataParser(ABC):
         self.full_prompt: str = ''
         self.raw_negative_prompt: str = ''
         self.full_negative_prompt: str = ''
-        self.steps: int = Steps.SPEED.value
+        self.steps: int = Steps.Speed.value
         self.base_model_name: str = ''
         self.base_model_hash: str = ''
         self.refiner_model_name: str = ''

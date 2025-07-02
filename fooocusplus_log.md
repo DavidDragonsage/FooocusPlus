@@ -1,3 +1,20 @@
+# 1.0.5
+
+* FooocusPlus may now be installed to a subfolder, regardless of the parent folder's name
+* restructured config.txt for more consistency, reliability and operating system compatibility
+* several config.txt options now fit their UI equivalents, e.g. "Image Quantity" not "Image Number"
+* config.txt now uses pathlib Path to itemize model folders
+* the user must delete config.txt and config_modification_tutorial.txt to activate the changes
+* the UI now has a "Custom" Performance option which defaults to 15 steps
+* "Custom" is adjustable in config.txt with custom_performance_steps, from 1 to 200 steps
+* the Refiner dropdown no longer lists Flux models
+* the "Refiner Switch At" settings are no longer ignored
+* restored IC-Light operation
+* fixed an obscure bug with preset switching when recreating a specific image
+* restored Save Preset operation and made the Save Preset functions Linux compatible
+* added the female_hair, male_hair and hair (unisex) wildcards
+* updated pytorch-lightning and lightning-fabric from version 2.5.1 to 2.5.2
+
 # 1.0.4
 
 * resolves the bug with incorrect secondary paths to the models folders

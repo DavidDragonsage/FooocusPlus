@@ -140,11 +140,10 @@ else:
             pass
         try:
             XFORMERS_VERSION = xformers.version.__version__
-            print("Xformers version:", XFORMERS_VERSION)
             if XFORMERS_VERSION.startswith("0.0.18"):
                 print()
                 print("WARNING: This version of Xformers has a major bug where you will get black images when generating high resolution images.")
-                print("Please downgrade or upgrade Xformers to a different version.")
+                print("Please upgrade Xformers to a newer version.")
                 print()
                 XFORMERS_ENABLED_VAE = False
         except:
@@ -261,7 +260,6 @@ elif args.always_offload_from_vram or (get_vram() < 12000):
 if not args.always_offload_from_vram:
     print("FooocusPlus is operating in Smart Memory mode:")
     print("VRAM will be unloaded only when necessary")
-print()
 
 def get_torch_device_name(device):
     if hasattr(device, 'type'):
@@ -286,6 +284,7 @@ except:
     print("Could not determine the default device.")
 
 print("VAE dtype:", VAE_DTYPE)
+print()
 
 current_loaded_models = []
 
