@@ -5,6 +5,8 @@ import numbers
 import random
 import re
 import gradio as gr
+from pathlib import Path
+
 import args_manager
 import common
 import enhanced.all_parameters as ads
@@ -359,13 +361,14 @@ def download_models(default_model, previous_default_models, checkpoint_downloads
 
 
 from transformers import CLIPTokenizer
-import shutil
 
-cur_clip_path = os.path.join(config.path_clip_vision, "clip-vit-large-patch14")
-if not os.path.exists(cur_clip_path):
-    org_clip_path = os.path.join(common.ROOT, 'models/clip_vision/clip-vit-large-patch14')
-    shutil.copytree(org_clip_path, cur_clip_path)
-tokenizer = CLIPTokenizer.from_pretrained(cur_clip_path)
+config_clip_path = Path(config.path_clip_vision)
+cur_clip_path = Path(config_clip_path/'clip-vit-large-patch14').resolve()
+if cur_clip_path.exists():
+    tokenizer = CLIPTokenizer.from_pretrained(cur_clip_path)
+else:
+    print(f'Cannot load the tokenizer from {cur_clip_path}')
+    print()
 
 def remove_tokenizer():
     global tokenizer
