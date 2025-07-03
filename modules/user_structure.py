@@ -59,7 +59,7 @@ def find_file_path(search_dir, filename):
 
 def load_json(arg_json):  # the file is automatically closed
     load_path = Path(arg_json)
-    if load_path.exists():
+    if load_path.is_file():
         try:
             json_string = load_path.read_text(encoding="utf-8")
             json.contents = json.loads(json_string)
@@ -72,7 +72,7 @@ def load_json(arg_json):  # the file is automatically closed
 
 def load_textfile(arg_textfile):  # the file is automatically closed
     load_path = Path(arg_textfile)
-    if load_path.exists():
+    if load_path.is_file():
         try:
             text_contents = load_path.read_text(encoding="utf-8")
         except Exception as error:
