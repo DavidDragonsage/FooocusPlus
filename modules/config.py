@@ -17,9 +17,9 @@ from modules.flags import OutputFormat, Performance, MetadataScheme
 from modules.model_loader import load_file_from_url
 
 
-current_dir = Path.cwd()
-home_dir = current_dir.parent.parent
-user_dir = Path(args_manager.args.user_dir)
+current_dir = Path.cwd().resolve()
+home_dir = current_dir.parent.parent.resolve()
+user_dir = Path(args_manager.args.user_dir).resolve()
 config_dict = {}
 always_save_keys = []
 visited_keys = []
@@ -80,10 +80,10 @@ US.create_user_structure(user_dir)
 
 def get_path_output() -> str:
     global config_dict, user_dir
-    path_output = Path(user_dir/'Outputs')
+    path_output = Path(user_dir/'Outputs').resolve()
     path_output = get_dir_or_set_default('path_outputs', path_output, make_directory=True)
     if args_manager.args.output_path:
-        config_dict['path_outputs'] = path_output = Path(args_manager.args.output_path)
+        config_dict['path_outputs'] = path_output = Path(args_manager.args.output_path).resolve()
     print(f'Generated images will be stored in {path_output}')
     return path_output
 
@@ -122,34 +122,34 @@ except Exception as e:
     print('4. All key and value formats are correct.')
 
 if args_manager.args.models_root:
-    get_dir_or_set_default('path_models_root', Path(args_manager.args.models_root))
-    path_models_root = Path(args_manager.args.models_root)
+    get_dir_or_set_default('path_models_root', Path(args_manager.args.models_root).resolve())
+    path_models_root = Path(args_manager.args.models_root).resolve()
 else:
-    path_models_root = get_dir_or_set_default('path_models_root', Path(user_dir/'models'))
+    path_models_root = get_dir_or_set_default('path_models_root', Path(user_dir/'models').resolve())
 path_models_root = Path(path_models_root).resolve()
 print(f'Generative models are stored in {path_models_root}')
 print('Models may also be stored in other locations, as defined in config.txt')
 
-paths_checkpoints = get_dir_or_set_default('path_checkpoints', [Path(path_models_root/'checkpoints'), Path(user_dir/'models/checkpoints')], True, False)
-paths_loras = get_dir_or_set_default('path_loras', [Path(path_models_root/'loras'), Path(user_dir/'models/loras')], True, False)
-path_embeddings = get_dir_or_set_default('path_embeddings', Path(path_models_root/'embeddings'))
-path_vae_approx = get_dir_or_set_default('path_vae_approx', Path(path_models_root/'vae_approx'))
-path_vae = get_dir_or_set_default('path_vae', Path(path_models_root/'vae'))
-path_upscale_models = get_dir_or_set_default('path_upscale_models', Path(path_models_root/'upscale_models'))
-paths_inpaint = get_dir_or_set_default('path_inpaint', [Path(path_models_root/'inpaint'), Path(user_dir/'models/inpaint')], True, False)
+paths_checkpoints = get_dir_or_set_default('path_checkpoints', [Path(path_models_root/'checkpoints').resolve(), Path(user_dir/'models/checkpoints').resolve()], True, False)
+paths_loras = get_dir_or_set_default('path_loras', [Path(path_models_root/'loras').resolve(), Path(user_dir/'models/loras').resolve()], True, False)
+path_embeddings = get_dir_or_set_default('path_embeddings', Path(path_models_root/'embeddings').resolve())
+path_vae_approx = get_dir_or_set_default('path_vae_approx', Path(path_models_root/'vae_approx').resolve())
+path_vae = get_dir_or_set_default('path_vae', Path(path_models_root/'vae').resolve())
+path_upscale_models = get_dir_or_set_default('path_upscale_models', Path(path_models_root/'upscale_models').resolve())
+paths_inpaint = get_dir_or_set_default('path_inpaint', [Path(path_models_root/'inpaint').resolve(), Path(user_dir/'models/inpaint').resolve()], True, False)
 path_sam = paths_inpaint[0]
-paths_controlnet = get_dir_or_set_default('path_controlnet', [Path(path_models_root/'controlnet'), Path(user_dir/'models/controlnet')], True, False)
-path_clip = get_dir_or_set_default('path_clip', Path(path_models_root/'clip'))
-path_clip_vision = get_dir_or_set_default('path_clip_vision', Path(path_models_root/'clip_vision'))
-path_fooocus_expansion = get_dir_or_set_default('path_fooocus_expansion', Path(path_models_root/'prompt_expansion/fooocus_expansion'))
-paths_llms = get_dir_or_set_default('path_llms', [Path(path_models_root/'llms')], True, False)
-path_safety_checker = get_dir_or_set_default('path_safety_checker', Path(path_models_root/'safety_checker'))
-path_unet = get_dir_or_set_default('path_unet', Path(path_models_root/'unet'))
-path_rembg = get_dir_or_set_default('path_rembg', Path(path_models_root/'rembg'))
-path_layer_model = get_dir_or_set_default('path_layer_model', Path(path_models_root/'layer_model'))
-paths_diffusers = get_dir_or_set_default('path_diffusers', [Path(path_models_root/'diffusers')], True, False)
+paths_controlnet = get_dir_or_set_default('path_controlnet', [Path(path_models_root/'controlnet').resolve(), Path(user_dir/'models/controlnet').resolve()], True, False)
+path_clip = get_dir_or_set_default('path_clip', Path(path_models_root/'clip').resolve())
+path_clip_vision = get_dir_or_set_default('path_clip_vision', Path(path_models_root/'clip_vision').resolve())
+path_fooocus_expansion = get_dir_or_set_default('path_fooocus_expansion', Path(path_models_root/'prompt_expansion/fooocus_expansion').resolve())
+paths_llms = get_dir_or_set_default('path_llms', [Path(path_models_root/'llms').resolve()], True, False)
+path_safety_checker = get_dir_or_set_default('path_safety_checker', Path(path_models_root/'safety_checker').resolve())
+path_unet = get_dir_or_set_default('path_unet', Path(path_models_root/'unet').resolve())
+path_rembg = get_dir_or_set_default('path_rembg', Path(path_models_root/'rembg').resolve())
+path_layer_model = get_dir_or_set_default('path_layer_model', Path(path_models_root/'layer_model').resolve())
+paths_diffusers = get_dir_or_set_default('path_diffusers', [Path(path_models_root/'diffusers').resolve()], True, False)
 path_outputs = get_path_output()
-path_wildcards = get_dir_or_set_default('path_wildcards', Path(user_dir/'wildcards'))
+path_wildcards = get_dir_or_set_default('path_wildcards', Path(user_dir/'wildcards').resolve())
 
 
 from enhanced.backend import init_modelsinfo
