@@ -160,6 +160,8 @@ def cleanup_structure(directml=False, python_embedded_path=''):
 
     # remove UserDir from repo, an error from 1.0.3
     remove_dirs('UserDir')
+    # remove a phantom FooocusPlus from repo, and error from 1.0.5
+    remove_dirs('FooocusPlus')
 
 
 def remove_obsolete_flux_folder(arg_parent_str):
