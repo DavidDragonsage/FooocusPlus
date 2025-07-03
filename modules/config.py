@@ -12,7 +12,7 @@ import modules.user_structure as US
 import tempfile
 
 from pathlib import Path
-from modules.extra_utils import makedirs_with_log, get_files_from_folder, try_eval_env_var
+from modules.extra_utils import get_files_from_folder, try_eval_env_var
 from modules.flags import OutputFormat, Performance, MetadataScheme
 from modules.model_loader import load_file_from_url
 
@@ -61,13 +61,11 @@ def get_dir_or_set_default(key, default_value, as_array=False, make_directory=Fa
         dp = []
         for path in default_value:
             abs_path = os.path.abspath(os.path.join(os.path.dirname(__file__), path))
-            abs_path = abs_path.replace(f'{home_dir}\\', '')
             dp.append(abs_path)
             os.makedirs(abs_path, exist_ok=True)
     else:
         if default_value != os.path.abspath(default_value):
             dp = os.path.abspath(os.path.join(os.path.dirname(__file__), default_value))
-            dp = dp.replace(f'{home_dir}\\', '')
         else:
             dp = default_value
         os.makedirs(dp, exist_ok=True)
