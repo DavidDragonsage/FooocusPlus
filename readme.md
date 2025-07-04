@@ -23,7 +23,7 @@ FooocusPlus gives you access to a diversity of AI image generation base models, 
 - Pony Diffusion XL
 - Flux from Black Forest Labs
 - Hunyuan-DiT
-- Kwai Kolors
+- Kwai Kolors (temporarily disabled)
 - Playground 2.5
 - Segmind-Vega
 - Stable Diffusion 1.5 (SD1.5)
@@ -52,7 +52,7 @@ Torchruntime is integrated into FooocusPlus. Please check their [compatibility t
 For Linux users, please use the [Installation Script for Linux](https://github.com/DavidDragonsage/FooocusPlus/wiki/Installation-Script-for-Linux) in the FooocusPlus Wiki.
 
 For Windows users, this [Installation Procedure](https://github.com/DavidDragonsage/FooocusPlus/wiki/Installation-Procedure-for-Windows) is also available in the Wiki, complete with images.
- 
+
 If you were using a pre-release or Beta version of FooocusPlus, please be sure to delete or at least rename it first, it is not compatible with the release version. Ideally FooocusPlus should be installed in the root of a high speed internal drive such an NVMe solid state drive (SSD). However it will work fine on standard SATA hard drive, just a bit more slowly. First, download the following archives:
 
 - The _latest_ version of [7-Zip](https://7-zip.org/) (the installation may fail if the version is not current)
@@ -71,7 +71,7 @@ If you were using a pre-release or Beta version of FooocusPlus, please be sure t
 5. Now double-click on the _run_FooocusPlus.bat_ file to load FooocusPlus for the first time. It will download some additional components automatically on the first run.
 
 Language and optional preset startup files are available in the FooocusPlus\UserDir\batch_startups folder. Please copy whatever you need to the FooocusPlus folder before using them.
-     
+
 ## Getting Help
 
 Have a question or concern? Visit the Discussions page here at GitHub or join our friendly community at the Facebook [Pure Fooocus](https://www.facebook.com/groups/fooocus) group. If you think you have found a bug or want to suggest a missing feature, visit the GitHub Issues page to file a report so that we can investigate.
