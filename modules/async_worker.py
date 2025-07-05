@@ -78,6 +78,8 @@ class AsyncTask:
         self.adm_scaler_end = args.pop()
         self.adaptive_cfg = args.pop()
         self.clip_skip = args.pop()
+        if type(self.clip_skip) != int:
+            self.clip_skip = modules.config.default_clip_skip
         self.sampler_name = args.pop()
         self.sampler_name = PR.default_sampler
         self.scheduler_name = args.pop()

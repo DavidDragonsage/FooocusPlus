@@ -153,7 +153,7 @@ def process_flow(flow_name, params, images, callback=None):
             print(f'[ComfyClient] ComfyTask prompt: {prompt_str}')
         images = get_images(ws, prompt_str, callback=callback)
     except websocket.WebSocketException as e:
-        print(f'[ComfyClient] The connect has been closed, restart and try again: {e}')
+        print(f'[ComfyClient] The connection has been closed, restart and try again: {e}')
         ws = None
 
     images_keys = sorted(images.keys(), reverse=True)
