@@ -1,3 +1,4 @@
 @echo off
-python_embedded\python.exe -s FooocusPlusAI\entry_with_update.py --language cn --hf-mirror %*
+:: Please copy this file to the FooocusPlus directory to run it
+python_embedded\python.exe -s FooocusPlusAI\entry_with_update.py --language cn %*
 pause
