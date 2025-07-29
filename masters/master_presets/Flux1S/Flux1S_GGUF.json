@@ -1,8 +1,8 @@
 { 
     "default_engine": {
 	"backend_engine": "Flux",
-	"disvisible": ["backend_selection", "performance_selection", "negative_prompt"],
-	"disinteractive": ["input_image_checkbox", "enhance_checkbox", "performance_selection", "negative_prompt", "loras-3", "refiner_model" ],
+	"disvisible": ["backend_selection", "performance_selection", "negative_prompt",  "refiner_model"],
+	"disinteractive": ["input_image_checkbox", "enhance_checkbox", "loras-3"],
             "backend_params": {
             "task_method": "flux_base2_gguf",
             "clip_model": "t5xxl_fp8_e4m3fn.safetensors"

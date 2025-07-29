@@ -11,18 +11,12 @@ from pathlib import Path
 from hydit.constants import SAMPLER_FACTORY
 from hydit.config import get_args
 from hydit.inference import End2End
-from modules.config import path_models_root, paths_diffusers, add_ratio
+from modules.config import path_models_root, paths_diffusers
 from modules.model_loader import load_file_from_url
 from modules.launch_util import is_installed
 from diffusers import HunyuanDiTPipeline, DDPMScheduler, DDIMScheduler, DPMSolverMultistepScheduler
 from transformers import T5EncoderModel
 
-default_aspect_ratio = add_ratio('1024*1024')
-available_aspect_ratios = [
-        '768*1280', '960*1280', '1024*1024', 
-        '1280*768', '1280*960', '1280*1280',
-    ]
-available_aspect_ratios = [add_ratio(x) for x in available_aspect_ratios]
 
 SAMPLERS = list(SAMPLER_FACTORY.keys())
 default_sampler = SAMPLERS[0]
@@ -42,7 +36,7 @@ def init_load_model():
     if not hydit_models_root.exists() or not check_files_exist(hydit_models_root, files):
         hydit_models_root.mkdir(parents=True, exist_ok=True)
         downloading_hydit_model(path_hydit)
-    
+
     if 'hydit_text_encoder' not in globals():
         globals()['hydit_text_encoder'] = None
     if hydit_text_encoder is None:
@@ -67,7 +61,7 @@ def init_load_model():
         globals()['hydit_pipe'] = None
     if hydit_pipe is None:
         hydit_pipe = HunyuanDiTPipeline.from_pretrained(
-            hydit_models_root, 
+            hydit_models_root,
             text_encoder_2=hydit_text_encoder,
             transformer=None,
             vae=None,
@@ -86,7 +80,7 @@ def unload_free_model():
     model_management.unload_all_models()
     gc.collect()
     torch.cuda.empty_cache()
-    print("[HyDiT] Freed the GPU RAM occupyed by the HyDit.")
+    print("[HyDiT] Freed the GPU RAM occupied by the HyDit.")
 
 def get_scheduler_name(sampler):
     params = SAMPLER_FACTORY[sampler.lower()]
@@ -114,9 +108,9 @@ def inferencer(
     enhanced_prompt = None
     sampler = sampler.lower()
     params = SAMPLER_FACTORY[sampler]
-    print(f'[HyDiT] Ready to HyDiT Task:\n    prompt={prompt}\n    negative_prompt={negative_prompt}\n    seed={seed}\n    cfg_scale={cfg_scale}\n    steps={infer_steps}\n    width,height={width},{height}\n    scheduler={params["scheduler"]}\n    sampler={params["name"]}')
+    print(f'[HyDiT] Ready to start HyDiT Task:\n    prompt={prompt}\n    negative_prompt={negative_prompt}\n    seed={seed}\n    cfg_scale={cfg_scale}\n    steps={infer_steps}\n    width,height={width},{height}\n    scheduler={params["scheduler"]}\n    sampler={params["name"]}')
 
-    
+
     with torch.no_grad():
         prompt_embeds, negative_prompt_embeds, prompt_attention_mask, negative_prompt_attention_mask = hydit_pipe.encode_prompt(prompt)
         (
@@ -172,7 +166,7 @@ def inferencer(
         negative_prompt_attention_mask=negative_prompt_attention_mask,
         negative_prompt_attention_mask_2=negative_prompt_attention_mask_2,
     ).images[0]
-    
+
     del pipe
     unload_free_model()
 

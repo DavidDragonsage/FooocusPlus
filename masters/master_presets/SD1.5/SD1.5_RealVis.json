@@ -2,7 +2,7 @@
 "default_engine": {
 	"backend_engine":"Comfy",
 	"disvisible": ["backend_selection", "performance_selection"],
-	"disinteractive": ["input_image_checkbox", "enhance_checkbox", "performance_selection", "loras", "refiner_model"],
+	"disinteractive": ["input_image_checkbox", "enhance_checkbox", "loras", "refiner_model"],
 	"backend_params": {"task_method": "SD_SIMPLE"}
 		  },
 "default_model": "SD1.5/realisticVisionV60B1_v51VAE.safetensors",

@@ -34,9 +34,10 @@ from modules.launch_util import is_installed, verify_installed_version,\
     run, python, run_pip, run_pip_url, requirements_met,\
     git_clone, index_url, target_path_install, met_diff
 
-from launch_support import build_launcher, delete_torch_dependencies,\
+from launch_support import delete_torch_dependencies,\
     dependency_resolver, is_win32_standalone_build,\
-    python_embedded_path, read_torch_base, write_torch_base
+    python_embedded_path, read_torch_base, write_torch_base,\
+    win32_root
 
 print()
 print('Checking for required library files...')
@@ -83,6 +84,8 @@ def prepare_environment():
         if torch_info == '':
             torch_info = "not installed"
             xformers_info = torch_info
+        elif xformers_info == '':
+            xformers_info = "not installed"
         print(f"Torch {torch_info}{cuda_info}, Xformers {xformers_info}")
     else:
         print(f"Torch {torch_base_ver}")
@@ -91,8 +94,12 @@ def prepare_environment():
 
     if REINSTALL_ALL or torch_ver != torch_base_ver or \
         torch_info == "not installed":
-        print(f'Using Torchruntime to configure Torch')
-        print(f'Updating to Torch {torch_ver} and its dependencies:')
+        if args.gpu_type == 'auto':
+            print(f'Using Torchruntime to configure Torch')
+            print(f'Updating to Torch {torch_ver} and its dependencies:')
+        else:
+            print(f'Using the "--gpu-type {args.gpu_type}" argument to configure Torch')
+            print(f'Installing Torch {torch_ver} and its dependencies:')
         print(torch_dict)
         print()
         delete_torch_dependencies()
@@ -114,7 +121,11 @@ def prepare_environment():
 
     if REINSTALL_ALL or not is_installed("xformers"):
         if platform.python_version().startswith("3.10"):
-            verify_installed_version('xformers', xformers_ver, False)
+            if args.gpu_type == 'auto' or args.gpu_type == 'cu128':
+                verify_installed_version('xformers', xformers_ver, False)
+            else:
+                xformers_statement = "xformers==" + xformers_ver
+                torchruntime.install(["--no-deps", xformers_statement])
         else:
             print("Installation of xformers is not supported in this version of Python.")
             print("You can also check this and build manually:" +\
@@ -136,11 +147,11 @@ def ini_args():
     return args
 
 args = ini_args()
-cleanup_structure(args.directml, python_embedded_path)
+cleanup_structure(args.directml, python_embedded_path, win32_root)
 
 prepare_environment()
 print('Analyzing the graphics system...')
-build_launcher()
+# build_launcher()
 args = ini_args()
 
 if args.gpu_device_id is not None:
@@ -152,6 +163,7 @@ if args.hf_mirror is not None:
     print("Set hf_mirror to:", args.hf_mirror)
 
 
+import common
 import modules.preset_resource as PR
 from modules import config
 from modules.hash_cache import init_cache
@@ -241,11 +253,12 @@ def download_models(default_model, previous_default_models, checkpoint_downloads
 
     return default_model, checkpoint_downloads
 
-if (config.default_low_vram_presets or launch_vram<6) and \
-    (PR.current_preset == 'initial' or PR.current_preset == 'Default'):
-    low_vram_preset = PR.get_lowVRAM_preset_content()
+if (common.is_low_vram_preset == True or launch_vram<6) and \
+    (args.preset == 'initial' or args.preset == 'Default'):
+    low_vram_preset_content = PR.get_lowVRAM_preset_content()
+    common.preset_content = low_vram_preset_content
     if low_vram_preset != '':
-        preset_prepared = parse_meta_from_preset(low_vram_preset)
+        preset_prepared = parse_meta_from_preset(low_vram_preset_content)
         if config.default_comfyd_active_checkbox:
             comfyd.stop()
         default_model = preset_prepared.get('base_model')

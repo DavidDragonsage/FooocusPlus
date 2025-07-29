@@ -55,10 +55,12 @@ For Windows users, this [Installation Procedure](https://github.com/DavidDragons
 
 If you were using a pre-release or Beta version of FooocusPlus, please be sure to delete or at least rename it first, it is not compatible with the release version. Ideally FooocusPlus should be installed in the root of a high speed internal drive such an NVMe solid state drive (SSD). However it will work fine on standard SATA hard drive, just a bit more slowly. First, download the following archives:
 
-- The _latest_ version of [7-Zip](https://7-zip.org/) (the installation may fail if the version is not current)
-- The [FooocusPlus](https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/FooocusPlus.7z) program archive
-- If you are using Windows, the [Python library](https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/python_embedded.7z) files
-- The FooocusPlus [Support Pack](https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/SupportPack.7z) (the Support Pack is optional but will save you a lot of time later)
+- The _latest_ version of [7-Zip](https://7-zip.org/). The installation may fail if the version is not current.
+- The [FooocusPlus](https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/FooocusPlus.7z) program archive.
+- If you are using Windows, the [Python library](https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/python_embedded.7z) files.
+- The FooocusPlus [Support Pack](https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/SupportPack.7z) The Support Pack is optional but will save you a lot of time later
+- The FooocusPlus [Tiny Pack](https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/TinyPack.7z). The Tiny Pack is designed for those with graphics cards that have less than 6GB of video RAM (VRAM). The Tiny Pack is completely optional. If not installed now, its files will be downloaded later if needed by a preset.
+- The FooocusPlus [Schnell Pack](https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/SchnellPack.7z). Another completely optional pack, it contains four basic Flux1 Schnell models. Schnell models provide high speed - 4 sampling steps per image generation - with reasonably good quality.
 <br/><br/>
 1. After your downloads are complete, first install 7-Zip.
 
@@ -66,9 +68,11 @@ If you were using a pre-release or Beta version of FooocusPlus, please be sure t
 
 3. Next, extract the _python_embedded_ library archive into the FooocusPlus folder.
 
-4. Lastly, extract the _Support Pack_ to the FooocusPlus folder. These files will be added to the UserDir\models subfolder.
+4. Next, extract the _Support Pack_ to the FooocusPlus folder. These files will be added to the UserDir\models subfolder.
 
-5. Now double-click on the _run_FooocusPlus.bat_ file to load FooocusPlus for the first time. It will download some additional components automatically on the first run.
+5. If you decided to download the _Tiny Pack_ or _Schnell Pack_, extract them to the FooocusPlus folder. Their contents will be added to the UserDir\models subfolder.
+
+6. Now double-click on the _run_FooocusPlus.bat_ file to load FooocusPlus for the first time. It will download some additional components automatically on the first run.
 
 Language and optional preset startup files are available in the FooocusPlus\UserDir\batch_startups folder. Please copy whatever you need to the FooocusPlus folder before using them.
 

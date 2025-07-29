@@ -851,5 +851,7 @@ def print_memory_info():
         free_cuda = f'{free_cuda/1024/1024/1024:.3f}GB'
         cuda_total = f'{cuda_total/1024/1024/1024:.3f}GB'
 
-        print(f'[Fooocus] GPU memory: max_reserved={max_reserved}, max_allocated={max_allocated}, reserved={reserved}, free={free_cuda}, free_torch={free_torch}, free_total={free_total}, gpu_total={gpu_total}, torch_total={torch_total}')
+        print(f'[Model Management] GPU memory: max_reserved={max_reserved}, max_allocated={max_allocated}')
+        print(f' GPU reserved={reserved}, free={free_cuda}, free_torch={free_torch}, free_total={free_total}')
+        print(f' GPU Total={gpu_total}, Torch Total={torch_total}')
         torch.cuda.reset_peak_memory_stats()

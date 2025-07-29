@@ -116,7 +116,7 @@ def set_image_shape_ceil(im, shape_ceil):
 
     H_origin, W_origin, _ = im.shape
     H, W = H_origin, W_origin
-    
+
     for _ in range(256):
         current_shape_ceil = get_shape_ceil(H, W)
         if abs(current_shape_ceil - shape_ceil) < 0.1:
@@ -194,7 +194,7 @@ def get_files_from_folder(folder_path, extensions=None, name_filter=None, variat
                 if variation:
                     mtime = int(os.path.getmtime(os.path.join(root, filename)))
                     if folder_path not in folder_variation or path not in folder_variation[folder_path] or mtime > folder_variation[folder_path][path]:
-                        if folder_path not in folder_variation:    
+                        if folder_path not in folder_variation:
                             folder_variation.update({folder_path: {path: mtime}})
                         else:
                             folder_variation[folder_path].update({path: mtime})
@@ -502,7 +502,7 @@ def apply_wildcards(wildcard_text, rng, i, read_wildcards_in_order) -> str:
         if len(placeholders) == 0:
             return wildcard_text
 
-        print(f'[Wildcards] processing: {wildcard_text}')
+        print(f'[Utility] Wildcard processing: {wildcard_text}')
         for placeholder in placeholders:
             try:
                 matches = [x for x in modules.config.wildcard_filenames if os.path.splitext(os.path.basename(x))[0] == placeholder]
@@ -514,12 +514,12 @@ def apply_wildcards(wildcard_text, rng, i, read_wildcards_in_order) -> str:
                 else:
                     wildcard_text = wildcard_text.replace(f'__{placeholder}__', rng.choice(words), 1)
             except:
-                print(f'[Wildcards] Warning: {placeholder}.txt missing or empty. '
+                print(f'[Utility] Wildcard Warning: {placeholder}.txt missing or empty. '
                       f'Using "{placeholder}" as a normal word.')
                 wildcard_text = wildcard_text.replace(f'__{placeholder}__', placeholder)
-            print(f'[Wildcards] {wildcard_text}')
+            print(f'[Utility] Wildcard text: {wildcard_text}')
 
-    print(f'[Wildcards] BFS stack overflow. Current text: {wildcard_text}')
+    print(f'[Utility] Wildcard BFS stack overflow. Current text: {wildcard_text}')
     return wildcard_text
 
 

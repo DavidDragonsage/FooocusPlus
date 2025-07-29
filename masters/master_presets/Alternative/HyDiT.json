@@ -1,8 +1,8 @@
 { 
     "default_engine": {
 	"backend_engine": "HyDiT+",
-	"disvisible": ["backend_selection", "performance_selection"],
-	"disinteractive": ["input_image_checkbox", "enhance_checkbox", "performance_selection", "base_model", "loras", "refiner_model", "scheduler_name"],
+	"disvisible": ["backend_selection", "performance_selection", "refiner_model"],
+	"disinteractive": ["input_image_checkbox", "enhance_checkbox", "base_model", "loras", "scheduler_name"],
 	"backend_params": {
 		"task_method": "hydit_base"
 		}

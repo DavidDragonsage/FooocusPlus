@@ -61,6 +61,9 @@ progress::after {
 .invisible{
   display: none !important;
 }
+.text-arial label{
+  font-family: Arial !important;
+}
 
 .loader-container > span {
   margin-left: 5px; /* Add spacing between the progress bar and the text */
@@ -90,14 +93,16 @@ div:has(> #positive_prompt) {
 }
 .type_row_half{
   height: 49% !important;
+  max-height: 48px !important;
   font-size: 14px !important;
   min-width: 75px !important;
   overflow: hidden;
 }
 .type_row_third{
   height: 32% !important;
+  max-height: 32px !important;
   font-size: 14px !important;
-  min-width: 75px !important;  
+  min-width: 75px !important;
   overflow: hidden;
 }
 
@@ -144,15 +149,6 @@ div:has(> #positive_prompt) {
     margin-left: -5px !important;
 }
 
-.lora_enable label {
-  height: 100%;
-}
-.lora_enable label input {
-  margin: auto;
-}
-.lora_enable label span {
-  display: none;
-}
 
 @-moz-document url-prefix() {
   .lora_weight input[type=number] {
@@ -388,8 +384,8 @@ div:has(> #positive_prompt) {
 }
 
 .contain .tabs .tabitem.style_selections_tab .style_selections .wrap[data-testid="checkbox-group"] {
-  position: absolute; /* 删除此以禁用复选框组中的滚动 */ 
-  overflow: auto; 
+  position: absolute; /* 删除此以禁用复选框组中的滚动 */
+  overflow: auto;
   padding-right: 2px;
   max-height: 100%;
   scrollbar-width: thin;      /* Firefox */
@@ -548,7 +544,7 @@ div.prose.tokenCounter {
   overflow-y: auto;   /* 启用垂直滚动条 */
   position: sticky;   /* 设为sticky */
   top: 0;             /* 设置sticky的顶部位置 */
-  
+
   scrollbar-width: thin !important;      /* Firefox */
   -ms-overflow-style: -ms-autohiding-scrollbar !important;   /* IE 和 Edge */
 }

@@ -13,26 +13,6 @@ python_embedded_path = Path(win32_root/'python_embedded')
 is_win32_standalone_build = python_embedded_path.is_dir()
 
 torch_base_ver = ''
-win32_cmd = '''
-@echo off
-.\python_embedded\python.exe -s FooocusPlus\{cmds} %*
-pause
-'''
-
-def build_launcher():
-    if not is_win32_standalone_build:
-        return
-
-    branches = {"FooocusPlus": "entry_with_update.py", "FooocusPlus_dev": "entry_with_update.py --dev",\
-        "FooocusPlus_without_update": "launch.py", "FooocusPlus_commit": "launch_with_commit.py 56e5200"}
-
-    for (name, cmd) in branches.items():
-        win32_cmd_preset = win32_cmd.replace('{cmds}', f'{cmd}')
-        bat_path = os.path.join(win32_root, f'run_{name}.bat')
-        if not os.path.exists(bat_path) or name=='FooocusPlus_commit':
-            with open(bat_path, "w", encoding="utf-8") as f:
-                f.write(win32_cmd_preset)
-    return
 
 
 def dependency_resolver():
@@ -71,12 +51,29 @@ def dependency_resolver():
     # Note, torchruntime/torchruntime/platform_detection.py
     # suggests "directml" should be used for Intel
     #
-    if platform.machine == "amd64" or torchruntime_platform == "xpu":
-        args_manager.directml = True # switch on AMD/Intel support
+    if platform.machine == "amd64" or torchruntime_platform == "xpu" \
+        or args_manager.args.gpu_type == 'directml' \
+        or args_manager.args.gpu_type == 'amd64':
+        args_manager.args.directml = True # switch on AMD/Intel support
         torch_ver = "2.3.1"
 
+
+    # --gpu-type command line overrides: in this case Torchruntime is ignored
+    # but if "gpu_type == auto" (the default) then Torchruntime is active
+    if args_manager.args.gpu_type == "amd64":
+        torch_ver = "2.2.2"
+    elif args_manager.args.gpu_type == "cu124":
+        torch_ver = "2.4.1"
+    elif args_manager.args.gpu_type == "cu128":
+        torch_ver = "2.7.1"
+    elif args_manager.args.gpu_type == "rocm5.2":
+        torch_ver = "1.13.1"
+    elif args_manager.args.gpu_type == "rocm5.7":
+        torch_ver = "2.3.1"
+
+
     # Detection Logic: Windows (win32) defaults to "2.7.1", unless "cu124"
-    if (sys.platform == "win32"): # and (arch_version == 12): # Blackwell (NVIDIA 5xxx)
+    elif (sys.platform == "win32"): # and (arch_version == 12): # Blackwell (NVIDIA 5xxx)
         torch_ver = "2.7.1"
 #    elif (sys.platform == "win32") and (arch_version > 3.7 and arch_version < 7.5):
 #        torch_ver = "2.4.1"    # older NVIDIA cards such as the 10xx series, cu124
@@ -189,9 +186,8 @@ def get_split_value(full_string):
     split_value = scratch[1] if len(scratch) > 1 else ''
     return split_value
 
-
-# IMPORTANT! The config.txt user_dir parameter has been removed
-# if for some reason the args_manager user_dir setting is not valid
+# IMPORTANT! The config.txt user_dir setting has been removed
+# if for some reason the args_manager.args.user_dir setting is not valid
 # it is set to the default value in this function
 def get_torch_base_path(): # the config.txt user_dir
     global win32_root      # setting is deprecated
@@ -217,3 +213,5 @@ def read_torch_base():     # the file auto-closes
 def write_torch_base(torch_base_ver): # the file auto-closes
     US.save_textfile(f"Torch base version = {torch_base_ver}", get_torch_base_path())
     return
+
+

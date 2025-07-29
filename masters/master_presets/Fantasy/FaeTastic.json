@@ -42,7 +42,7 @@
     ],
     "default_aspect_ratio": "0*0",
     "checkpoint_downloads": {
-        "SDXLFaetastic_v24.safetensors": "https://civitai.com/api/download/models/1110155?type=Model&format=SafeTensor&size=pruned&fp=fp16"
+        "SDXLFaetastic_v24.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/SDXLFaetastic_v24.safetensors"
     },
     "embeddings_downloads": {},
     "lora_downloads": {

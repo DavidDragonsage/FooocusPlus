@@ -1,5 +1,53 @@
+# 1.0.6
+
+* removed the following components that are not suitable for production code:
+** launch_support.build_launcher() and launch_with_commit.py
+** run_FooocusPlus_commit.bat & run_FooocusPlus_dev.bat (auto-delete)
+* introduced the "--gpu-type" command line argument
+* run_FooocusPlus_cu124.bat demonstrates gpu_type = "cu124"
+* restored run_FooocusPlus_FR.bat for French language support
+* corrected the Flux1S preset to use the "flux_base" task_method
+* the base model list "flux_base2_gguf" method now includes "schnell" in the filter
+* created Hyperflux Schnell models, represented by the HyperFlux1S5 & HyperFlux1S8 presets
+* HyperFlux1S5 is in the Flux1S category and HyperFlux1S8 is in the HyperFlux category
+* added a "Tiny Pack" for 4GB VRAM users and a "Schnell Pack" to the Hugging Face archives
+* moved the Cheyenne preset to the General category and renamed it Cheyenne18
+* introduced the Custom preset into the Favorite category, set for Custom Performance
+* the Custom preset also specifies a 16*9 aspect ratio and an image quantity of 10
+* the Custom preset is supported by run_Custom.bat in the batch_startups directory
+* when switching aspect ratio templates, Default toggles to Custom instead of Cheyenne
+* when switching presets, the positive and negative prompts are preserved
+* if available, positive and negative prompts specified in presets are utilized
+* the Negative Prompt field is now just below the Preset selectors so that is always visible
+* the main prompt automatically extends to accomodate long prompts, like original Fooocus
+* the extended prompt field makes editing more practical and reduces errors
+* similarily, image quantity settings are preserved during preset switching
+* and image quantity values specified in a preset are used, if available
+* restored the function of the Sampler and Scheduler dropdowns
+* fixed an intermittent error with the Scheduler Name during image generation
+* overwriting the aspect ratio width and height values no longer produces a console error
+* introduced the Juggernaut8 and Juggernaut9 presets
+* renamed the existing Juggernaut preset to "JuggernautXI"
+* added the Rossetti Painting, Rossetti Drawing and Rossetti Sketch styles
+* restored the correct operation of LoRAs in Flux presets
+* restored the operation of preset aspect ratios
+* if an aspect ratio height value is missing, it will be rebuilt
+* increased the width of the Base Model and Refiner dropdowns
+* the Refiner dropdown is invisible in Comfy modes such as Flux (instead of non-interactive)
+* increased the width of the LoRA selector dropdowns and grouped each LoRA separately
+* "Output Format" is renamed "Image Format" and moved to the Advanced tab
+* the Metadata settings are moved from Expert Mode and grouped with Image Format
+* the old Fooocus Documentation link has been removed from the Advanced tab
+* new Forum (Pure Fooocus) and Wiki links are grouped with the Image Log link
+* adjusted the Guidance Scale (CFG) slider from a 0.001 to a 0.1 step increment
+* adjusted the Image Sharpness slider from a 0.001 to a 0.1 step increment
+* if a directory is not accessible, the program no longer tries to rename it ".corrupted"
+* in support of UK users, all presets referring to CivitAI links now refer to the FooocusPlus repo
+
+
 # 1.0.5
 
+* fixed a bug that prevented installation of FooocusPlus to a subfolder
 * FooocusPlus may now be installed to a subfolder, regardless of the parent folder's name
 * restructured config.txt for more consistency, reliability and operating system compatibility
 * several config.txt options now fit their UI equivalents, e.g. "Image Quantity" not "Image Number"
@@ -14,6 +62,13 @@
 * restored Save Preset operation and made the Save Preset functions Linux compatible
 * added the female_hair, male_hair and hair (unisex) wildcards
 * updated pytorch-lightning and lightning-fabric from version 2.5.1 to 2.5.2
+* removed a misleading and incorrect error message during first time installation
+* now using a "fooocusplus" temporary folder to avoid possible conflicts with mainline Fooocus
+* removed the Kolors presets because they are not working: Kolors support will return in the future
+* all batch startup files now contain a note about copying them to the FooocusPlus directory
+* removed the HF Mirror argument from the Chinese batch files, it was causing an error
+* fixed a bug with Clip Skip that affected some users
+* xformers installation now uses verify_installed_version() rather than Torchruntime
 
 # 1.0.4
 
@@ -27,6 +82,9 @@
 
 # 1.0.3
 
+* introduced full support for NVIDIA 50xx video cards
+* now using Torchruntime 1.18.1, Torch 2.7.1 and Xformers 0.0.30
+* full Torch information is now listed in the console, including the CUDA variant
 * the bug with Aspect Ratio selection has been resolved
 * the Random Preset Category selector now works reliably
 * a slight slot machine effect may occur during the randomization process
@@ -38,7 +96,6 @@
 * the library files have been cleaned up and several items have been updated
 * these library updates will automatically install during launch
 * these changes are also available in the python_embedded archive at Hugging Face
-* full Torch information is now listed in the console, including the CUDA variant
 * the image seed options are now accessed through the Image Seed Control accordion
 
 # 1.0.2

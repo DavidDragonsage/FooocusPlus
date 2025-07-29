@@ -7,6 +7,7 @@ import shutil
 import time
 import gradio as gr
 import args_manager
+import common
 import modules.config as config
 import modules.preset_resource as PR
 import modules.sdxl_styles as sdxl_styles
@@ -207,7 +208,7 @@ def toggle_note_box(item, state_params):
     if item == 'preset':
         return gr.update(value=toolbox_note_preset_title + title_extra, visible=True), \
             gr.update(visible=flag), gr.update(visible=flag), gr.update(visible=flag), \
-            state_params, gr.update(value=PR.current_preset)
+            state_params, gr.update(value=args_manager.args.preset)
     if item == 'embed':
         return gr.update(value=toolbox_note_embed_title + title_extra, visible=True), \
             gr.update(visible=flag), gr.update(visible=flag), state_params
@@ -380,7 +381,7 @@ def save_preset(*args):
     state_params = dict(args.pop())
 
     advanced_checkbox = args.pop()
-    image_number = int(args.pop())
+    image_quantity = int(args.pop())
     prompt = args.pop()
     negative_prompt = args.pop()
     style_selections = args.pop()
@@ -401,8 +402,11 @@ def save_preset(*args):
     base_model = args.pop()
     refiner_model = args.pop()
     refiner_switch = args.pop()
+    refiner_switch = common.refiner_slider
     sampler_name = args.pop()
+    sampler_name = common.sampler_name
     scheduler_name = args.pop()
+    scheduler_name = common.scheduler_name
     vae_name = args.pop()
     seed_random = args.pop()
     image_seed = args.pop()
@@ -463,7 +467,7 @@ def save_preset(*args):
         if user_path:
             print(f'[ToolBox] Saved the current parameters to {user_path.resolve()}')
             state_params.update({"__preset": save_name})
-            PR.current_preset = save_name
+            args_manager.args.preset = save_name
         else:
             print(f'Could not save the new {save_name} preset')
     state_params.update({"note_box_state": ['',0,0]})

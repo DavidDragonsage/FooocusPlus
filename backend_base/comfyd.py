@@ -19,7 +19,7 @@ def is_running():
     process_code = comfyd_process.poll()
     if process_code is None:
         return True
-    print("[Comfyd] comfyd process status code: {process_code}")
+    print("[Comfy Backend] comfyd process status code: {process_code}")
     return False
 
 def start(args_patch=[[]]):
@@ -30,7 +30,7 @@ def start(args_patch=[[]]):
         if len(args_patch) > 0 and len(args_patch[0]) > 0:
             comfyd_args += args_patch
         if not utils.echo_off:
-            print(f'[Comfyd] args_comfyd was patched: {args_comfyd}, patch:{comfyd_args}')
+            print(f'[Comfy Backend] args_comfyd was patched: {args_comfyd}, patch:{comfyd_args}')
         arguments = [arg for sublist in args_comfyd for arg in sublist]
         process_env = os.environ.copy()
         process_env["PYTHONPATH"] = os.pathsep.join(sys.path)
@@ -38,13 +38,13 @@ def start(args_patch=[[]]):
         gc.collect()
         torch.cuda.empty_cache()
         if not utils.echo_off:
-            print(f'[Comfyd] Ready to start with arguments: {arguments}, env: {process_env}')
+            print(f'[Comfy Backend] Ready to start with arguments: {arguments}, env: {process_env}')
         if 'comfyd_process' not in globals():
             globals()['comfyd_process'] = None
         comfyd_process  = subprocess.Popen([sys.executable, backend_script] + arguments, env=process_env)
         comfyclient_pipeline.ws = None
     else:
-        print("[Comfyd] Comfyd is active!")
+        print("[Comfy Backend] Comfyd is active!")
     return
 
 def active(flag=False):
@@ -65,12 +65,12 @@ def finished():
     if comfyd_active:
         #free()
         gc.collect()
-        print("[Comfyd] Task finished !")
+        print("[Comfy Backend] Task finished !")
         return
     comfyclient_pipeline.ws = None
     free()
     gc.collect()
-    print("[Comfyd] Comfyd stopped!")
+    print("[Comfy Backend] Comfyd stopped!")
 
 def stop():
     global comfyd_process
@@ -81,7 +81,7 @@ def stop():
     if comfyd_active:
         free(all=True)
         gc.collect()
-        print("[Comfyd] Releasing Comfyd!")
+        print("[Comfy Backend] Releasing Comfyd!")
         return
     if is_running():
         comfyd_process.terminate()
@@ -90,7 +90,7 @@ def stop():
     comfyclient_pipeline.ws = None
     free()
     gc.collect()
-    print("[Comfyd] Comfyd has stopped!")
+    print("[Comfy Backend] Comfyd has stopped!")
 
 def free(all=False):
     global comfyd_process
@@ -137,7 +137,7 @@ def args_mapping(args_fooocus):
     else:
         print("Smart memory enabled")
     if not utils.echo_off:
-        print(f'[Comfyd] args_fooocus: {args_fooocus}\nargs_comfy: {args_comfy}')
+        print(f'[Comfy Backend] args_fooocus: {args_fooocus}\nargs_comfy: {args_comfy}')
     return args_comfy
 
 def get_entry_point_id():

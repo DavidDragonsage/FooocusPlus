@@ -160,7 +160,7 @@ default_class_params = {
         'backend_params': {},
         },
     'Kolors': {
-        'disvisible': ["backend_selection", "performance_selection"],
+        'disvisible': ["backend_selection", "performance_selection", "refiner_model"],
         'disinteractive': ["input_image_checkbox", "enhance_checkbox", "performance_selection", "base_model", "overwrite_step", "refiner_model"],
         'available_aspect_ratios_selection': 'Standard',
         'available_sampler_name': comfy_sampler_list,
@@ -171,7 +171,7 @@ default_class_params = {
             },
         },
     'Kolors+': {
-        'disvisible': ["backend_selection", "performance_selection"],
+        'disvisible': ["backend_selection", "performance_selection", "refiner_model"],
         'disinteractive': ["input_image_checkbox", "enhance_checkbox", "performance_selection", "base_model", "overwrite_step", "refiner_model"],
         'available_aspect_ratios_selection': 'Standard',
         'available_sampler_name': comfy_sampler_list,
@@ -182,7 +182,7 @@ default_class_params = {
             },
         },
     'SD3x': {
-        'disvisible': ["backend_selection", "performance_selection"],
+        'disvisible': ["backend_selection", "performance_selection", "refiner_model"],
         'disinteractive': ["input_image_checkbox", "enhance_checkbox", "performance_selection", "loras", "refiner_model"],
         'available_aspect_ratios_selection': 'Standard',
         'available_sampler_name': comfy_sampler_list,
@@ -192,7 +192,7 @@ default_class_params = {
             },
         },
     'HyDiT': {
-        'disvisible': ["backend_selection", "performance_selection"],
+        'disvisible': ["backend_selection", "performance_selection", "refiner_model"],
         'disinteractive': ["input_image_checkbox", "enhance_checkbox", "performance_selection", "base_model", "loras", "refiner_model", "scheduler_name"],
         'available_aspect_ratios_selection': 'Standard',
         'available_sampler_name': ["ddpm", "ddim", "dpmms"],
@@ -201,8 +201,8 @@ default_class_params = {
             },
         },
     'HyDiT+': {
-        'disvisible': ["backend_selection", "performance_selection"],
-        'disinteractive': ["input_image_checkbox", "enhance_checkbox", "performance_selection", "base_model", "loras", "refiner_model", "scheduler_name"],
+        'disvisible': ["backend_selection", "performance_selection", "refiner_model"],
+        'disinteractive': ["input_image_checkbox", "enhance_checkbox", "performance_selection", "base_model", "loras" "scheduler_name"],
         'available_aspect_ratios_selection': 'Standard',
         'available_sampler_name': comfy_sampler_list,
         'available_scheduler_name': comfy_scheduler_list,
@@ -211,7 +211,7 @@ default_class_params = {
             },
         },
     'Flux': {
-        'disvisible': ["backend_selection", "performance_selection"],
+        'disvisible': ["backend_selection", "performance_selection", "refiner_model"],
         'disinteractive': ["input_image_checkbox", "enhance_checkbox", "performance_selection", "loras-4", "refiner_model"],
         'available_aspect_ratios_selection': 'Standard',
         'available_sampler_name': comfy_sampler_list,

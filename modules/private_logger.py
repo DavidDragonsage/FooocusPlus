@@ -77,7 +77,7 @@ def log(img, metadata, metadata_parser: MetadataParser | None = None, output_for
 
     js = (
         """<script>
-        function to_clipboard(txt) { 
+        function to_clipboard(txt) {
         txt = decodeURIComponent(txt);
         if (navigator.clipboard && navigator.permissions) {
             navigator.clipboard.writeText(txt)
@@ -101,7 +101,7 @@ def log(img, metadata, metadata_parser: MetadataParser | None = None, output_for
     )
 
     begin_part = f'<!DOCTYPE html><html><head><title>FooocusPlus Log {date_string}</title>{css_styles}</head>\
-    <body>{js}<p>FooocusPlus Log {date_string}</p>\n<p>To save text data in an image, adjust the "metadata" settings in config.txt or at the bottom of the Expert Mode Tools pane found under the Advanced tab.</p><!--fooocus-log-split-->\n\n'
+    <body>{js}<p>FooocusPlus Log {date_string}</p>\n<p>To save text data in an image, adjust the "metadata" settings in config.txt or under the Advanced tab.</p><!--fooocus-log-split-->\n\n'
     end_part = f'\n<!--fooocus-log-split--></body></html>'
 
     middle_part = log_cache.get(html_name, "")
@@ -148,9 +148,9 @@ def log(img, metadata, metadata_parser: MetadataParser | None = None, output_for
         print('The image log shows the newest images first')
     else:
         print('The image log shows the newest images last')
-        
+
     log_cache[html_name] = middle_part
-    
+
     log_ext(local_temp_filename)
 
     return local_temp_filename
@@ -159,12 +159,12 @@ def log(img, metadata, metadata_parser: MetadataParser | None = None, output_for
 def log_ext(file_name):
     dirname, filename = os.path.split(file_name)
     log_name = os.path.join(dirname, "log_ads.json")
-    
+
     log_ext = {}
     if os.path.exists(log_name):
         with open(log_name, "r", encoding="utf-8") as log_file:
             log_ext.update(json.load(log_file))
-    
+
     ads_ext = {} #ads.get_diff_for_log_ext()
     if len(ads_ext.keys())==0:
         return
@@ -175,4 +175,4 @@ def log_ext(file_name):
         json.dump(log_ext, log_file)
 
     print(f'Image generated with advanced params log at: {log_name}')
-    return 
+    return

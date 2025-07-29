@@ -8,12 +8,12 @@ import gradio as gr
 from PIL import Image
 
 import common
+import args_manager as args
 import enhanced.all_parameters as ads
 import enhanced.version
-import modules.config
+import modules.config as config
 import modules.aspect_ratios as AR
 import modules.sdxl_styles
-import modules.preset_resource as PR
 from modules.flags import MetadataScheme, Performance, Steps, task_class_mapping, get_taskclass_by_fullname
 from modules.flags import default_class_params, scheduler_list, sampler_list, SAMPLERS, CIVITAI_NO_KARRAS
 from modules.util import quote, unquote, extract_styles_from_prompt, is_json, sha256
@@ -62,7 +62,7 @@ def switch_layout_template(presetdata: dict | str, state_params, preset_url=''):
     params_backend  = enginedata_dict.get('backend_params', modules.flags.get_engine_default_backend_params(template_engine))
     params_backend.update({'backend_engine': template_engine})
     task_method = params_backend.get('task_method', None)
-    base_model_list = modules.config.get_base_model_list(template_engine, task_method)
+    base_model_list = config.get_base_model_list(template_engine, task_method)
 
     results = [params_backend]
     results.append(get_layout_visible_inter('performance_selection', visible, inter))
@@ -76,8 +76,8 @@ def switch_layout_template(presetdata: dict | str, state_params, preset_url=''):
     results.append(get_layout_visible_inter('guidance_scale', visible, inter))
     results.append(get_layout_empty_visible_inter('negative_prompt', visible, inter))
     results.append(gr.update(visible=True if 'blank.inc.html' not in preset_url else False))
-    results += get_layout_visible_inter_loras(visible, inter, modules.config.default_max_lora_number)
-    #for i in range(modules.config.default_max_lora_number):
+    results += get_layout_visible_inter_loras(visible, inter, config.default_max_lora_number)
+    #for i in range(config.default_max_lora_number):
     #    results += [get_layout_visible_inter('loras', visible, inter)] * 3
 
     #[output_format, inpaint_advanced_masking_checkbox, mixing_image_prompt_and_vary_upscale, mixing_image_prompt_and_inpaint, backfill_prompt, translation_methods, input_image_checkbox, state_topbar]
@@ -105,7 +105,7 @@ def load_parameter_button_click(raw_metadata: dict | str, is_generating: bool, i
 
     results = [True] if len(loaded_parameter_dict) > 0 else [gr.update()]
 
-    get_image_number('image_quantity', 'Image Quantity', loaded_parameter_dict, results)
+    get_image_quantity('image_quantity', 'Image Quantity', loaded_parameter_dict, results)
     get_str('prompt', 'Prompt', loaded_parameter_dict, results)
     get_str('negative_prompt', 'Negative Prompt', loaded_parameter_dict, results)
     get_list('styles', 'Styles', loaded_parameter_dict, results)
@@ -144,7 +144,7 @@ def load_parameter_button_click(raw_metadata: dict | str, is_generating: bool, i
         performance = Performance(performance)
         performance_filename = performance.lora_filename()
 
-    for i in range(modules.config.default_max_lora_number):
+    for i in range(config.default_max_lora_number):
         get_lora(f'lora_combined_{i + 1}', f'LoRA {i + 1}', loaded_parameter_dict, results, performance_filename)
 
     return results
@@ -185,12 +185,12 @@ def get_number(key: str, fallback: str | None, source_dict: dict, results: list,
         results.append(gr.update())
 
 
-def get_image_number(key: str, fallback: str | None, source_dict: dict, results: list, default=None):
+def get_image_quantity(key: str, fallback: str | None, source_dict: dict, results: list, default=None):
     try:
         h = source_dict.get(key, source_dict.get(fallback, default))
         assert h is not None
         h = int(h)
-        h = min(h, modules.config.default_max_image_quantity)
+        h = min(h, config.default_max_image_quantity)
         m = int(source_dict.get('max_image_quantity', ads.default["max_image_quantity"]))
         results.append(gr.update(value=h, maximum=m))
     except:
@@ -228,32 +228,32 @@ def get_resolution(key: str, fallback: str | None, source_dict: dict, results: l
             template = default_class_params[engine].get('available_aspect_ratios_selection',\
                 default_class_params['Fooocus']['available_aspect_ratios_selection'])
 
-        if 'SD1.5' in str(AR.preset_file) and template!='SD1.5':
+        if 'SD1.5' in str(common.preset_file_path) and template!='SD1.5':
             template = 'SD1.5'
-            print(f'Selected the SD1.5 template for the {AR.preset_file} file')
+            print(f'Selected the SD1.5 template for the {common.preset_file_path} file')
 
-        if template == 'Standard' and AR.AR_shortlist:
+        if template == 'Standard' and config.enable_shortlist_aspect_ratios:
             template = 'Shortlist'
-        elif template == 'Shortlist' and not AR.AR_shortlist:
+        elif template == 'Shortlist' and not config.enable_shortlist_aspect_ratios:
             template = 'Standard'
 
         if h != '':
             width, height = eval(h)
 
         if AR.AR_template != template:    # i.e. the template has changed
-            AR.current_AR = AR.validate_AR(AR.current_AR, template)
+            common.current_AR = AR.validate_AR(common.current_AR, template)
             h = ''
         AR.AR_template = template
 
         if (width == '0') or (height == '0') or (h == ''):
-            if AR.current_AR == '':
-                AR.current_AR = AR.assign_default_by_template(template)
-            h = AR.current_AR
+            if common.current_AR == '':
+                common.current_AR = AR.assign_default_by_template(template)
+            h = common.current_AR
             width, height = AR.AR_split(h)
-        AR.current_AR = h
+        common.current_AR = h
 
         formatted = AR.add_ratio(f'{width}*{height}')
-        if formatted in AR.config_aspect_ratio_labels[template]:
+        if formatted in common.full_AR_labels[template]:
             h = f'{formatted},{template}'
             results.append(h)
             results.append(-1)
@@ -302,12 +302,12 @@ def get_inpaint_method(key: str, fallback: str | None, source_dict: dict, result
         h = source_dict.get(key, source_dict.get(fallback, default))
         assert isinstance(h, str) and h in modules.flags.inpaint_options
         results.append(h)
-        for i in range(modules.config.default_enhance_tabs):
+        for i in range(config.default_enhance_tabs):
             results.append(h)
         return h
     except:
         results.append(gr.update())
-        for i in range(modules.config.default_enhance_tabs):
+        for i in range(config.default_enhance_tabs):
             results.append(gr.update())
 
 
@@ -384,44 +384,67 @@ def parse_meta_from_preset(preset_content):
     preset_prepared = {}
     items = preset_content
 
-    for settings_key, meta_key in modules.config.possible_preset_keys.items():
+    for settings_key, meta_key in config.possible_preset_keys.items():
+        # for presets that do not have a default prompt or negative prompt
+        # and almost all presets do not have an image quantity:
+        items.setdefault("default_prompt", common.positive)
+        items.setdefault("default_prompt_negative", common.negative)
+        items.setdefault("default_image_quantity", common.image_quantity)
+
         if settings_key == "default_loras":
-            loras = getattr(modules.config, settings_key)
+            loras = getattr(config, settings_key)
             if settings_key in items:
                 loras = items[settings_key]
-            for index, lora in enumerate(loras[:modules.config.default_max_lora_number]):
-#                if len(lora) == 2:
-#                    lora[0] = lora[0].replace('\\', os.sep).replace('/', os.sep)
-#                elif  len(lora) == 3:
-#                    lora[1] = lora[1].replace('\\', os.sep).replace('/', os.sep)
+            for index, lora in enumerate(loras[:config.default_max_lora_number]):
+                if len(lora) == 2:
+                    lora[0] = lora[0].replace('\\', os.sep).replace('/', os.sep)
+                elif  len(lora) == 3:
+                    lora[1] = lora[1].replace('\\', os.sep).replace('/', os.sep)
                 preset_prepared[f'lora_combined_{index + 1}'] = ' : '.join(map(str, lora))
-        elif settings_key == "default_aspect_ratio":
-#            if settings_key in items and (items[settings_key] is not None or items[settings_key] != '0*0'):
-#                default_aspect_ratio = items[settings_key]
-#                width, height = AR.AR_split(default_aspect_ratio)
-#            else:
-            if AR.current_AR:
-                default_aspect_ratio = AR.current_AR
+        elif settings_key == "default_prompt":
+            if items[settings_key] == "":
+                items[settings_key] = common.positive
             else:
-                default_aspect_ratio = AR.default_standard_AR
-                print(f'Metadata fallback to default aspect ratio: {default_aspect_ratio}')
-            width, height = AR.AR_split(default_aspect_ratio)
+                common.positive = items[settings_key]
+                print(f'[MetaParser] Positive prompt set by preset')
+        elif settings_key == "default_prompt_negative":
+            if items[settings_key] == "":
+                items[settings_key] = common.negative
+            else:
+                common.negative = items[settings_key]
+                print(f'[MetaParser] Negative prompt set by preset')
+        elif settings_key == "default_aspect_ratio":
+            if settings_key in items and (items[settings_key] is not None or items[settings_key] != '0*0'):
+                default_aspect_ratio = items[settings_key]
+                width, height = AR.AR_split(default_aspect_ratio)
+            else:
+                if common.current_AR:
+                    default_aspect_ratio = common.current_AR
+                else:
+                    default_aspect_ratio = AR.default_standard_AR
+                    print(f'Metadata fallback to default aspect ratio: {default_aspect_ratio}')
+                width, height = AR.AR_split(default_aspect_ratio)
             preset_prepared[meta_key] = (width, height)
         elif settings_key == "default_refiner_switch":
             try:
                 common.refiner_slider = items[settings_key]
             except:
                 if type(common.refiner_slider) != 'float':
-                    common.refiner_slider = modules.config.default_refiner_switch
+                    common.refiner_slider = config.default_refiner_switch
         elif settings_key == "default_sampler":
             try:
-                PR.default_sampler = items[settings_key]
+                common.sampler_name = items[settings_key]
             except:
-                PR.default_sampler = modules.config.default_sampler
-        elif settings_key not in items and settings_key in modules.config.allow_missing_preset_key:
+                common.sampler_name = config.default_sampler
+        elif settings_key == "default_scheduler":
+            try:
+                common.scheduler_name = items[settings_key]
+            except:
+                common.scheduler_name = config.default_scheduler
+        elif settings_key not in items and settings_key in config.allow_missing_preset_key:
             continue
         else:
-            preset_prepared[meta_key] = items[settings_key] if settings_key in items and items[settings_key] is not None else getattr(modules.config, settings_key)
+            preset_prepared[meta_key] = items[settings_key] if settings_key in items and items[settings_key] is not None else getattr(config, settings_key)
 
         if settings_key == "default_styles" or settings_key == "default_aspect_ratio":
             preset_prepared[meta_key] = str(preset_prepared[meta_key])
@@ -461,7 +484,9 @@ class MetadataParser(ABC):
     def set_data(self, raw_prompt, full_prompt, raw_negative_prompt, full_negative_prompt, steps, base_model_name,
                  refiner_model_name, loras, vae_name, styles_definition):
         self.raw_prompt = raw_prompt
+        print(f'Metadata raw_prompt {raw_prompt}')
         self.full_prompt = full_prompt
+        print(f'Metadata full_prompt {full_prompt}')
         self.raw_negative_prompt = raw_negative_prompt
         self.full_negative_prompt = full_negative_prompt
         self.steps = steps
@@ -593,9 +618,9 @@ class A1111MetadataParser(MetadataParser):
         for key in ['base_model', 'refiner_model', 'vae']:
             if key in data:
                 if key == 'vae':
-                    self.add_extension_to_filename(data, modules.config.vae_filenames, 'vae')
+                    self.add_extension_to_filename(data, config.vae_filenames, 'vae')
                 else:
-                    self.add_extension_to_filename(data, modules.config.model_filenames, key)
+                    self.add_extension_to_filename(data, config.model_filenames, key)
 
         lora_data = ''
         if 'lora_weights' in data and data['lora_weights'] != '':
@@ -608,7 +633,7 @@ class A1111MetadataParser(MetadataParser):
                 lora_split = lora.split(': ')
                 lora_name = lora_split[0]
                 lora_weight = lora_split[2] if len(lora_split) == 3 else lora_split[1]
-                for filename in modules.config.lora_filenames:
+                for filename in config.lora_filenames:
                     path = Path(filename)
                     if lora_name == path.stem:
                         data[f'lora_combined_{li + 1}'] = f'{filename} : {lora_weight}'
@@ -672,8 +697,8 @@ class A1111MetadataParser(MetadataParser):
 
         generation_params[self.fooocus_to_a1111['version']] = data['version']
 
-        if modules.config.metadata_created_by != '':
-            generation_params[self.fooocus_to_a1111['created_by']] = modules.config.metadata_created_by
+        if config.metadata_created_by != '':
+            generation_params[self.fooocus_to_a1111['created_by']] = config.metadata_created_by
 
         generation_params_text = ", ".join(
             [k if k == v else f'{k}: {quote(v)}' for k, v in generation_params.items() if
@@ -702,11 +727,11 @@ class FooocusMetadataParser(MetadataParser):
             if value in ['', 'None']:
                 continue
             if key in ['base_model', 'refiner_model']:
-                metadata[key] = self.replace_value_with_filename(key, value, modules.config.model_filenames)
+                metadata[key] = self.replace_value_with_filename(key, value, config.model_filenames)
             elif key.startswith('lora_combined_'):
-                metadata[key] = self.replace_value_with_filename(key, value, modules.config.lora_filenames)
+                metadata[key] = self.replace_value_with_filename(key, value, config.lora_filenames)
             elif key == 'vae':
-                metadata[key] = self.replace_value_with_filename(key, value, modules.config.vae_filenames)
+                metadata[key] = self.replace_value_with_filename(key, value, config.vae_filenames)
             else:
                 continue
 
@@ -739,8 +764,8 @@ class FooocusMetadataParser(MetadataParser):
         if res['Metadata Scheme'].lower() == 'simple':
             res['Metadata Scheme'] = 'Fooocus'
 
-        if modules.config.metadata_created_by != '':
-            res['created_by'] = modules.config.metadata_created_by
+        if config.metadata_created_by != '':
+            res['created_by'] = config.metadata_created_by
 
         return json.dumps(dict(sorted(res.items())))
 
@@ -764,7 +789,7 @@ class SIMPLEMetadataParser(MetadataParser):
 
     def to_json(self, metadata: dict) -> dict:
         engine = get_taskclass_by_fullname(metadata.get('Backend Engine', metadata.get('backend_engine', task_class_mapping['Fooocus'])))
-        model_filenames = modules.config.get_base_model_list(engine)
+        model_filenames = config.get_base_model_list(engine)
         for key, value in metadata.items():
             if value in ['', 'None']:
                 if key in ['base_model', 'refiner_model', 'Base Model', 'Refiner Model']:
@@ -775,9 +800,9 @@ class SIMPLEMetadataParser(MetadataParser):
                 if metadata[key]=='None':
                     print(f'[MetaParser] ⚠️  WARNING! The model is not available in the local: {value}.')
             elif key.startswith('LoRA '):
-                metadata[key] = self.replace_value_with_filename(key, value, modules.config.lora_filenames)
+                metadata[key] = self.replace_value_with_filename(key, value, config.lora_filenames)
             elif key in ['vae', 'VAE']:
-                metadata[key] = self.replace_value_with_filename(key, value, modules.config.vae_filenames)
+                metadata[key] = self.replace_value_with_filename(key, value, config.vae_filenames)
             else:
                 continue
 
@@ -811,8 +836,8 @@ class SIMPLEMetadataParser(MetadataParser):
         res['LoRAs'] = self.loras
         res['styles_definition'] = self.styles_definition
 
-        if modules.config.metadata_created_by != '':
-            res['User'] = modules.config.metadata_created_by
+        if config.metadata_created_by != '':
+            res['User'] = config.metadata_created_by
 
         return json.dumps(dict(sorted(res.items())))
 
@@ -898,7 +923,7 @@ def get_exif(metadata: str | None, metadata_scheme: str):
     # 0x9286 = UserComment
     exif[0x9286] = metadata
     # 0x0131 = Software
-    exif[0x0131] = f'FooocusPlus {enhanced.version.get_fooocusplus_ver()}, Preset: {PR.current_preset}'
+    exif[0x0131] = f'FooocusPlus {enhanced.version.get_fooocusplus_ver()}, Preset: {args.args.preset}'
     # 0x927C = MakerNote
     exif[0x927C] = metadata_scheme
     return exif

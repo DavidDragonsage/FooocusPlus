@@ -42,7 +42,7 @@
     ],
     "default_aspect_ratio": "0*0",
     "checkpoint_downloads": {
-        "RealvisXLv40_v40Bakedvae.safetensors": "https://civitai.com/api/download/models/344487?type=Model&format=SafeTensor&size=pruned&fp=fp16"
+        "RealvisXLv40_v40Bakedvae.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/RealvisXLv40_v40Bakedvae.safetensors"
     },
     "embeddings_downloads": {},
     "lora_downloads": {

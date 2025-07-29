@@ -2,10 +2,10 @@
     "default_engine": {
 	"backend_engine": "Flux",
 	"task_method": "flux_base",
-	"disvisible": ["backend_selection", "performance_selection", "negative_prompt"],
-	"disinteractive": ["input_image_checkbox", "enhance_checkbox", "performance_selection", "loras", "refiner_model"],
+	"disvisible": ["backend_selection", "performance_selection", "negative_prompt",  "refiner_model"],
+	"disinteractive": ["input_image_checkbox", "enhance_checkbox", "loras-4"],
 	"backend_params": {
-                "task_method": "flux_base2_gguf",
+                "task_method": "flux_base",
                 "clip_model": "t5xxl_fp8_e4m3fn.safetensors",
                 "base_model_dtype": "auto"
 	    }

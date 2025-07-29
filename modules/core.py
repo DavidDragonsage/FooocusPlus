@@ -70,7 +70,8 @@ class StableDiffusionModel:
         if self.unet is None:
             return
 
-        print(f'Request to load LoRAs {str(loras)} for model [{self.filename}].')
+        print(f'[Core] Request to load LoRAs {str(loras)} for model:')
+        print(f' {self.filename}')
 
         loras_to_load = []
 
@@ -84,7 +85,7 @@ class StableDiffusionModel:
                 lora_filename = get_file_from_folder_list(filename, modules.config.paths_loras)
 
             if not os.path.exists(lora_filename):
-                print(f'Lora file not found: {lora_filename}')
+                print(f'[Core] Lora file not found: {lora_filename}')
                 continue
 
             loras_to_load.append((lora_filename, weight))
@@ -102,24 +103,27 @@ class StableDiffusionModel:
                 continue
 
             if len(lora_unmatch) > 0:
-                print(f'Loaded LoRA [{lora_filename}] for model [{self.filename}] '
-                      f'with unmatched keys {list(lora_unmatch.keys())}')
+                print(f'[Core] Loaded LoRA [{lora_filename}]')
+                print(f'for model [{self.filename}]')
+                print(f'with unmatched keys {list(lora_unmatch.keys())}')
 
             if self.unet_with_lora is not None and len(lora_unet) > 0:
                 loaded_keys = self.unet_with_lora.add_patches(lora_unet, weight)
-                print(f'Loaded LoRA [{lora_filename}] for UNet [{self.filename}] '
-                      f'with {len(loaded_keys)} keys at weight {weight}.')
+                print(f'[Core] Loaded LoRA [{lora_filename}]')
+                print(f'for UNet [{self.filename}]')
+                print(f'with {len(loaded_keys)} keys at weight {weight}')
                 for item in lora_unet:
                     if item not in loaded_keys:
-                        print("UNet LoRA key skipped: ", item)
+                        print("[Core] UNet LoRA key skipped: ", item)
 
             if self.clip_with_lora is not None and len(lora_clip) > 0:
                 loaded_keys = self.clip_with_lora.add_patches(lora_clip, weight)
-                print(f'Loaded LoRA [{lora_filename}] for CLIP [{self.filename}] '
-                      f'with {len(loaded_keys)} keys at weight {weight}.')
+                print(f'[Core] Loaded LoRA [{lora_filename}]')
+                print(f'for CLIP [{self.filename}]')
+                print(f'with {len(loaded_keys)} keys at weight {weight}')
                 for item in lora_clip:
                     if item not in loaded_keys:
-                        print("CLIP LoRA key skipped: ", item)
+                        print("[Core] CLIP LoRA key skipped: ", item)
 
 
 @torch.no_grad()
@@ -262,9 +266,9 @@ def get_previewer(model):
 @torch.no_grad()
 @torch.inference_mode()
 def ksampler(model, positive, negative, latent, seed=None, steps=30, cfg=7.0, sampler_name='dpmpp_2m_sde_gpu',
-             scheduler='karras', denoise=1.0, disable_noise=False, start_step=None, last_step=None,
-             force_full_denoise=False, callback_function=None, refiner=None, refiner_switch=-1,
-             previewer_start=None, previewer_end=None, sigmas=None, noise_mean=None, disable_preview=False):
+    scheduler='karras', denoise=1.0, disable_noise=False, start_step=None, last_step=None,
+    force_full_denoise=False, callback_function=None, refiner=None, refiner_switch=-1,
+    previewer_start=None, previewer_end=None, sigmas=None, noise_mean=None, disable_preview=False):
 
     if sigmas is not None:
         sigmas = sigmas.clone().to(ldm_patched.modules.model_management.get_torch_device())
@@ -272,7 +276,8 @@ def ksampler(model, positive, negative, latent, seed=None, steps=30, cfg=7.0, sa
     latent_image = latent["samples"]
 
     if disable_noise:
-        noise = torch.zeros(latent_image.size(), dtype=latent_image.dtype, layout=latent_image.layout, device="cpu")
+        noise = torch.zeros(latent_image.size(), dtype=latent_image.dtype,
+            layout=latent_image.layout, device="cpu")
     else:
         batch_inds = latent["batch_index"] if "batch_index" in latent else None
         noise = ldm_patched.modules.sample.prepare_noise(latent_image, seed, batch_inds)
@@ -307,14 +312,14 @@ def ksampler(model, positive, negative, latent, seed=None, steps=30, cfg=7.0, sa
 
     try:
         samples = ldm_patched.modules.sample.sample(model,
-                                                    noise, steps, cfg, sampler_name, scheduler,
-                                                    positive, negative, latent_image,
-                                                    denoise=denoise, disable_noise=disable_noise,
-                                                    start_step=start_step,
-                                                    last_step=last_step,
-                                                    force_full_denoise=force_full_denoise, noise_mask=noise_mask,
-                                                    callback=callback,
-                                                    disable_pbar=disable_pbar, seed=seed, sigmas=sigmas)
+            noise, steps, cfg, sampler_name, scheduler,
+            positive, negative, latent_image,
+            denoise=denoise, disable_noise=disable_noise,
+            start_step=start_step,
+            last_step=last_step,
+            force_full_denoise=force_full_denoise, noise_mask=noise_mask,
+            callback=callback,
+            disable_pbar=disable_pbar, seed=seed, sigmas=sigmas)
 
         out = latent.copy()
         out["samples"] = samples

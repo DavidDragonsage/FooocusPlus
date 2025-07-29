@@ -4,24 +4,16 @@ import random
 import threading
 import time
 import gradio as gr
-import args_manager
-import modules.aspect_ratios as AR
+import args_manager as args
+import common
 import modules.user_structure as US
 from ldm_patched.modules import model_management
 from pathlib import Path
 
-current_preset = args_manager.args.preset
+current_preset = args.args.preset
 presets_path = Path('presets')
 random_block = False # used by Random Preset Category
 
-# set by modules.config
-default_bar_category = 'Favorite'
-preset_bar_length = 8
-
-# set by modules.config
-# updated by modules.meta_parser.parse_meta_from_preset(preset_content)
-# set_preset_selection() updates the webui sampler dropdown
-default_sampler = 'dpmpp_2m_sde_gpu'
 
 def find_preset_file(preset):
     global presets_path
@@ -33,7 +25,7 @@ def find_preset_file(preset):
         print(f'Could not find the {preset} preset')
         print()
         return {}
-    AR.preset_file = preset_file_path # used to guarantee use of SD1.5 AR template
+    common.preset_file_path = preset_file_path # used to guarantee use of SD1.5 AR template
     return preset_file_path
 
 def find_preset_category(preset):
@@ -169,11 +161,68 @@ def set_category_selection(arg_category_selection):
         gr.update(value=f'Current Preset: {current_preset}')
 
 
+def select_data_from_preset(preset_content):
+    assert isinstance(preset_content, dict)
+    global current_preset
+    preset_prepared = {}
+    items = preset_content
+
+    # for presets that do not have a default prompt or negative prompt
+    # and almost all presets do not have an image quantity
+    items.setdefault("default_prompt", common.positive)
+    items.setdefault("default_prompt_negative", common.negative)
+    items.setdefault("default_image_quantity", common.image_quantity)
+    items.setdefault("default_sampler", common.sampler_name)
+    items.setdefault("default_scheduler", common.scheduler_name)
+
+    preset_prompt = items.get("default_prompt")
+    if preset_prompt != "":
+        common.positive = preset_prompt
+
+    preset_negative = items.get("default_prompt_negative")
+    if preset_negative != "":
+        common.negative = preset_negative
+
+    preset_quantity = items.get("default_image_quantity")
+    if preset_quantity != common.image_quantity:
+        common.image_quantity = preset_quantity
+        print(f'[Preset] Image Quantity set to {common.image_quantity} by preset')
+
+    preset_sampler = items.get("default_sampler")
+    if preset_sampler != common.sampler_name:
+        common.sampler_name = preset_sampler
+        print()
+        print(f'[Preset] Sampler set to {common.sampler_name} by the {current_preset} preset')
+
+    preset_scheduler = items.get("default_scheduler")
+    if preset_scheduler != common.scheduler_name:
+        common.scheduler_name = preset_scheduler
+        print(f'[Preset] Scheduler set to {common.scheduler_name} by the {current_preset} preset')
+    return
+
+
+def get_preset_content(preset, quiet=True):
+    preset_file = find_preset_file(preset)
+    if preset_file:
+        try:
+            with open(preset_file, "r", encoding="utf-8") as json_file:
+                json_content = json.load(json_file)
+                if not quiet:
+                    print(f'Loaded the {preset} preset content from:')
+                    print(f' {preset_file}')
+            common.preset_content = json_content
+            return json_content
+        except Exception as e:
+            print(f'Could not load the {preset} preset content from {preset_file}')
+            print(e)
+        print()
+    return {}
+
 def set_preset_selection(arg_preset_selection, state_params):
-    global category_selection, current_preset, default_sampler, random_block
+    global category_selection, current_preset, random_block
     if arg_preset_selection == '' and not random_block:
         if current_preset == '':
-            current_preset = args_manager.args.preset
+            current_preset = args.args.preset
         print(f'Using the {current_preset} preset...')
 
     elif (current_preset != arg_preset_selection) and not random_block and \
@@ -182,41 +231,37 @@ def set_preset_selection(arg_preset_selection, state_params):
         current_preset = arg_preset_selection  # update the current preset tracker
 
     state_params.update({'bar_button': current_preset})
-    AR.current_preset = current_preset      # for use by AR Shortlist/Standard toggle
+    args.args.preset = current_preset      # for use by AR Shortlist/Standard toggle
+
+    # determine prompt and quantity values in current preset
+    # so that they can update their UI controls
+    preset_content = get_preset_content(current_preset, quiet = True)
+    select_data_from_preset(preset_content)
+
     return gr.update(value=current_preset), \
         gr.update(value=state_params), \
         gr.update(value=f'Current Preset: {current_preset}'), \
-        gr.update(value=AR.current_AR), \
-        gr.update(value=default_sampler), \
-        gr.update(value=category_selection)
+        gr.update(value=common.current_AR), \
+        gr.update(value=category_selection), \
+        gr.update(value=common.positive), \
+        gr.update(value=common.negative), \
+        gr.update(value=common.image_quantity), \
+        gr.update(value=common.sampler_name), \
+        gr.update(value=common.scheduler_name)
 
 def bar_button_change(bar_button, state_params):
     global category_selection, current_preset
     state_params.update({'bar_button': bar_button})
     current_preset = bar_button
+    args.args.preset = current_preset
     category_selection = find_preset_category(current_preset)
     return state_params, gr.update(value=category_selection),\
         gr.update(value=current_preset)
 
-def get_preset_content(preset):
-    preset_file = find_preset_file(preset)
-    if preset_file:
-        try:
-            with open(preset_file, "r", encoding="utf-8") as json_file:
-                json_content = json.load(json_file)
-                print(f'Loaded the {preset} preset content from {preset_file}')
-            AR.preset_content = json_content
-            return json_content
-        except Exception as e:
-            print(f'Could not load the {preset} preset content from {preset_file}')
-            print(e)
-        print()
-    return {}
-
 def get_initial_preset_content():
-    global current_preset, category_selection, default_bar_category
+    global current_preset, category_selection
     json_content = ''
-    preset = args_manager.args.preset
+    preset = args.args.preset
     if not find_preset_file(preset):
         if find_preset_file('Default'):
             preset = 'Default'
@@ -227,24 +272,24 @@ def get_initial_preset_content():
                 print('Could not find any presets')
                 current_preset = 'initial'
     if category_selection != 'Random' and current_preset != 'initial':
-        args_manager.args.preset = preset
+        args.args.preset = preset
         current_preset = preset
         category_selection = find_preset_category(preset)
     if current_preset != 'initial':
         set_category_selection(category_selection)
-        json_content = get_preset_content(current_preset)
+        json_content = get_preset_content(current_preset, quiet=False)
     return json_content
 
 def get_lowVRAM_preset_content():
-    global current_preset, category_selection, default_bar_category
+    global current_preset, category_selection
     json_content = ''
     if find_preset_file('4GB_Default'):
-        AR.low_vram = True
+        common.is_low_vram_preset = True
         category_selection = 'LowVRAM'
-        default_bar_category = category_selection
-        args_manager.args.preset = '4GB_Default'
-        current_preset = args_manager.args.preset
-        json_content = get_preset_content(current_preset)
+        common.default_bar_category = category_selection
+        args.args.preset = '4GB_Default'
+        current_preset = args.args.preset
+        json_content = get_preset_content(current_preset, quiet=False)
         print('The 4GB_Default preset is optimized for low VRAM systems')
     return json_content
 
@@ -262,8 +307,7 @@ def pad_list(arg_list, arg_length, arg_value):
         return padded_list
 
 def preset_bar_count():
-    global default_bar_category
-    preset_bar_list = get_presets_in_folder(default_bar_category)
+    preset_bar_list = get_presets_in_folder(common.default_bar_category)
     preset_bar_count = len(preset_bar_list)
     return preset_bar_count
 

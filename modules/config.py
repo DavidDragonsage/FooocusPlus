@@ -5,7 +5,7 @@ import numbers
 import args_manager
 import common
 import enhanced.all_parameters as ads
-import modules.aspect_ratios as AR
+import modules.constants as constants
 import modules.flags
 import modules.preset_resource as PR
 import modules.user_structure as US
@@ -62,13 +62,13 @@ def get_dir_or_set_default(key, default_value, as_array=False, make_directory=Fa
         for path in default_value:
             abs_path = os.path.abspath(os.path.join(os.path.dirname(__file__), path))
             dp.append(abs_path)
-            os.makedirs(abs_path, exist_ok=True)
+            US.make_dir(abs_path)
     else:
         if default_value != os.path.abspath(default_value):
             dp = os.path.abspath(os.path.join(os.path.dirname(__file__), default_value))
         else:
             dp = default_value
-        os.makedirs(dp, exist_ok=True)
+        US.make_dir(dp)
         if as_array:
             dp = [dp]
     config_dict[key] = dp
@@ -353,7 +353,7 @@ enable_shortlist_aspect_ratios = get_config_item_or_set_default(
 )
 available_standard_aspect_ratios = get_config_item_or_set_default(
     key='available_standard_aspect_ratios',
-    default_value=AR.available_aspect_ratios[0],
+    default_value=constants.template_aspect_ratios[0],
     validator=lambda x: isinstance(x, list) and all('*' in v for v in x) and len(x) > 1,
     expected_type=list
 )
@@ -365,7 +365,7 @@ default_standard_aspect_ratio = get_config_item_or_set_default(
 )
 available_shortlist_aspect_ratios = get_config_item_or_set_default(
     key='available_shortlist_aspect_ratios',
-    default_value=AR.available_aspect_ratios[1],
+    default_value=constants.template_aspect_ratios[1],
     validator=lambda x: isinstance(x, list) and all('*' in v for v in x) and len(x) > 1,
     expected_type=list
 )
@@ -377,7 +377,7 @@ default_shortlist_aspect_ratio = get_config_item_or_set_default(
 )
 available_sd1_5_aspect_ratios = get_config_item_or_set_default(
     key='available_sd1_5_aspect_ratios',
-    default_value=AR.available_aspect_ratios[2],
+    default_value=constants.template_aspect_ratios[2],
     validator=lambda x: isinstance(x, list) and all('*' in v for v in x) and len(x) > 1,
     expected_type=list
 )
@@ -389,7 +389,7 @@ default_sd1_5_aspect_ratio = get_config_item_or_set_default(
 )
 available_pixart_aspect_ratios = get_config_item_or_set_default(
     key='available_pixart_aspect_ratios',
-    default_value=AR.available_aspect_ratios[3],
+    default_value=constants.template_aspect_ratios[3],
     validator=lambda x: isinstance(x, list) and all('*' in v for v in x) and len(x) > 1,
     expected_type=list
 )
@@ -905,7 +905,7 @@ possible_preset_keys = {
     "default_overwrite_step": "steps",
     "default_overwrite_switch": "overwrite_switch",
     "default_performance": "performance",
-    "default_image_quantity": "image_quantity",
+
     "default_prompt": "prompt",
     "default_prompt_negative": "negative_prompt",
     "default_extra_variation": "extra_variation",
@@ -920,6 +920,7 @@ possible_preset_keys = {
     # "default_inpaint_method": "inpaint_method", # disabled so inpaint mode doesn't refresh after every preset change
     "default_inpaint_engine_version": "inpaint_engine_version",
 
+    "default_image_quantity": "image_quantity",
     "default_max_image_quantity": "max_image_quantity",
     "default_freeu": "freeu",
     "default_adm_guidance": "adm_guidance",
@@ -939,12 +940,25 @@ possible_preset_keys = {
 }
 
 allow_missing_preset_key = [
-    "default_aspect_ratio"
     "default_prompt",
     "default_prompt_negative",
-    "default_image_quantity"
+    "default_extra_variation",
+    "default_aspect_ratio",
+    "default_save_metadata_to_images",
+    "default_vae",
+    "vae_downloads",
+    "default_inpaint_engine_version",
+    "default_image_quantity",
+    "default_max_image_quantity",
+    "default_freeu",
+    "default_adm_guidance",
     "default_output_format",
-    "input_image_checkbox",
+    "default_inpaint_advanced_masking_checkbox",
+    "default_mixing_image_prompt_and_vary_upscale",
+    "default_mixing_image_prompt_and_inpaint",
+    "default_backfill_prompt",
+    "default_translation_methods",
+    "default_image_catalog_max_number",
     "styles_definition",
     "instruction",
     "reference",
@@ -1017,8 +1031,10 @@ def get_base_model_list(engine='Fooocus', task_method=None):
     base_model_list = modelsinfo.get_model_names('checkpoints', file_filter)
     if engine in ['Fooocus', 'Comfy']:
         base_model_list = modelsinfo.get_model_names('checkpoints', modules.flags.model_file_filter['Fooocus'], reverse=True)
-    elif task_method == 'flux_base2_gguf':    # adjusted the GGUF filter to include "flux", not just "hyperflux"
-        base_model_list = [f for f in base_model_list if ("hyp8" in f or "hyp16" in f or "flux" in f) and f.endswith("gguf")]
+    elif task_method == 'flux_base2_gguf':
+        # adjusted the GGUF filter to include "flux" and "schnell",
+        # not just "hyperflux"
+        base_model_list = [f for f in base_model_list if ("hyp8" in f or "hyp16" in f or "flux" in f or "schnell" in f) and f.endswith("gguf")]
     return base_model_list
 
 def update_files(engine='Fooocus', task_method=None):    # called by the webui update button & by launch.py
@@ -1283,26 +1299,28 @@ def downloading_sd35_large_model():
 
 update_files()
 
-# Aspect ratio support: initialize AR globals
-AR.default_standard_AR = default_standard_aspect_ratio
-AR.default_shortlist_AR = default_shortlist_aspect_ratio
-AR.default_sd1_5_AR = default_sd1_5_aspect_ratio
-AR.default_pixart_AR = default_pixart_aspect_ratio
 
-AR.available_standard_aspect_ratios = available_standard_aspect_ratios
-AR.available_shortlist_aspect_ratios = available_shortlist_aspect_ratios
-AR.available_sd1_5_aspect_ratios = available_sd1_5_aspect_ratios
-AR.available_pixart_aspect_ratios = available_pixart_aspect_ratios
+# Aspect Ratio support
+default_aspect_ratio_values = [default_standard_aspect_ratio, default_shortlist_aspect_ratio,\
+    default_sd1_5_aspect_ratio, default_pixart_aspect_ratio]
 
-AR.AR_shortlist = enable_shortlist_aspect_ratios
+config_aspect_ratios = [available_standard_aspect_ratios, available_shortlist_aspect_ratios,\
+    available_sd1_5_aspect_ratios, available_pixart_aspect_ratios,]
+
+# Common support for prompt & image quantity preservation
+# during preset switching
+common.positive = default_prompt
+common.negative = default_prompt_negative
+common.image_quantity = default_image_quantity
 
 # Common support, typically for Gradio errors in updating system dictionary
 common.refiner_slider = default_refiner_switch
+common.sampler_name = default_sampler
+common.scheduler_name = default_scheduler
 
-# Preset Resource support
-PR.default_bar_category = default_bar_category
-PR.preset_bar_length = preset_bar_length
-PR.default_sampler = default_sampler
+# Preset support in neutral (common) ground
+common.default_bar_category = default_bar_category
+common.preset_bar_length = preset_bar_length
 
 # Flags support
 modules.flags.custom_performance = custom_performance_steps

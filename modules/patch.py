@@ -21,6 +21,7 @@ import warnings
 import safetensors.torch
 import modules.constants as constants
 
+from pathlib import Path
 from ldm_patched.modules.samplers import calc_cond_uncond_batch
 from ldm_patched.k_diffusion.sampling import BatchedBrownianTree
 from ldm_patched.ldm.modules.diffusionmodules.openaimodel import forward_timestep_embed, apply_control
@@ -447,7 +448,7 @@ def patched_load_models_gpu(*args, **kwargs):
     y = ldm_patched.modules.model_management.load_models_gpu_origin(*args, **kwargs)
     moving_time = time.perf_counter() - execution_start_time
     if moving_time > 0.1:
-        print(f'[Fooocus Model Management] Moving model(s) has taken {moving_time:.2f} seconds')
+        print(f'[Fooocus Patch] Moving model(s) has taken {moving_time:.2f} seconds')
     return y
 
 
@@ -464,11 +465,14 @@ def build_loaded(module, loader_name):
         try:
             result = original_loader(*args, **kwargs)
         except Exception as e:
-            result = None
+#            result = None
             exp = str(e) + '\n'
             for path in list(args) + list(kwargs.values()):
                 if isinstance(path, str):
                     if os.path.exists(path):
+                        if os.path.isdir(path):
+                            print(f'The {path} directory is not accessible')
+                            return result
                         exp += f'File corrupted: {path} \n'
                         corrupted_backup_file = path + '.corrupted'
                         if os.path.exists(corrupted_backup_file):

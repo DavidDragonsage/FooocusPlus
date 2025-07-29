@@ -276,7 +276,7 @@ def reload_expansion():
 
 def free_everything():
     global model_base, model_refiner, final_unet, final_clip, final_vae, final_refiner_unet, final_refiner_vae, final_expansion, loaded_ControlNets
-    
+
     model_base = core.StableDiffusionModel()
     model_refiner = core.StableDiffusionModel()
 
@@ -374,15 +374,15 @@ def process_diffusion(positive_cond, negative_cond, steps, switch, width, height
             if denoise > (float(steps - switch) / float(steps)) ** 0.834:  # karras 0.834
                 target_unet, target_vae, target_refiner_unet, target_refiner_vae \
                     = final_unet, final_vae, None, None
-                print(f'[Sampler] only use Base because of partial denoise.')
+                print(f'[Pipeline] Only use Base because of partial denoise.')
             else:
                 positive_cond = clip_separate(positive_cond, target_model=final_refiner_unet.model, target_clip=final_clip)
                 negative_cond = clip_separate(negative_cond, target_model=final_refiner_unet.model, target_clip=final_clip)
                 target_unet, target_vae, target_refiner_unet, target_refiner_vae \
                     = final_refiner_unet, final_refiner_vae, None, None
-                print(f'[Sampler] only use Refiner because of partial denoise.')
+                print(f'[Pipeline] Only use Refiner because of partial denoise.')
 
-    print(f'[Sampler] refiner_swap_method = {refiner_swap_method}')
+    print(f'[Pipeline] Refiner swap method: {refiner_swap_method}')
 
     if latent is None:
         initial_latent = core.generate_empty_latent(width=width, height=height, batch_size=1)
@@ -393,7 +393,7 @@ def process_diffusion(positive_cond, negative_cond, steps, switch, width, height
     sigma_min, sigma_max = minmax_sigmas[minmax_sigmas > 0].min(), minmax_sigmas.max()
     sigma_min = float(sigma_min.cpu().numpy())
     sigma_max = float(sigma_max.cpu().numpy())
-    print(f'[Sampler] sigma_min = {sigma_min}, sigma_max = {sigma_max}')
+    print(f'[Pipeline] Sigma Minimum: {sigma_min}, Maximum: {sigma_max}')
 
     modules.patch.BrownianTreeNoiseSamplerPatched.global_init(
         initial_latent['samples'].to(ldm_patched.modules.model_management.get_torch_device()),

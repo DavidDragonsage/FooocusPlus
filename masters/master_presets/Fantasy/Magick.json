@@ -42,7 +42,7 @@
     ],
     "default_aspect_ratio": "0*0",
     "checkpoint_downloads": {
-        "magickXL_v10.safetensors": "https://civitai.com/api/download/models/1126742?type=Model&format=SafeTensor&size=pruned&fp=fp16"
+        "magickXL_v10.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/magickXL_v10.safetensors"
     },
     "embeddings_downloads": {},
     "lora_downloads": {

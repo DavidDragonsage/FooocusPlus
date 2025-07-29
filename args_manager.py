@@ -13,6 +13,10 @@ args_parser.parser.add_argument("--language", type=str, default='en',
     help="Translate UI using json files in [language] folder. "
     "For example, [--language en_uk] will use [language/en_uk.json] for translation.")
 
+args_parser.parser.add_argument("--gpu-type", type=str, default='auto',
+    help="Manual setting for GPU, overriding Torchruntime. "
+    "The values are amd64, auto, cu124, cu128, directml, rocm5.2, rocm5.7")
+
 args_parser.parser.add_argument("--webroot", type=str, default='',
     help="Set the webroot path.")
 
@@ -33,7 +37,7 @@ args_parser.parser.add_argument("--disable-image-log", action='store_true',
 #   help="This is an obsolete argument: Gradio Analytics are always disabled.")
 args_parser.args.disable_analytics = True
 os.environ["GRADIO_ANALYTICS_ENABLED"] = "False" # Gradio is no longer allowed to call home
-os.environ["NO_ALBUMENTATIONS_UPDATE"] = "True" # an update would cause some serios errors
+os.environ["NO_ALBUMENTATIONS_UPDATE"] = "True" # an update would cause some serious errors
 
 args_parser.parser.add_argument("--disable-metadata", action='store_true',
     help="Disable saving metadata to images.")

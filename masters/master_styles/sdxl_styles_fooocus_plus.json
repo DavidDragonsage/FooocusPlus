@@ -1,7 +1,22 @@
 [
-    {
-        "name": "Pony Real",
-        "prompt": "score_9, score_8_up, score_7_up, rating_safe, realistic, {prompt}",
-        "negative_prompt": "score_6, score_5, score_4, ugly, deformed"
-    }
+  {
+    "name": "Pony Real",
+    "prompt": "score_9, score_8_up, score_7_up, rating_safe, realistic, {prompt}",
+    "negative_prompt": "score_6, score_5, score_4, ugly, deformed"
+    },
+  {
+    "name": "Rossetti Drawing",
+    "prompt": "Dante Gabriel Rossetti chalk drawing: {prompt}, sensual romantic beauty, soft delicate lines, warm colours, dreamy, gentle, intricate detail, idealized, ethereal, spiritual longing, symbolism, medieval themes, expressive eyes, Pre-Raphaelite style",
+    "negative_prompt": "cartoon, avant-garde abstract modernism, cubism, impressionism, industrial technology, pointillism, electronic, neon, intense colour, cyber-punk, science-fiction, photorealism, mundane, ugly"
+  },
+  {
+    "name": "Rossetti Painting",
+    "prompt": "Dante Gabriel Rossetti oil painting: {prompt}, sensual romantic beauty, intricate detail, vivid colours, realistic fantasy, idealized, ethereal, spiritual longing, symbolism, medieval themes, expressive eyes, Pre-Raphaelite style",
+    "negative_prompt": "monochrome, cartoon, avant-garde abstract modernism, cubism, impressionism, industrial technology, pointillism, electronic, neon, cyber-punk, science-fiction, photorealism, mundane, ugly"
+  },
+  {
+    "name": "Rossetti Sketch",
+    "prompt": "Dante Gabriel Rossetti charcoal sketch: {prompt}, monochrome, sensual romantic beauty, intricate detail, expressive eyes, flowing drapery, muted backgrounds, pencil drawing, idealized, ethereal, spiritual longing, symbolism, medieval themes, Pre-Raphaelite style",
+    "negative_prompt": "colourful, cartoon, photographic, avant-garde abstract modernism, cubism, impressionism, industrial technology, pointillism, electronic, neon, cyber-punk, science-fiction, mundane, ugly"
+  }
 ]

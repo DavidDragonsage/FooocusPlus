@@ -1,5 +1,4 @@
 {
-    "Download manually from": "https://civitai.com/api/download/models/464939?type=Model&format=SafeTensor&size=full&fp=fp16",
     "default_model": "Pony/ponyFaetality_v11.safetensors",
     "default_refiner": "None",
     "default_refiner_switch": 0.6,
@@ -42,7 +41,7 @@
     ],
     "default_aspect_ratio": "0*0",
     "checkpoint_downloads": {
-        "elsewhereXL_v10.safetensors": "https://civitai.com/api/download/models/1110155?type=Model&format=SafeTensor&size=pruned&fp=fp16"
+        "Pony/ponyFaetality_v11.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/ponyFaetality_v11.safetensors"
     },    
     "default_overwrite_step": -1,
     "default_inpaint_engine_version": "None",

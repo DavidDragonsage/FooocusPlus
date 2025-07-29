@@ -43,7 +43,7 @@
     "default_aspect_ratio": "0*0",
     "default_overwrite_step": -1,
     "checkpoint_downloads": {
-        "LowVRAM/sdxl4GB2GBImprovedFP8_fp8FullCheckpoint.safetensors": "https://civitai.com/api/download/models/968654?type=Model&format=SafeTensor&size=full&fp=fp8&token=b9c06333099ba600ef8e993a5e97f31a"
+        "LowVRAM/sdxl4GB2GBImprovedFP8_fp8FullCheckpoint.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/sdxl4GB2GBImprovedFP8_fp8FullCheckpoint.safetensors"
     },
     "embeddings_downloads": {},
     "lora_downloads": {

@@ -144,7 +144,7 @@ def save_textfile(arg_data, arg_textfile):  # the file is automatically closed
     return success
 
 
-def cleanup_structure(directml=False, python_embedded_path=''):
+def cleanup_structure(directml=False, python_embedded_path='', win32_root=''):
     # cleanup an error condition from version 1.0.0
     remove_dirs('python_embedded')
 
@@ -163,6 +163,12 @@ def cleanup_structure(directml=False, python_embedded_path=''):
     # remove a phantom FooocusPlus from repo, and error from 1.0.5
     remove_dirs('FooocusPlus')
 
+    # cleanup batch file clutter, effective 1.0.6
+    remove_file(Path(win32_root/'run_FooocusPlus_commit.bat'))
+    remove_file(Path(win32_root/'run_FooocusPlus_dev.bat'))
+
+    return
+
 
 def remove_obsolete_flux_folder(arg_parent_str):
     # remove obsolete Flux folder if empty
@@ -171,6 +177,7 @@ def remove_obsolete_flux_folder(arg_parent_str):
     old_flux_file = Path(old_flux_path/'put_flux_base_models_here')
     remove_file(old_flux_file)
     remove_empty_dir(old_flux_path)
+    return
 
 def create_model_structure(paths_checkpoints, paths_loras):
 
@@ -263,6 +270,8 @@ def create_user_structure(user_dir):
 
     user_styles_path = Path(user_dir_path/'user_styles')
     make_dir(user_styles_path)
+    samples_path = Path(user_styles_path/'samples')
+    make_dir(samples_path)
     copy_dirs(user_styles_path, working_styles_path)
     print(f'Updated the working styles folder: {working_styles_path}')
 
