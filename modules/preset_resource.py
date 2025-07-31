@@ -208,7 +208,7 @@ def get_preset_content(preset, quiet=True):
             with open(preset_file, "r", encoding="utf-8") as json_file:
                 json_content = json.load(json_file)
                 if not quiet:
-                    print(f'Loaded the {preset} preset content from:')
+                    print(f'[Preset] Loaded the {preset} preset content from:')
                     print(f' {preset_file}')
             common.preset_content = json_content
             return json_content

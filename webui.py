@@ -1608,8 +1608,10 @@ with common.GRADIO_ROOT:
             .then(fn=generate_clicked, inputs=currentTask,
                 outputs=[progress_html, progress_window,
                 progress_gallery, gallery]) \
-            .then(UIS.process_after_generation, inputs=state_topbar,           outputs=[generate_button, stop_button, skip_button,\
-                state_is_generating, gallery_index, index_radio] + protections, show_progress=False) \
+            .then(UIS.process_after_generation, inputs=state_topbar,
+                outputs=[generate_button, stop_button, skip_button,
+                state_is_generating, gallery_index, index_radio] + protections,
+                show_progress=False) \
             .then(fn=update_history_link, outputs=history_link) \
             .then(lambda x: x['__finished_nums_pages'],
                 inputs=state_topbar,

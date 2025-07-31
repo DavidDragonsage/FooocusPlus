@@ -1321,6 +1321,7 @@ common.scheduler_name = default_scheduler
 # Preset support in neutral (common) ground
 common.default_bar_category = default_bar_category
 common.preset_bar_length = preset_bar_length
+common.is_low_vram_preset = default_low_vram_presets
 
 # Flags support
 modules.flags.custom_performance = custom_performance_steps

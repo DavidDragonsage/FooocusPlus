@@ -253,11 +253,13 @@ def download_models(default_model, previous_default_models, checkpoint_downloads
 
     return default_model, checkpoint_downloads
 
+
 if (common.is_low_vram_preset == True or launch_vram<6) and \
     (args.preset == 'initial' or args.preset == 'Default'):
     low_vram_preset_content = PR.get_lowVRAM_preset_content()
     common.preset_content = low_vram_preset_content
-    if low_vram_preset != '':
+    if common.preset_content != '':
+        common.is_low_vram_preset = True
         preset_prepared = parse_meta_from_preset(low_vram_preset_content)
         if config.default_comfyd_active_checkbox:
             comfyd.stop()
@@ -271,6 +273,8 @@ if (common.is_low_vram_preset == True or launch_vram<6) and \
         embeddings_downloads = preset_prepared.get('embeddings_downloads', {})
         lora_downloads = preset_prepared.get('lora_downloads', {})
         vae_downloads = preset_prepared.get('vae_downloads', {})
+    else:
+        common.is_low_vram_preset = False
 
 
 config.default_base_model_name, config.checkpoint_downloads = download_models(

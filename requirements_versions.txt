@@ -7,6 +7,7 @@ torchruntime==1.18.1
 transformers==4.50.3
 accelerate==0.32.1
 albumentations==2.0.4
+aiohttp==3.11.14
 attrs==24.2.0
 bitsandbytes>=0.46.0
 blend_modes
