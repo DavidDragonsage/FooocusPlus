@@ -238,7 +238,7 @@ def create_user_structure(user_dir):
     make_dir(user_topics_path)
     copy_dirs(user_topics_path, working_topics_path)
     print('Updated the working Random Prompt (OneButtonPrompt) topics folder:')
-    print(f'  {working_topics_path.resolve()}')
+    print(f' {working_topics_path.resolve()}')
 
 
     # in a similar way, initialize the Presets structure

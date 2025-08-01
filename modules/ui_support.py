@@ -300,10 +300,7 @@ def reset_layout_params(prompt, negative_prompt, state_params, is_generating, in
     print()
     print(f'[UI Support] Changed the preset from {state_params["__preset"]} to {preset}')
     state_params.update({"__preset": preset})
-    common.positive = prompt    # save the prompts to prevent loss during preset switching
-    common.negative = negative_prompt
-    state_params.update({"__prompt": prompt})
-    state_params.update({"__negative_prompt": negative_prompt})
+
     args.args.preset = preset
     config_preset = PR.get_preset_content(preset, quiet=False)
     preset_prepared = meta_parser.parse_meta_from_preset(config_preset)
@@ -386,6 +383,7 @@ def remove_tokenizer():
 
 def prompt_token_prediction(text, style_selections):
     global tokenizer, cur_clip_path
+    common.positive = text  # save the prompt for preset_resource & meta_parser
     if 'tokenizer' not in globals():
         globals()['tokenizer'] = None
     if tokenizer is None:
@@ -400,10 +398,11 @@ def prompt_token_prediction(text, style_selections):
     from modules.sdxl_styles import apply_style, fooocus_expansion
 
     prompt = translator.convert(text, enhanced_parameters.translation_methods)
+    common.positive = prompt  # save the prompt for preset_resource & meta_parser
     return len(tokenizer.tokenize(prompt))
 
-    common.positive = prompt  # save the prompt for preset_resource & meta_parser
-
+    print('[UI Support] TERRA INCOGNITA - Here be Dragons')
+    print()
     if fooocus_expansion in style_selections:
         use_expansion = True
         style_selections.remove(fooocus_expansion)

@@ -22,8 +22,9 @@ def find_preset_file(preset):
         preset_name_path = Path(preset_name_path.with_suffix(preset_name_path.suffix + '.json'))
     preset_file_path = US.find_file_path(presets_path, preset_name_path)
     if not preset_file_path:
-        print(f'Could not find the {preset} preset')
-        print()
+        if preset != 'Default':
+            print(f'Could not find the {preset} preset')
+            print()
         return {}
     common.preset_file_path = preset_file_path # used to guarantee use of SD1.5 AR template
     return preset_file_path
