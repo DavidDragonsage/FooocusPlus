@@ -1068,7 +1068,7 @@ with common.GRADIO_ROOT:
                             value=config.default_save_metadata_to_images,
                             info='Add parameters to an image for regeneration or upload to Civitai. A Metadata Scheme is not in effect unless this box is checked.')
                         metadata_scheme = gr.Radio(label='Metadata Scheme', choices=flags.metadata_scheme, value=config.default_metadata_scheme,
-                            info='Use "Fooocus" to regenerate images and "A1111" for Civitai', visible=True)
+                            info='Use "Fooocus" to regenerate images and "A1111" for upload to Civitai', visible=True)
 
                         save_metadata_to_images.change(lambda x: [gr.update(visible=x)], inputs=[save_metadata_to_images],\
                             outputs=[metadata_scheme], queue=False, show_progress=False)

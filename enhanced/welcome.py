@@ -7,33 +7,41 @@ import random
 import time
 from pathlib import Path
 from PIL import Image
+import args_manager
+import modules.user_structure as US
 
+
+user_dir = Path(args_manager.args.user_dir).resolve()
 
 def get_welcome_image():
-    path_welcome = os.path.abspath(f'{modules.config.user_dir}\\welcome_images\\')
-    skip_jpg = os.path.join(path_welcome, 'skip.jpg')
-    if not os.path.isfile(skip_jpg):                   # if skip.jpg exists then ignore all jpgs & jpegs
-        image_count = len(glob.glob1(path_welcome,'*.jpg')) + len(glob.glob1(path_welcome,'*.jpeg'))
-        if image_count > 0:
-            welcomes = [p for p in util.get_files_from_folder(path_welcome, ['.jpg', '.jpeg'], None, None)]
-            return os.path.join(path_welcome, random.choice(welcomes))
+    path_welcome = Path(user_dir/'welcome_images').resolve()
+    skip_jpg = Path(path_welcome/'skip.jpg').resolve()
+    if not skip_jpg.is_file(): # if skip.jpg exists then ignore all jpgs & jpegs
+        welcomes = US.list_files_by_pattern(path_welcome,
+            arg_pattern1='*.jpg', arg_pattern2='*.jpeg')
+        if welcomes:
+            file_welcome = Path(path_welcome/random.choice(welcomes)).resolve()
+            return file_welcome
 
-    skip_png = os.path.join(path_welcome, 'skip.png')
-    if not os.path.isfile(skip_png):                   # if skip.png exists then use the fallback, welcome.png
-        image_count = len(glob.glob1(path_welcome,'*.png'))
-        if image_count > 1:
-            welcomes = [p for p in util.get_files_from_folder(path_welcome, '.png', None, None) if p != 'welcome.png']
-            if len(welcomes) > 0:
-                file_welcome = random.choice(welcomes) # a call to the dynamic startup code will follow this line
- #               file_welcome = fill_background_png(path_welcome, file_welcome, 1152, 896)
-                if file_welcome != "":
-                    return os.path.join(path_welcome, file_welcome)
-    file_welcome = os.path.join(path_welcome, 'welcome.png')
-    if not os.path.isfile(file_welcome):
+    skip_png = Path(path_welcome/'skip.png').resolve()
+    # if skip.png exists then use the fallback, welcome.png
+    if not skip_png.is_file():
+        welcomes = US.list_files_by_pattern(path_welcome,
+            arg_pattern1='*.png', arg_pattern2='')
+        if welcomes:
+            file_welcome = Path(path_welcome/random.choice(welcomes)).resolve()
+            # when the fill_background code is ready, activate this line:
+            # file_welcome = fill_background_png(path_welcome, file_welcome, 1152, 896)
+            return file_welcome
+
+    file_welcome = Path(path_welcome/'welcome.png').resolve()
+    if file_welcome.is_file():
+        return file_welcome
+    else:
         print()
-        print(f'SERIOUS ERROR: PLEASE RESTORE {file_welcome}')
+        print(f'[Welcome] ERROR: Please restore {file_welcome}')
         print()
-    return file_welcome
+    return ''
 
 
 # color database
@@ -42,7 +50,7 @@ def get_colors():
         [0,0,0],
         [4,47,128],
         [14,54,96],
-        [40,40,40], 
+        [40,40,40],
         [52,152,219],
         [69,69,69],
         [114,114,114],
@@ -76,7 +84,7 @@ def generate_background(width, height):
         axis = size_height
     else:
         axis = size_width
-    
+
     # Fill R, G and B channels with linear gradient between two end colours
     gradient[:,:,0] = np.linspace(colorA[0], colorB[0], axis, dtype=np.uint8)
     gradient[:,:,1] = np.linspace(colorA[1], colorB[1], axis, dtype=np.uint8)
@@ -162,4 +170,4 @@ def test_welcome_image(is_mobile=False):
     splash_image.save(path_splash, format="png", quality=100)
     # return the path to the ui
     return path_splash
-    
+

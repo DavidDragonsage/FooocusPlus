@@ -186,7 +186,10 @@ def init_nav_bars(state_params, request: gr.Request):
     results = refresh_nav_bars(state_params)
     file_welcome = get_welcome_image()
     print('[UI Support] Welcome image:')
-    print(f'{file_welcome}')
+    if file_welcome == '':
+        print(' Not found!')
+    else:
+        print(f' {file_welcome}')
     print()
     results += [gr.update(value=f'{file_welcome}')]
     results += [gr.update(value=modules.flags.language_radio(state_params["__lang"])), gr.update(value=state_params["__theme"])]

@@ -29,7 +29,7 @@ def copy_file(arg_source, arg_dest): # preserves metadata
         dest_path = ''
     return dest_path
 
-def empty_dir(arg_dir):
+def empty_dir(arg_dir): # empty dir, then delete
     result = True
     empty_path = Path(arg_dir)
     try:
@@ -56,6 +56,20 @@ def find_file_path(search_dir, filename):
     for file_path in search_path.rglob(str_filename):
         return Path(file_path).resolve()
     return ''
+
+def list_files_by_pattern(search_dir, arg_pattern1='', arg_pattern2=''):
+    # searches in search_dir and its subdirectories
+    # returns a list corresponding to the pattern
+    # the pattern could be a file extension such as "*.jpg"
+    file_list = []
+    file_list2 = []
+    search_path = Path(search_dir)
+    if arg_pattern1:
+        file_list = list(search_path.rglob(arg_pattern1))
+    if arg_pattern2:
+        file_list2 = list(search_path.rglob(arg_pattern2))
+    file_list.extend(file_list2)
+    return file_list
 
 def load_json(arg_json):  # the file is automatically closed
     load_path = Path(arg_json)
@@ -93,7 +107,9 @@ def make_dir(arg_dir):
     return make_path
 
 def mkdir_copy_file(arg_source_file, arg_dest_dir):
-    # ensures destination folder exists before copy
+    # copy a file to a directory
+    # ensure destination directory exists before copy
+    # make the directory if does not exist
     source_file_path = Path(arg_source_file)
     dest_folder_path = Path(arg_dest_dir)
     dest_file_path = dest_folder_path / source_file_path.name
