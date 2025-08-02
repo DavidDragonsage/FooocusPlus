@@ -17,7 +17,7 @@ def get_welcome_image():
     path_welcome = Path(user_dir/'welcome_images').resolve()
     skip_jpg = Path(path_welcome/'skip.jpg').resolve()
     if not skip_jpg.is_file(): # if skip.jpg exists then ignore all jpgs & jpegs
-        welcomes = US.list_files_by_pattern(path_welcome,
+        welcomes = US.list_files_by_patterns(path_welcome,
             arg_pattern1='*.jpg', arg_pattern2='*.jpeg')
         if welcomes:
             file_welcome = Path(path_welcome/random.choice(welcomes)).resolve()
@@ -26,7 +26,7 @@ def get_welcome_image():
     skip_png = Path(path_welcome/'skip.png').resolve()
     # if skip.png exists then use the fallback, welcome.png
     if not skip_png.is_file():
-        welcomes = US.list_files_by_pattern(path_welcome,
+        welcomes = US.list_files_by_patterns(path_welcome,
             arg_pattern1='*.png', arg_pattern2='')
         if welcomes:
             file_welcome = Path(path_welcome/random.choice(welcomes)).resolve()

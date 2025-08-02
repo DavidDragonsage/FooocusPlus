@@ -57,10 +57,10 @@ def find_file_path(search_dir, filename):
         return Path(file_path).resolve()
     return ''
 
-def list_files_by_pattern(search_dir, arg_pattern1='', arg_pattern2=''):
-    # searches in search_dir and its subdirectories
-    # returns a list corresponding to the pattern
-    # the pattern could be a file extension such as "*.jpg"
+def list_files_by_patterns(search_dir, arg_pattern1='', arg_pattern2=''):
+    # looks in search_dir and its subdirectories
+    # returns a list corresponding to the patterns
+    # a pattern could be a file extension such as "*.jpg"
     file_list = []
     file_list2 = []
     search_path = Path(search_dir)
@@ -69,7 +69,7 @@ def list_files_by_pattern(search_dir, arg_pattern1='', arg_pattern2=''):
     if arg_pattern2:
         file_list2 = list(search_path.rglob(arg_pattern2))
     file_list.extend(file_list2)
-    return file_list
+    return file_list # empty list if no qualifying files found
 
 def load_json(arg_json):  # the file is automatically closed
     load_path = Path(arg_json)
