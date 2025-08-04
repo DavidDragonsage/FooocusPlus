@@ -910,7 +910,8 @@ with common.GRADIO_ROOT:
                                 gr.HTML('<a href="https://github.com/lllyasviel/Fooocus/discussions/1363" target="_blank">\U0001F4D4 Documentation</a>')
 
                                 def trigger_show_image_properties(image):
-                                    image_size = modules.util.get_image_size_info(image, AR.available_aspect_ratios[0])
+                                    image_size = modules.util.get_image_size_info(image,
+                                        config.config_aspect_ratios[0])
                                     return gr.update(value=image_size, visible=True)
 
                                 describe_input_image.upload(trigger_show_image_properties, inputs=describe_input_image,
