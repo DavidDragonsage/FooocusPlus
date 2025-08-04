@@ -29,6 +29,8 @@ sorted_styles.json
 /tmp
 /ui-config.json
 /outputs
+/presets
+/sdxl_styles
 /config.json
 /log
 /webui.settings.bat
@@ -77,7 +79,7 @@ wd-v1-4-moat-tagger-v2.csv
 /custom/OneButtonPrompt/settings/paths.json
 /custom/OneButtonPrompt/settings/settings.json
 /custom/OneButtonPrompt/models/loras/
-/custom/OneButtonPrompt/random_prompt/userfiles/obp_presets.json
+/custom/OneButtonPrompt/random_prompt/userfiles/
 .token_user.pem
 .user_Pq69KpDwNenAq2aA33kyo9rw15xrEgiPn.did
 /repos/
@@ -85,7 +87,6 @@ wd-v1-4-moat-tagger-v2.csv
 *.did
 /models/hydit
 /client.toml
-/models
 /comfy/input/
 /comfy/output/
 /comfy/temp/
