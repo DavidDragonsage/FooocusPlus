@@ -12,7 +12,7 @@ FooocusPlus is a community-developed AI image generation application that makes 
 - Enhance existing images using AI – banish Photoshop editing with advanced image modification tools, or even use an existing picture as inspiration for a new creation!
 - Bring the power of community home – use LoRA models from websites like Civitai to add new concepts to your images
 - Full control at your fingertips – simple one-click access to advanced generation options, letting you use custom settings like a pro without ever leaving our friendly user interface
-- Multilingual – full support for English, French, and Chinese out of the box
+- Multilingual – full support for English, French, and Simplified Chinese out of the box
 - Private – runs on your computer and does not send information about your identity or AI art generation to third parties without your consent
 
 ## Supported Models
@@ -74,7 +74,13 @@ If you were using a pre-release or Beta version of FooocusPlus, please be sure t
 
 6. Now double-click on the _run_FooocusPlus.bat_ file to load FooocusPlus for the first time. It will download some additional components automatically on the first run.
 
-Language and optional preset startup files are available in the FooocusPlus\UserDir\batch_startups folder. Please copy whatever you need to the FooocusPlus folder before using them.
+## Language Support
+
+Language and optional preset startup files are available in the FooocusPlus\UserDir\batch_startups folder. Please copy whatever you need to the FooocusPlus folder before using them. These are the current language startups:
+
+- Chinese, Simplified: 常规启动.bat and 不更新启动.bat (no update)
+- English, UK: run_FooocusPlus_UK.bat
+- French: run_FooocusPlus_FR.bat
 
 ## Getting Help
 

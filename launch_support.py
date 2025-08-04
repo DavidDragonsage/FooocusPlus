@@ -72,17 +72,20 @@ def dependency_resolver():
         torch_ver = "2.3.1"
 
 
-    # Detection Logic: Windows (win32) defaults to "2.7.1", unless "cu124"
-    elif (sys.platform == "win32"): # and (arch_version == 12): # Blackwell (NVIDIA 5xxx)
-        torch_ver = "2.7.1"
-    elif (sys.platform == "win32") and (arch_version > 3.7 and arch_version < 7.5):
-        torch_ver = "2.4.1"    # older NVIDIA cards such as the 10xx series, P40, cu124
+    # Detection Logic: Windows (win32) defaults to "2.7.1+cu128"
+    # almost all modern NVIDIA cards including NVIDIA 50xx (Blackwell)
+    elif sys.platform == "win32":
+        if arch_version >= 7.5:
+            torch_ver = "2.7.1"
+        # older NVIDIA cards like the 10xx series & P40 use cu124
+        elif (arch_version > 3.7) and (arch_version < 7.5):
+            torch_ver = "2.4.1"
 
-    elif sys.platform == "linux": # Linux also defaults to "2.7.1"
-        if arch_version == 12:    # Blackwell (NVIDIA 5xxx)
+    elif sys.platform == "linux":  # Linux also defaults to "2.7.1+cu128"
+        if arch_version >= 7.5: # NVIDIA GTX1650 through to NVIDIA 5xxx (Blackwell)
             torch_ver = "2.7.1"
         elif (arch_version > 3.7 and arch_version < 7.5):
-            torch_ver = "2.4.1"   # older NVIDIA cards such as the 10xx series, P40, cu124
+            torch_ver = "2.4.1" # older NVIDIA cards like the 10xx & P40 use cu124
         if torchruntime_platform == "rocm5.7":
             torch_ver = "2.3.1"
         elif torchruntime_platform == "rocm5.2":
