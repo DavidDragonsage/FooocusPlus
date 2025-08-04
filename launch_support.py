@@ -78,13 +78,13 @@ def dependency_resolver():
         if arch_version >= 7.5:
             torch_ver = "2.7.1"
         # older NVIDIA cards like the 10xx series & P40 use cu124
-        elif (arch_version > 3.7) and (arch_version < 7.5):
+        else:
             torch_ver = "2.4.1"
 
     elif sys.platform == "linux":  # Linux also defaults to "2.7.1+cu128"
         if arch_version >= 7.5: # NVIDIA GTX1650 through to NVIDIA 5xxx (Blackwell)
             torch_ver = "2.7.1"
-        elif (arch_version > 3.7 and arch_version < 7.5):
+        else:
             torch_ver = "2.4.1" # older NVIDIA cards like the 10xx & P40 use cu124
         if torchruntime_platform == "rocm5.7":
             torch_ver = "2.3.1"

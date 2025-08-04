@@ -1232,7 +1232,7 @@ with common.GRADIO_ROOT:
                     US.create_model_structure(config.paths_checkpoints, config.paths_loras)
                     engine = state_params.get('engine', 'Fooocus')
                     task_method = state_params.get('task_method', None)
-                    model_filenames, sd_model_filenames, lora_filenames, vae_filenames = config.update_files(engine, task_method)
+                    model_filenames, lora_filenames, vae_filenames = config.update_files(engine, task_method)
                     results = [gr.update(choices=model_filenames)]
                     results += [gr.update(choices=['None'] + model_filenames)]
                     results += [gr.update(choices=[flags.default_vae] + vae_filenames)]
