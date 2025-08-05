@@ -46,6 +46,7 @@
 * Hotfix: restored the visibility of the Stop & Skip buttons during generation
 * Hotfix: Linux is finally functional: dependency errors and non-compliant coding were resolved
 * Hotfix: "Refresh All Files" correctly adds new LoRAs and does not cause an error
+* Hotfix: improved legacy graphics card support
 
 
 # 1.0.5
