@@ -121,7 +121,7 @@ def prepare_environment():
 
     if REINSTALL_ALL or not is_installed("xformers"):
         if platform.python_version().startswith("3.10"):
-            if args.gpu_type == 'auto' or args.gpu_type == 'cu128':
+            if torch_ver == '2.7.1':
                 verify_installed_version('xformers', xformers_ver, False)
             else:
                 xformers_statement = "xformers==" + xformers_ver

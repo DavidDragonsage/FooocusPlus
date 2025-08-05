@@ -5,7 +5,7 @@ import json
 import time
 from datetime import datetime
 
-# LoRA Trigger and Thumbnail retriever by Carl Bratcher for Pure Fooocus AI Facebook page and FooocusPlus
+# LoRA Trigger and Thumbnail retriever by Taffy Carl
 def calculate_sha256(file_path):
     """Calculate SHA-256 hash of a file."""
     sha256_hash = hashlib.sha256()
@@ -26,12 +26,6 @@ def get_civitai_model_info(file_hash):
         print(f"Error fetching data for hash {file_hash}: {e}")
         return None
 
-def is_pony_model(model_data):
-    """Check if the model is a Pony model based on baseModel or tags."""
-    base_model = model_data.get("baseModel", "").lower()
-    tags = [tag.lower() for tag in model_data.get("tags", [])]
-    return "pony" in base_model or any("pony" in tag for tag in tags)
-
 def get_thumbnail_url(model_data):
     """Extract thumbnail URL from model images, preferring the first available image."""
     images = model_data.get("images", [])
@@ -48,7 +42,7 @@ def scan_lora_files(folder_path):
         for file in files:
             if file.endswith(".safetensors"):
                 file_path = os.path.join(root, file)
-                print(f"Processing {file}...")
+                print(f"Processing {file_path}...")
                 
                 # Calculate SHA-256 hash
                 file_hash = calculate_sha256(file_path)
@@ -57,11 +51,6 @@ def scan_lora_files(folder_path):
                 model_info = get_civitai_model_info(file_hash)
                 
                 if model_info:
-                    # Skip Pony models
-                    if is_pony_model(model_info):
-                        print(f"Skipping Pony model: {file}")
-                        continue
-                    
                     # Extract relevant data
                     base_model = model_info.get("baseModel", "Unknown")
                     trigger_words = model_info.get("trainedWords", [])
@@ -69,6 +58,7 @@ def scan_lora_files(folder_path):
                     
                     lora_data.append({
                         "file_name": file,
+                        "file_path": file_path,
                         "base_model": base_model,
                         "trigger_words": trigger_words,
                         "thumbnail_url": thumbnail_url
@@ -76,6 +66,9 @@ def scan_lora_files(folder_path):
                 
                 # Respect Civitai API rate limit
                 time.sleep(1)
+    
+    # Sort by file_name alphabetically
+    lora_data.sort(key=lambda x: x["file_name"].lower())
     
     return lora_data
 
@@ -85,7 +78,7 @@ def save_to_json(data, output_path):
         json.dump(data, f, indent=4, ensure_ascii=False)
 
 def save_to_html(data, output_path):
-    """Save data to HTML file with thumbnails."""
+    """Save data to HTML file with 150px thumbnails."""
     html_content = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -99,15 +92,16 @@ def save_to_html(data, output_path):
         th { background-color: #f2f2f2; }
         tr:nth-child(even) { background-color: #f9f9f9; }
         h1 { color: #333; }
-        img { max-width: 100px; height: auto; display: block; }
+        img { max-width: 150px; height: auto; display: block; }
     </style>
 </head>
 <body>
     <h1>LoRA Model Information</h1>
     <table>
         <tr>
-            <th>File Name</th>
             <th>Base Model</th>
+            <th>File Name</th>
+            <th>File Path</th>
             <th>Trigger Words</th>
             <th>Thumbnail</th>
         </tr>
@@ -116,8 +110,9 @@ def save_to_html(data, output_path):
         trigger_words = ", ".join(item["trigger_words"]) if item["trigger_words"] else "None"
         thumbnail = f'<img src="{item["thumbnail_url"]}" alt="Thumbnail">' if item["thumbnail_url"] != "No thumbnail available" else "No thumbnail"
         html_content += f"""        <tr>
-            <td>{item["file_name"]}</td>
             <td>{item["base_model"]}</td>
+            <td>{item["file_name"]}</td>
+            <td>{item["file_path"]}</td>
             <td>{trigger_words}</td>
             <td>{thumbnail}</td>
         </tr>
@@ -128,17 +123,39 @@ def save_to_html(data, output_path):
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(html_content)
 
+def save_to_txt(data, output_path):
+    """Save data to TXT file, excluding thumbnail URL."""
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("LoRA Model Information\n")
+        f.write("=" * 50 + "\n\n")
+        for item in data:
+            trigger_words = ", ".join(item["trigger_words"]) if item["trigger_words"] else "None"
+            f.write(f"Base Model: {item['base_model']}\n")
+            f.write(f"File Name: {item['file_name']}\n")
+            f.write(f"File Path: {item['file_path']}\n")
+            f.write(f"Trigger Words: {trigger_words}\n")
+            f.write("-" * 50 + "\n")
+
 def main():
-    # Specify the folder to scan (modify this path as needed)
-    folder_path = r"E:\FooocusPlus\UserDir\models\loras"
-    output_json = f"lora_info_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    output_html = f"lora_info_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+    # Specify the folder to scan and output folder (modify these paths as needed)
+    folder_path = r"C:\Users\AI\models\loras"
+    output_folder = r"C:\Users\AI\lora_triggers"
+    
+    # Create output folder if it doesn't exist
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+    
+    # Generate output file names with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_json = os.path.join(output_folder, f"lora_info_{timestamp}.json")
+    output_html = os.path.join(output_folder, f"lora_info_{timestamp}.html")
+    output_txt = os.path.join(output_folder, f"lora_info_{timestamp}.txt")
     
     # Scan for LoRA files and retrieve info
     lora_data = scan_lora_files(folder_path)
     
     if not lora_data:
-        print("No non-Pony LoRA models found or no valid data retrieved.")
+        print("No LoRA models found or no valid data retrieved.")
         return
     
     # Save to JSON
@@ -148,6 +165,10 @@ def main():
     # Save to HTML
     save_to_html(lora_data, output_html)
     print(f"Data saved to {output_html}")
+    
+    # Save to TXT
+    save_to_txt(lora_data, output_txt)
+    print(f"Data saved to {output_txt}")
 
 if __name__ == "__main__":
     main()

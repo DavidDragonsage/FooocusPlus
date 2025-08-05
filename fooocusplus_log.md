@@ -43,6 +43,9 @@
 * adjusted the Image Sharpness slider from a 0.001 to a 0.1 step increment
 * if a directory is not accessible, the program no longer tries to rename it ".corrupted"
 * in support of UK users, all presets referring to CivitAI links now refer to the FooocusPlus repo
+* Hotfix: restored the visibility of the Stop & Skip buttons during generation
+* Hotfix: Linux is finally functional: dependency errors and non-compliant coding were resolved
+* Hotfix: "Refresh All Files" correctly adds new LoRAs and does not cause an error
 
 
 # 1.0.5
