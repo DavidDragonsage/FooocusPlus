@@ -163,15 +163,16 @@ def is_installed_version(package, version_required):
         return False
     return True
 
-def verify_installed_version(package_name, package_ver, dependencies = False):
+def verify_installed_version(package_name, package_ver, dependencies = False, use_index = ''):
     result = True
+    index_url_line = f' --index-url {use_index}' if use_index != '' else ''
     if not is_installed_version(package_name, package_ver):
         if dependencies:
             run(f'"{python}" -m pip uninstall -y {package_name}')
-            result = run_pip(f"install -U -I {package_name}=={package_ver}", {package_name}, live=True)
+            result = run_pip(f"install -U -I {package_name}=={package_ver} {index_url_line}", {package_name}, live=True)
         else:
             run(f'"{python}" -m pip uninstall -y {package_name}')
-            result = run_pip(f"install -U -I --no-deps {package_name}=={package_ver}", {package_name}, live=True)
+            result = run_pip(f"install -U -I --no-deps {package_name}=={package_ver} {index_url_line}", {package_name}, live=True)
     return result
 
 met_diff = {}

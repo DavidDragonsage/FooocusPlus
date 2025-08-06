@@ -121,11 +121,10 @@ def prepare_environment():
 
     if REINSTALL_ALL or not is_installed("xformers"):
         if platform.python_version().startswith("3.10"):
-            if torch_ver == '2.7.1':
-                verify_installed_version('xformers', xformers_ver, False)
+            if xformers_ver == '0.0.30':
+                verify_installed_version('xformers', xformers_ver, False, use_index = 'https://download.pytorch.org/whl/cu128')
             else:
-                xformers_statement = "xformers==" + xformers_ver
-                torchruntime.install(["--no-deps", xformers_statement])
+                verify_installed_version('xformers', xformers_ver, False, use_index = 'https://download.pytorch.org/whl/cu124')
         else:
             print("Installation of xformers is not supported in this version of Python.")
             print("You can also check this and build manually:" +\
