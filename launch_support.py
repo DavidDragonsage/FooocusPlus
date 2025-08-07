@@ -12,6 +12,13 @@ win32_root = current_dir.resolve().parent
 python_embedded_path = Path(win32_root/'python_embedded')
 is_win32_standalone_build = python_embedded_path.is_dir()
 
+# moved from args_parser, but uses is_win32_standalone_build
+# instead of the obsolete args.is_windows_embedded_python
+if is_win32_standalone_build:
+    args_manager.args.in_browser = True
+if args_manager.args.disable_in_browser:
+    args_manager.args.in_browser = False
+
 torch_base_ver = ''
 
 

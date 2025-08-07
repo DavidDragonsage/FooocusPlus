@@ -47,6 +47,7 @@
 * Hotfix: Linux is finally functional: dependency errors and non-compliant coding were resolved
 * Hotfix: "Refresh All Files" correctly adds new LoRAs and does not cause an error
 * Hotfix: improved legacy graphics card support
+* Hotfix: removed the non-destructive error condition when using Describe
 
 
 # 1.0.5
