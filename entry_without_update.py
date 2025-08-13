@@ -1,9 +1,11 @@
 import os
 import sys
+from pathlib import Path
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(ROOT)
+ROOT = Path(__file__).parent
+sys.path.append(str(ROOT))
 os.chdir(ROOT)
+print(f'ROOT {ROOT}')
 
 print('Loading FooocusPlus without updating...')
 

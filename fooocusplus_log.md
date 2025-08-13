@@ -1,3 +1,18 @@
+# 1.07
+
+* introduced three presets: Flux1Krea, Flux1Krea_5GGUF and Flux1Krea_8GGUF
+* these presets are located in the new Flux1Krea Preset Category
+* added the Spanish language user interface
+* a version information link is now available below System Identification, in Extras
+* introduced Hotfix identification, displaying a fourth digit in the version string
+* Linux users now use the appropriate Xformers version. No change for Windows users
+* debugged and updated support for AMD graphics card users
+* added HF-Mirror support for Chinese users, in the two Chinese batch files
+* to reduce image distortion, the main canvas is now set for a minimum height of 300px
+* updated python_embedded version to 1.06 (current users have already updated)
+* Hotfix0: None
+
+
 # 1.0.6
 
 * removed the following components that are not suitable for production code:
@@ -5,8 +20,8 @@
 ** run_FooocusPlus_commit.bat & run_FooocusPlus_dev.bat (auto-delete)
 * introduced the "--gpu-type" command line argument
 * run_FooocusPlus_cu124.bat demonstrates gpu_type = "cu124"
-* restored run_FooocusPlus_FR.bat for French language support
-* corrected the Flux1S preset to use the "flux_base" task_method
+  * restored run_FooocusPlus_FR.bat for French language support
+  * corrected the Flux1S preset to use the "flux_base" task_method
 * the base model list "flux_base2_gguf" method now includes "schnell" in the filter
 * created Hyperflux Schnell models, represented by the HyperFlux1S5 & HyperFlux1S8 presets
 * HyperFlux1S5 is in the Flux1S category and HyperFlux1S8 is in the HyperFlux category
@@ -43,11 +58,11 @@
 * adjusted the Image Sharpness slider from a 0.001 to a 0.1 step increment
 * if a directory is not accessible, the program no longer tries to rename it ".corrupted"
 * in support of UK users, all presets referring to CivitAI links now refer to the FooocusPlus repo
-* Hotfix: restored the visibility of the Stop & Skip buttons during generation
-* Hotfix: Linux is finally functional: dependency errors and non-compliant coding were resolved
-* Hotfix: "Refresh All Files" correctly adds new LoRAs and does not cause an error
-* Hotfix: improved legacy graphics card support
-* Hotfix: removed the non-destructive error condition when using Describe
+* Hotfix5: removed the non-destructive error condition when using Describe
+* Hotfix4: improved legacy graphics card support
+* Hotfix3: "Refresh All Files" correctly adds new LoRAs and does not cause an error
+* Hotfix2: Linux is finally functional: dependency errors and non-compliant coding were resolved
+* Hotfix1: restored the visibility of the Stop & Skip buttons during generation
 
 
 # 1.0.5
@@ -75,6 +90,7 @@
 * fixed a bug with Clip Skip that affected some users
 * xformers installation now uses verify_installed_version() rather than Torchruntime
 
+
 # 1.0.4
 
 * resolves the bug with incorrect secondary paths to the models folders
@@ -84,6 +100,7 @@
 * the presence of directml files in the Python libraries was sabotaging NVIDIA installations
 * in the GUI, "Forced Overwrite of Sampling Step" is grouped with Performance Options
 * to reduce clutter, the Performance Options are now available from an accordion
+
 
 # 1.0.3
 
@@ -103,6 +120,7 @@
 * these changes are also available in the python_embedded archive at Hugging Face
 * the image seed options are now accessed through the Image Seed Control accordion
 
+
 # 1.0.2
 
 * LowVRAM Preset mode activates if VRAM<6GB
@@ -111,6 +129,7 @@
 * the 4GB_Default preset now uses Segmind-Vega in normal mode
 * the VegaRT preset operates Segming-Vega in "Real Time" mode
 * Styles can now be configured in UserDir, like Presets and Topics
+
 
 # 1.0.1
 
@@ -121,6 +140,7 @@
 * this phantom python_embedded folder is automatically deleted if present
 * from 1.0.0, Flux models are installed in either the "FluxDev" or "FluxSchnell" folders
 * if an obsolete "Flux" folder is found and it is empty, it is automatically deleted
+
 
 # 1.0.0
 
@@ -163,6 +183,7 @@
 * fixed bugs with SuperPrompter, Wildcard Panel, Sampler selector, Refiner switch and metadata processing
 * subject to testing, this version provisionally supports NVIDIA 50xx video cards
 * temporarily removed several Wildcard files that need improvement
+
 
 # 0.9.8 Dev
 

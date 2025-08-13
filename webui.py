@@ -190,7 +190,8 @@ def enhance_inpaint_mode_change(mode, inpaint_engine_version):
 
 reload_javascript()
 
-title = f'FooocusPlus {version.get_fooocusplus_ver()}'
+fooocusplus_ver, hotfix = version.get_fooocusplus_ver()
+title = f'FooocusPlus {fooocusplus_ver}.{hotfix}'
 common.GRADIO_ROOT = gr.Blocks(
     title=title, css=toolbox.css).queue()
 
@@ -222,7 +223,7 @@ with common.GRADIO_ROOT:
 
                 with gr.Row():
                     progress_window = grh.Image(label='Preview', show_label=False, visible=True, height=768, elem_id='preview_generating',
-                        elem_classes=['main_view'], value="masters/master_welcome_images/welcome.png")
+                        elem_classes=['main_view','main_canvas'], value="masters/master_welcome_images/welcome.png")
                     progress_gallery = gr.Gallery(label='Image Gallery', show_label=True, object_fit='contain', elem_id='finished_gallery',
                         height=520, visible=False, elem_classes=['main_view', 'image_gallery'])
                 progress_html = gr.HTML(value=modules.html.make_progress_html(32, 'Progress 32%'), visible=False,
@@ -249,7 +250,7 @@ with common.GRADIO_ROOT:
                 with gr.Row():
                     with gr.Column(scale=12):
                         prompt = gr.Textbox(show_label=False,
-                            placeholder="Type the main prompt here or paste parameters.",
+                            placeholder="Type the main prompt here or paste parameters",
                             elem_id='positive_prompt', elem_classes='text-arial',
                             autofocus=True, value=common.positive, lines=4)
 
@@ -703,7 +704,7 @@ with common.GRADIO_ROOT:
                 wildcards_list = gr.Dataset(components=[prompt], type='index', label='Wildcard Filenames', samples=wildcards.get_wildcards_samples(), visible=True, samples_per_page=28)
                 read_wildcards_in_order = gr.Checkbox(label="Generate Wildcards in Order", value=False, visible=True)
                 with gr.Accordion(label='Wildcard Contents', visible=True, open=False) as words_in_wildcard:
-                    wildcard_tag_name_selection = gr.Dataset(components=[prompt], label='Words in the Wildcards:', samples=wildcards.get_words_of_wildcard_samples(), visible=True, samples_per_page=30, type='index')
+                    wildcard_tag_name_selection = gr.Dataset(components=[prompt], label='Words in the Wildcards', samples=wildcards.get_words_of_wildcard_samples(), visible=True, samples_per_page=30, type='index')
                 wildcards_list.click(wildcards.add_wildcards_and_array_to_prompt, inputs=[wildcards_list, prompt, state_topbar], outputs=[prompt, wildcard_tag_name_selection, words_in_wildcard], show_progress=False, queue=False)
                 wildcard_tag_name_selection.click(wildcards.add_word_to_prompt, inputs=[wildcards_list, wildcard_tag_name_selection, prompt], outputs=prompt, show_progress=False, queue=False)
                 wildcards_array = [prompt_wildcards, words_in_wildcard, wildcards_list, wildcard_tag_name_selection]
@@ -1027,7 +1028,6 @@ with common.GRADIO_ROOT:
                 lora_ctrls = []
                 for i, (enabled, filename, weight) in enumerate(config.default_loras):
                     with gr.Group():
-
                         with gr.Row():
                             lora_enabled = gr.Checkbox(label=f'LoRA {i + 1} Enable',
                                 value=enabled,
@@ -1038,16 +1038,20 @@ with common.GRADIO_ROOT:
                                 config.lora_filenames,
                                 value=filename,
                                 allow_custom_value=True)
-#                                elem_classes='lora_model', scale=5)
                         with gr.Row():
-                            lora_weight = gr.Slider(label='Weight', minimum=config.default_loras_min_weight,
+                            lora_weight = gr.Slider(label='Weight',
+                                minimum=config.default_loras_min_weight,
                                 maximum=config.default_loras_max_weight,
                                 step=0.01, value=weight)
-#                                elem_classes='lora_weight', scale=5)
                             lora_ctrls += [lora_enabled, lora_model, lora_weight]
+#                        with gr.Row():
+#                            trigger_info = gr.Markdown(value=f' Trigger Words: unknown',
+#                            container=False, visible=True)
 
                 with gr.Row():
                     refresh_files = gr.Button(label='Refresh', value='\U0001f504 Refresh All Files')
+#                with gr.Row():
+#                    refresh_files = gr.Button(label='LoRA_Triggers', value='\U0001f504 Load LoRA Trigger Words')
 
             with gr.Tab(label='Advanced', elem_id="scrollable-box"):
                 guidance_scale = gr.Slider(label='Guidance Scale (CFG)', minimum=0.1, maximum=30.0, step=0.1,
@@ -1307,6 +1311,7 @@ with common.GRADIO_ROOT:
                     torch_ver, xformers_ver, cuda_ver = torch_info()
                     if xformers_ver == '':
                         xformers_ver = "not installed"
+                    fooocusplus_ver, hotfix = version.get_fooocusplus_ver()
                     gr.Markdown(value=f'<h3>System Information</h3>\
                     System RAM: {int(model_management.get_sysram())} MB,\
                     Video RAM: {int(model_management.get_vram())} MB<br>\
@@ -1315,7 +1320,10 @@ with common.GRADIO_ROOT:
                     Python {platform.python_version()}, Library {version.get_library_ver()}, \
                     Comfy {comfy.comfy_version.version}<br>\
                     Torch {torch_ver}{cuda_ver}, Xformers {xformers_ver}<br>\
-                    FooocusPlus {version.get_fooocusplus_ver()}<br><br>')
+                    FooocusPlus {fooocusplus_ver}, Hotfix {hotfix}')
+
+                with gr.Row():
+                    gr.HTML('<font size="4">&emsp;<a href="https://github.com/DavidDragonsage/FooocusPlus/blob/main/fooocusplus_log.md" target="_blank">\U0001F4D4 Version Info</a>')
 
             iclight_enable.change(lambda x: [gr.update(interactive=x, value='' if not x else comfy_task.iclight_source_names[0]),\
                     gr.update(value=AR.add_ratio('1024*1024') if not x else config.default_aspect_ratio_values[0])],\
@@ -1415,6 +1423,8 @@ with common.GRADIO_ROOT:
 
         if not args.args.disable_preset_selection:
             def _change(preset, is_generating, inpaint_mode):
+                print('[UI] TERRA INCOGNITA - Here be Dragons')
+                print()
                 preset_content = PR.get_preset_content(preset, quiet=False) if preset != 'initial' else {}
                 preset_prepared = modules.meta_parser.parse_meta_from_preset(preset_content)
 

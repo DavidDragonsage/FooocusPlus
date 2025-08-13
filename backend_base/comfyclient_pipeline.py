@@ -62,7 +62,7 @@ def get_images(ws, prompt, callback=None):
         try:
             out = ws.recv()
         except ConnectionResetError as e:
-            print(f'[ComfyClient] The connect was exception, restart and try again: {e}')
+            print(f'[ComfyClient] The connection created an exception. Restart and try again: {e}')
             ws = websocket.WebSocket()
             ws.connect("ws://{}/ws?clientId={}".format(server_address, client_id))
             out = ws.recv()
@@ -113,7 +113,7 @@ def images_upload(images):
             data = {'overwrite': 'true', 'type': 'input'}
             response = httpx.post("http://{}/upload/image".format(server_address), files=files, data=data)
         result.update({k: response.json()["name"]})
-    print(f'[ComfyClient] The ComfyTask:upload_input_images has finished: {len(result)}')
+    print(f'[ComfyClient] The ComfyTask: upload_input_images has finished: {len(result)}')
     return result
 
 

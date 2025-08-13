@@ -919,11 +919,12 @@ def params_lora_fixed(parameters):
 
 def get_exif(metadata: str | None, metadata_scheme: str):
     exif = Image.Exif()
+    fooocusplus_ver, hotfix = enhanced.version.get_fooocusplus_ver()
     # tags see see https://github.com/python-pillow/Pillow/blob/9.2.x/src/PIL/ExifTags.py
     # 0x9286 = UserComment
     exif[0x9286] = metadata
     # 0x0131 = Software
-    exif[0x0131] = f'FooocusPlus {enhanced.version.get_fooocusplus_ver()}, Preset: {args.args.preset}'
+    exif[0x0131] = f'FooocusPlus {fooocusplus_ver}.{hotfix}, Preset: {args.args.preset}'
     # 0x927C = MakerNote
     exif[0x927C] = metadata_scheme
     return exif

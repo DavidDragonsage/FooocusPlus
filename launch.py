@@ -7,15 +7,17 @@ from common import ROOT
 
 print('[System ARGV] ' + str(sys.argv))
 print(f'Root {ROOT}')
-sys.path.append(ROOT)
-os.chdir(ROOT)
+# sys.path.append(ROOT)
+# os.chdir(ROOT)
 
 REINSTALL_ALL = False
 
+fooocusplus_ver, hotfix = version.get_fooocusplus_ver()
+
 if not version.get_required_library():
     print()
-    print('Our apologies for the inconvenience, but the installed')
-    print(f'Python library does not support FooocusPlus {version.get_fooocusplus_ver()}')
+    print('The installed Python library does not support')
+    print(f'FooocusPlus {fooocusplus_ver}')
     print('Please install the new python_embedded archive from')
     print('https://huggingface.co/DavidDragonsage/FooocusPlus/')
     print()
@@ -62,7 +64,7 @@ from modules.user_structure import cleanup_structure
 
 
 def prepare_environment():
-    global torch_ver
+    global torch_ver, fooocusplus_ver, hotfix
     target_path_win = Path(python_embedded_path/'Lib/site-packages')
     torch_dict = dependency_resolver()
     torch_ver = torch_dict['torch_ver']
@@ -89,7 +91,7 @@ def prepare_environment():
         print(f"Torch {torch_info}{cuda_info}, Xformers {xformers_info}")
     else:
         print(f"Torch {torch_base_ver}")
-    print(f"FooocusPlus version: {version.get_fooocusplus_ver()}")
+    print(f"FooocusPlus version: {fooocusplus_ver}, Hotfix: {hotfix}")
     print()
 
     if REINSTALL_ALL or torch_ver != torch_base_ver or \
@@ -121,10 +123,13 @@ def prepare_environment():
 
     if REINSTALL_ALL or not is_installed("xformers"):
         if platform.python_version().startswith("3.10"):
-            if xformers_ver == '0.0.30':
+            if torch_platform_ver == 'cu128':
                 verify_installed_version('xformers', xformers_ver, False, use_index = 'https://download.pytorch.org/whl/cu128')
-            else:
+            elif torch_platform_ver == 'cu124':
                 verify_installed_version('xformers', xformers_ver, False, use_index = 'https://download.pytorch.org/whl/cu124')
+            else:
+                xformers_statement = "xformers==" + xformers_ver
+                torchruntime.install(["--no-deps", xformers_statement])
         else:
             print("Installation of xformers is not supported in this version of Python.")
             print("You can also check this and build manually:" +\
@@ -159,7 +164,7 @@ if args.gpu_device_id is not None:
 
 if args.hf_mirror is not None:
     os.environ['HF_MIRROR'] = str(args.hf_mirror)
-    print("Set hf_mirror to:", args.hf_mirror)
+    print("The hf_mirror is:", args.hf_mirror)
 
 
 import common

@@ -50,13 +50,13 @@ def execute_prestartup_script():
                 success = execute_script(script_path)
                 node_prestartup_times.append((time.perf_counter() - time_before, module_path, success))
     if len(node_prestartup_times) > 0:
-        print("[Comfyd] Prestartup times for custom nodes:")
+        print("[Comfy] Prestartup times for custom nodes:")
         for n in sorted(node_prestartup_times):
             if n[2]:
                 import_message = ""
             else:
                 import_message = " (PRESTARTUP FAILED)"
-            print("[Comfyd]    {:6.1f} seconds{}:".format(n[0], import_message), n[1])
+            print("[Comfy]    {:6.1f} seconds{}:".format(n[0], import_message), n[1])
         #print()
 
 #execute_prestartup_script()
@@ -173,7 +173,7 @@ def hijack_progress(server):
     def hook(value, total, preview_image):
         comfy.model_management.throw_exception_if_processing_interrupted()
         progress = {"value": value, "max": total, "prompt_id": server.last_prompt_id, "node": server.last_node_id}
-        
+
         server.send_sync("progress", progress, server.client_id)
         if preview_image is not None:
             server.send_sync(BinaryEventTypes.UNENCODED_PREVIEW_IMAGE, preview_image, server.client_id)
@@ -239,7 +239,7 @@ if __name__ == "__main__":
         input_dir = os.path.abspath(args.input_directory)
         logging.info(f"Setting input directory to: {input_dir}")
         folder_paths.set_input_directory(input_dir)
-    
+
     if args.user_directory:
         user_dir = os.path.abspath(args.user_directory)
         logging.info(f"Setting user directory to: {user_dir}")

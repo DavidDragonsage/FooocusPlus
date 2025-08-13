@@ -48,14 +48,14 @@ def find_dir_path(search_dir, find_dir):
     str_find_dir = str(find_dir)
     for dir_path in search_path.rglob(str_find_dir):
         return Path(dir_path).resolve()
-    return ''
+    return '' # empty string for search fail
 
 def find_file_path(search_dir, filename):
     search_path = Path(search_dir)
     str_filename = str(filename)
     for file_path in search_path.rglob(str_filename):
         return Path(file_path).resolve()
-    return ''
+    return '' # empty string for search fail
 
 def list_files_by_patterns(search_dir, arg_pattern1='', arg_pattern2=''):
     # looks in search_dir and its subdirectories
@@ -85,16 +85,36 @@ def load_json(arg_json):  # the file is automatically closed
     return json_contents
 
 def load_textfile(arg_textfile):  # the file is automatically closed
+    # the results are returned as a list of text lines
     load_path = Path(arg_textfile)
     if load_path.is_file():
         try:
             text_contents = load_path.read_text(encoding="utf-8")
+            text_list = text_contents.splitlines()
         except Exception as error:
             print(f'Could not load {arg_textfile} because: {error}')
-            text_contents = False
+            text_list = False
     else:
-        text_contents = False
-    return text_contents
+        text_list = False
+    return text_list
+
+def locate_value(arg_list, parameter, terminator = ''):
+    # find a parameter and value in a list
+    # the optional terminator will truncate the value string
+    # if used, the terminator is typically a space or a colon
+    value = ''
+    trans_table = str.maketrans('','','"')
+    for line in arg_list:
+        if line.startswith(parameter):
+            # remove the parameter and ending space:
+            value_quote = line.strip(parameter).strip()
+            # remove quotation marks, if any:
+            value = value_quote.translate(trans_table)
+            if terminator != '':
+                value_list = value.split(terminator,1)
+                value = value_list[0]
+            break
+    return value
 
 def make_dir(arg_dir):
     make_path = Path(arg_dir)
@@ -195,6 +215,7 @@ def remove_obsolete_flux_folder(arg_parent_str):
     remove_empty_dir(old_flux_path)
     return
 
+
 def create_model_structure(paths_checkpoints, paths_loras):
 
     # remove obsolete Flux folders if empty, effective 1.0.1
@@ -207,6 +228,7 @@ def create_model_structure(paths_checkpoints, paths_loras):
     checkpoint0_path = Path(paths_checkpoints[0])
     make_dir(checkpoint0_path/'Alternative')
     make_dir(checkpoint0_path/'FluxDev')
+    make_dir(checkpoint0_path/'FluxKrea')
     make_dir(checkpoint0_path/'FluxSchnell')
     make_dir(checkpoint0_path/'LowVRAM')
     make_dir(checkpoint0_path/'Pony')
@@ -227,15 +249,27 @@ def create_model_structure(paths_checkpoints, paths_loras):
 def create_user_structure(user_dir):
 
     # initialize the user directory, user_dir
+    masters_path = Path('masters').resolve()
     user_dir_path = Path(user_dir).resolve()
     print(f'Initialized the user folder at {user_dir_path}')
-    copy_dirs('masters/master_batch_startups', user_dir_path/'batch_startups')
-    copy_dirs('masters/master_control_images', user_dir_path/'control_images')
-    copy_dirs('masters/master_welcome_images', user_dir_path/'welcome_images')
-    copy_dirs('masters/master_wildcards', user_dir_path/'wildcards')
+    copy_dirs(Path(masters_path/'master_control_images'), Path(user_dir_path/'control_images'))
+    copy_dirs(Path(masters_path/'master_welcome_images'), Path(user_dir_path/'welcome_images'))
+    copy_dirs(Path(masters_path/'master_wildcards'), Path(user_dir_path/'wildcards'))
+
+    # Ensure that all reference batch files are
+    # current and correctly named. Copy the contents
+    # of masters/master_batch_startups to
+    # user_dir/batch_startups. The user must copy the batch
+    # file they want from "FooocusPlus\UserDir\batch_startups"
+    # to the parent directory, "FooocusPlus" to use it
+    master_batch_path = Path(masters_path/'master_batch_startups')
+    ref_master_batch_path = Path(user_dir_path/'batch_startups')
+    remove_dirs(ref_master_batch_path)
+    copy_dirs(master_batch_path, ref_master_batch_path)
 
     # delete the contents of user_dir/master_topics to get a clean start
-    # copy the contents of '.masters/master_topics' to user_dir for the user's reference only
+    # copy the contents of '.masters/master_topics' to user_dir
+    # for the user's reference only
     master_topics_path = Path('masters/master_topics')
     ref_master_topics_path = Path(user_dir_path/'master_topics')
     remove_dirs(ref_master_topics_path)

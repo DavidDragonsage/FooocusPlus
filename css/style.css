@@ -19,6 +19,10 @@
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+/* Main Canvas */
+.main_canvas {
+    min-height: 300px !important;
+}
 
 /* Style the progress bar */
 progress {

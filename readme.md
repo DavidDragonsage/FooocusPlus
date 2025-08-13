@@ -76,11 +76,12 @@ If you were using a pre-release or Beta version of FooocusPlus, please be sure t
 
 ## Language Support
 
-Language and optional preset startup files are available in the FooocusPlus\UserDir\batch_startups folder. Please copy whatever you need to the FooocusPlus folder before using them. These are the current language startups:
+Language and optional preset startup files are available in the FooocusPlus\UserDir\batch_startups folder. _Please copy whatever you need to the FooocusPlus folder before using them._ These are the current language startups:
 
 - Chinese, Simplified: 常规启动.bat and 不更新启动.bat (no update)
 - English, UK: run_FooocusPlus_UK.bat
-- French: run_FooocusPlus_FR.bat
+- French: run_FooocusPlus_française.bat
+- Spanish: run_FooocusPlus_español.bat
 
 ## Getting Help
 

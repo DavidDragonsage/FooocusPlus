@@ -1,26 +1,16 @@
 import os
 import sys
+from pathlib import Path
 
-root = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(root)
-os.chdir(root)
+ROOT = Path(__file__).parent
+sys.path.append(str(ROOT))
+os.chdir(ROOT)
 
-def get_fooocusplus_version():
-    fooocusplus_log = os.path.abspath(f'./fooocusplus_log.md')
-    if os.path.exists(fooocusplus_log):
-        with open(fooocusplus_log, "r", encoding="utf-8") as log_file:
-            line = log_file.readline().strip()
-            while line:
-                if line.startswith("# "):
-                    break
-                line = log_file.readline().strip()                
-    else:
-        line = '0.9.0'
-    fooocusplus_ver = line.strip('# ')
-    return fooocusplus_ver
+import enhanced.version as version
 
-old_version = get_fooocusplus_version()
+old_version, old_hotfix = version.get_fooocusplus_version()
 print(f'Welcome to FooocusPlus {old_version}: checking for updates...')
+
 
 try:
     import pygit2
@@ -29,7 +19,7 @@ try:
     repo = pygit2.Repository(os.path.abspath(os.path.dirname(__file__)))
 
     branch_name = repo.head.shorthand
- 
+
     remote_name = 'origin'
     remote = repo.remotes[remote_name]
     remote.fetch()
@@ -79,9 +69,11 @@ except Exception as e:
     print(f'{branch_name if branch_name!="main" else "FooocusPlus"}: Update failed.')
     print(str(e))
 
-new_version = get_fooocusplus_version()
+new_version, new_hotfix = version.get_fooocusplus_version()
 if new_version != old_version:
     print(f'Updated FooocusPlus from {old_version} to {new_version}')
+elif new_hotfix != old_hotfix:
+    print(f'Updated FooocusPlus to Hotfix {new_version}')
 print()
 
 from launch import *
