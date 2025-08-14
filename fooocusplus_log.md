@@ -10,6 +10,7 @@
 * added HF-Mirror support for Chinese users, in the two Chinese batch files
 * to reduce image distortion, the main canvas is now set for a minimum height of 300px
 * updated python_embedded version to 1.06 (current users have already updated)
+* Hotfix2: fix the version numbering problem
 * Hotfix1: fix startup update problem
 
 
