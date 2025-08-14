@@ -8,7 +8,7 @@ os.chdir(ROOT)
 
 import enhanced.version as version
 
-old_version, old_hotfix = version.get_fooocusplus_version()
+old_version, old_hotfix = version.get_fooocusplus_ver()
 print(f'Welcome to FooocusPlus {old_version}: checking for updates...')
 
 
