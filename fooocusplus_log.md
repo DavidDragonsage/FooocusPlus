@@ -1,4 +1,4 @@
-# 1.07
+# 1.0.7
 
 * introduced three presets: Flux1Krea, Flux1Krea_5GGUF and Flux1Krea_8GGUF
 * these presets are located in the new Flux1Krea Preset Category
