@@ -69,7 +69,7 @@ except Exception as e:
     print(f'{branch_name if branch_name!="main" else "FooocusPlus"}: Update failed.')
     print(str(e))
 
-new_version, new_hotfix = version.get_fooocusplus_version()
+new_version, new_hotfix = version.get_fooocusplus_ver()
 if new_version != old_version:
     print(f'Updated FooocusPlus from {old_version} to {new_version}')
 elif new_hotfix != old_hotfix:
