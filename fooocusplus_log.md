@@ -10,6 +10,10 @@
 * added HF-Mirror support for Chinese users, in the two Chinese batch files
 * to reduce image distortion, the main canvas is now set for a minimum height of 300px
 * updated python_embedded version to 1.06 (current users have already updated)
+* Hotfix3: removed the assert statements from Inpainting, uses recovery logic
+* added the Elsewhere preset to the General Category, a backup for the Default preset
+  * this is to encourage the creation of a user created Default to suit individual needs
+* removed the "test" Random Prompt Topic and rationalized the random prompt names
 * Hotfix2: fix the version numbering problem
 * Hotfix1: fix startup update problem
 
@@ -17,12 +21,12 @@
 # 1.0.6
 
 * removed the following components that are not suitable for production code:
-** launch_support.build_launcher() and launch_with_commit.py
-** run_FooocusPlus_commit.bat & run_FooocusPlus_dev.bat (auto-delete)
+  * launch_support.build_launcher() and launch_with_commit.py
+  * run_FooocusPlus_commit.bat & run_FooocusPlus_dev.bat (auto-delete)
 * introduced the "--gpu-type" command line argument
 * run_FooocusPlus_cu124.bat demonstrates gpu_type = "cu124"
-  * restored run_FooocusPlus_FR.bat for French language support
-  * corrected the Flux1S preset to use the "flux_base" task_method
+* restored run_FooocusPlus_FR.bat for French language support
+* corrected the Flux1S preset to use the "flux_base" task_method
 * the base model list "flux_base2_gguf" method now includes "schnell" in the filter
 * created Hyperflux Schnell models, represented by the HyperFlux1S5 & HyperFlux1S8 presets
 * HyperFlux1S5 is in the Flux1S category and HyperFlux1S8 is in the HyperFlux category

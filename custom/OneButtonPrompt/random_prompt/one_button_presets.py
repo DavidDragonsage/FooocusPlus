@@ -11,7 +11,7 @@ class OneButtonPresets:
     OBP_FULLPATH = os.path.abspath(OBP_FILE)
     USER_FILE = os.path.abspath(f'{args_manager.args.user_dir}/user_topics')
     CUSTOM_OBP = "Create a New Topic..."
-    RANDOM_PRESET_OBP = "All Topics at Random..."
+    RANDOM_PRESET_OBP = "All Topics at Random"
 
     def __init__(self):
         self.opb_presets = self.load_obp_presets()

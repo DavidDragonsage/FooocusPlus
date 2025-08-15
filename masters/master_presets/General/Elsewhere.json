@@ -1,0 +1,53 @@
+{
+    "default_model": "elsewhereXL_v10.safetensors",
+    "default_refiner": "None",
+    "default_refiner_switch": 0.6,
+    "default_loras": [
+        [
+            false,
+            "SDXLFaeTastic2400.safetensors",
+            0.7
+        ],
+        [
+            false,
+            "SDXL_black_and_color_Sa_May.safetensors",
+            1.0
+        ],
+        [
+            true,
+            "None",
+            1.0
+        ],
+        [
+            true,
+            "None",
+            1.0
+        ],
+        [
+            true,
+            "None",
+            1.0
+        ]
+    ],
+    "default_cfg_scale": 4.5,
+    "default_sample_sharpness": 6.0,
+    "default_sampler": "dpmpp_2m_sde_gpu",
+    "default_scheduler": "karras",
+    "default_performance": "Speed",
+    "default_prompt": "",
+    "default_prompt_negative": "",
+    "default_styles": [
+        "Fooocus V2",
+        "Fooocus Enhance"
+    ],
+    "default_aspect_ratio": "0*0",
+    "checkpoint_downloads": {
+        "elsewhereXL_v10.safetensors": "https://civitai.com/api/download/models/1110155?type=Model&format=SafeTensor&size=pruned&fp=fp16"
+    },
+    "embeddings_downloads": {},
+    "lora_downloads": {
+        "SDXLFaeTastic2400.safetensors": "https://civitai.com/api/download/models/293991?type=Model&format=SafeTensor",
+        "SDXL_black_and_color_Sa_May.safetensors": "https://civitai.com/api/download/models/191463?type=Model&format=SafeTensor"
+    },
+    "previous_default_models": []
+}

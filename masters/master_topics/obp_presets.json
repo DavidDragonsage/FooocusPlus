@@ -17,6 +17,42 @@
     "giventypeofimage": "",
     "antistring": ""
   },
+  "Anime Boyfriend": {
+    "insanitylevel": 7,
+    "subject": "human - generic",
+    "artist": "none",
+    "chosensubjectsubtypeobject": "all",
+    "chosensubjectsubtypehumanoid": "all",
+    "chosensubjectsubtypeconcept": "all",
+    "chosengender": "male",
+    "imagetype": "subject only mode",
+    "imagemodechance": "20",
+    "givensubject": "-devadescriptor- 1boy, solo,",
+    "smartsubject": true,
+    "givenoutfit": "",
+    "prefixprompt": "(((masterpiece))), (((best quality))), anime style, 2d,",
+    "suffixprompt": "key visual",
+    "giventypeofimage": "",
+    "antistring": ""
+  },
+  "Anime Girlfriend": {
+    "insanitylevel": 7,
+    "subject": "human - generic",
+    "artist": "none",
+    "chosensubjectsubtypeobject": "all",
+    "chosensubjectsubtypehumanoid": "all",
+    "chosensubjectsubtypeconcept": "all",
+    "chosengender": "female",
+    "imagetype": "subject only mode",
+    "imagemodechance": "20",
+    "givensubject": "-devadescriptor- 1girl, solo,",
+    "smartsubject": true,
+    "givenoutfit": "",
+    "prefixprompt": "(((masterpiece))), (((best quality))), anime style, 2d,",
+    "suffixprompt": "key visual",
+    "giventypeofimage": "",
+    "antistring": ""
+  },
   "Architecture": {
     "insanitylevel": 3,
     "subject": "object - building",
@@ -89,7 +125,7 @@
     "giventypeofimage": "",
     "antistring": ""
   },
-  "Consistent results": {
+  "Consistent Results": {
     "insanitylevel": 2,
     "subject": "concept - card names",
     "artist": "none",
@@ -179,7 +215,7 @@
     "giventypeofimage": "Fashion photography",
     "antistring": ""
   },
-  "Greg mode - The Preset": {
+  "Greg Mode: The Preset": {
     "insanitylevel": 3,
     "subject": "human - generic",
     "artist": "greg mode",
@@ -194,24 +230,6 @@
     "givenoutfit": "-outfit-",
     "prefixprompt": "",
     "suffixprompt": "",
-    "giventypeofimage": "",
-    "antistring": ""
-  },
-  "Husbando's": {
-    "insanitylevel": 7,
-    "subject": "human - generic",
-    "artist": "none",
-    "chosensubjectsubtypeobject": "all",
-    "chosensubjectsubtypehumanoid": "all",
-    "chosensubjectsubtypeconcept": "all",
-    "chosengender": "male",
-    "imagetype": "subject only mode",
-    "imagemodechance": "20",
-    "givensubject": "-devadescriptor- 1boy, solo,",
-    "smartsubject": true,
-    "givenoutfit": "",
-    "prefixprompt": "(((masterpiece))), (((best quality))), anime style, 2d,",
-    "suffixprompt": "key visual",
     "giventypeofimage": "",
     "antistring": ""
   },
@@ -233,7 +251,7 @@
     "giventypeofimage": "",
     "antistring": ""
   },
-  "Let the CFG sort it out": {
+  "Let the CFG Sort It Out": {
     "insanitylevel": 2,
     "subject": "--- concept - all",
     "artist": "all (wild)",
@@ -269,7 +287,7 @@
     "giventypeofimage": "",
     "antistring": ""
   },
-  "Now this is podracing": {
+  "Now This is Podracing!": {
     "insanitylevel": 9,
     "subject": "--- concept - all",
     "artist": "all (wild)",
@@ -341,25 +359,7 @@
     "giventypeofimage": "",
     "antistring": ""
   },
-  "Waifu's": {
-    "insanitylevel": 7,
-    "subject": "human - generic",
-    "artist": "none",
-    "chosensubjectsubtypeobject": "all",
-    "chosensubjectsubtypehumanoid": "all",
-    "chosensubjectsubtypeconcept": "all",
-    "chosengender": "female",
-    "imagetype": "subject only mode",
-    "imagemodechance": "20",
-    "givensubject": "-devadescriptor- 1girl, solo,",
-    "smartsubject": true,
-    "givenoutfit": "",
-    "prefixprompt": "(((masterpiece))), (((best quality))), anime style, 2d,",
-    "suffixprompt": "key visual",
-    "giventypeofimage": "",
-    "antistring": ""
-  },
-  "Wallpaper art": {
+  "Wallpaper Art": {
     "insanitylevel": 3,
     "subject": "concept - the x of y",
     "artist": "digital",
@@ -377,7 +377,7 @@
     "giventypeofimage": "wallpaper art, in the center is an image",
     "antistring": ""
   },
-  "WEIRD HATS": {
+  "Weird Hats": {
     "insanitylevel": 4,
     "subject": "human - generic",
     "artist": "none",
@@ -393,24 +393,6 @@
     "prefixprompt": "",
     "suffixprompt": "",
     "giventypeofimage": "",
-    "antistring": ""
-  },
-  "test": {
-    "insanitylevel": 3,
-    "subject": "human - generic",
-    "artist": "fashion",
-    "chosensubjectsubtypeobject": "all",
-    "chosensubjectsubtypehumanoid": "all",
-    "chosensubjectsubtypeconcept": "all",
-    "chosengender": "all",
-    "imagetype": "photograph",
-    "imagemodechance": "100",
-    "givensubject": "supermodel",
-    "smartsubject": true,
-    "givenoutfit": "fashion outfit",
-    "prefixprompt": "",
-    "suffixprompt": "",
-    "giventypeofimage": "Fashion photography",
     "antistring": ""
   }
 }

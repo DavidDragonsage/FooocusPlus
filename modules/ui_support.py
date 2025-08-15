@@ -38,7 +38,7 @@ if os.path.exists(enhanced_config):
     with open(enhanced_config, "r", encoding="utf-8") as json_file:
         config_ext.update(json.load(json_file))
 else:
-    config_ext.update({'fooocus_line': '# 2.1.852', 'simplesdxl_line': '# 2023-12-20'})
+    config_ext.update({'fooocus_line': '# 2.1.852'})
 
 
 def get_system_message():
