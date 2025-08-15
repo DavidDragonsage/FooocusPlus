@@ -1089,27 +1089,27 @@ def downloading_sdxl_lcm_lora():
     load_file_from_url(
         url='https://huggingface.co/lllyasviel/misc/resolve/main/sdxl_lcm_lora.safetensors',
         model_dir=paths_loras[0],
-        file_name=modules.flags.PerformanceLoRA.EXTREME_SPEED.value
+        file_name=modules.flags.PerformanceLoRA.Extreme_Speed.value
     )
-    return modules.flags.PerformanceLoRA.EXTREME_SPEED.value
+    return modules.flags.PerformanceLoRA.Extreme_Speed.value
 
 
 def downloading_sdxl_lightning_lora():
     load_file_from_url(
         url='https://huggingface.co/mashb1t/misc/resolve/main/sdxl_lightning_4step_lora.safetensors',
         model_dir=paths_loras[0],
-        file_name=modules.flags.PerformanceLoRA.LIGHTNING.value
+        file_name=modules.flags.PerformanceLoRA.Lightning.value
     )
-    return modules.flags.PerformanceLoRA.LIGHTNING.value
+    return modules.flags.PerformanceLoRA.Lightning.value
 
 
 def downloading_sdxl_hyper_sd_lora():
     load_file_from_url(
         url='https://huggingface.co/mashb1t/misc/resolve/main/sdxl_hyper_sd_4step_lora.safetensors',
         model_dir=paths_loras[0],
-        file_name=modules.flags.PerformanceLoRA.HYPER_SD.value
+        file_name=modules.flags.PerformanceLoRA.Hyper_SD.value
     )
-    return modules.flags.PerformanceLoRA.HYPER_SD.value
+    return modules.flags.PerformanceLoRA.Hyper_SD.value
 
 
 def downloading_controlnet_canny():

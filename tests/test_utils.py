@@ -86,42 +86,42 @@ class TestUtils(unittest.TestCase):
     def test_can_parse_tokens_and_strip_performance_lora(self):
         lora_filenames = [
             'hey-lora.safetensors',
-            modules.flags.PerformanceLoRA.EXTREME_SPEED.value,
-            modules.flags.PerformanceLoRA.LIGHTNING.value,
-            os.path.join('subfolder', modules.flags.PerformanceLoRA.HYPER_SD.value)
+            modules.flags.PerformanceLoRA.Extreme_Speed.value,
+            modules.flags.PerformanceLoRA.Lightning.value,
+            os.path.join('subfolder', modules.flags.PerformanceLoRA.Hyper_SD.value)
         ]
 
         test_cases = [
             {
-                "input": ("some prompt, <lora:hey-lora:0.4>", [], 5, True, modules.flags.Performance.QUALITY),
+                "input": ("some prompt, <lora:hey-lora:0.4>", [], 5, True, modules.flags.Performance.Quality),
                 "output": (
                     [('hey-lora.safetensors', 0.4)],
                     'some prompt'
                 ),
             },
             {
-                "input": ("some prompt, <lora:hey-lora:0.4>", [], 5, True, modules.flags.Performance.SPEED),
+                "input": ("some prompt, <lora:hey-lora:0.4>", [], 5, True, modules.flags.Performance.Speed),
                 "output": (
                     [('hey-lora.safetensors', 0.4)],
                     'some prompt'
                 ),
             },
             {
-                "input": ("some prompt, <lora:sdxl_lcm_lora:1>, <lora:hey-lora:0.4>", [], 5, True, modules.flags.Performance.EXTREME_SPEED),
+                "input": ("some prompt, <lora:sdxl_lcm_lora:1>, <lora:hey-lora:0.4>", [], 5, True, modules.flags.Performance.Extreme_Speed),
                 "output": (
                     [('hey-lora.safetensors', 0.4)],
                     'some prompt'
                 ),
             },
             {
-                "input": ("some prompt, <lora:sdxl_lightning_4step_lora:1>, <lora:hey-lora:0.4>", [], 5, True, modules.flags.Performance.LIGHTNING),
+                "input": ("some prompt, <lora:sdxl_lightning_4step_lora:1>, <lora:hey-lora:0.4>", [], 5, True, modules.flags.Performance.Lightning),
                 "output": (
                     [('hey-lora.safetensors', 0.4)],
                     'some prompt'
                 ),
             },
             {
-                "input": ("some prompt, <lora:sdxl_hyper_sd_4step_lora:1>, <lora:hey-lora:0.4>", [], 5, True, modules.flags.Performance.HYPER_SD),
+                "input": ("some prompt, <lora:sdxl_hyper_sd_4step_lora:1>, <lora:hey-lora:0.4>", [], 5, True, modules.flags.Performance.Hyper_SD),
                 "output": (
                     [('hey-lora.safetensors', 0.4)],
                     'some prompt'

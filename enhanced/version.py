@@ -38,17 +38,16 @@ def get_required_library():
 
 def get_fooocusplus_ver():
     global fooocusplus_ver, hotfix
-    if not fooocusplus_ver:
+    if not fooocusplus_ver or not hotfix:
         current_dir = Path.cwd().resolve()
         log_txt = US.load_textfile(Path(current_dir/'fooocusplus_log.md'))
         if log_txt == False:
-            return '0.9.0', ''    # fooocusplus_ver fallback
+            return '0.9.0', '0'    # fooocusplus_ver fallback
         else:
             fooocusplus_ver = US.locate_value(log_txt, "# ")
-            if fooocusplus_ver == '':
-                return '0.9.9', '' # secondary fallback
-        if not hotfix or hotfix == '0':
             hotfix = US.locate_value(log_txt, "* Hotfix", terminator=':')
-    if hotfix == '':
-        hotfix = '0'
+            if fooocusplus_ver == '':
+                return '0.9.9', '0' # secondary fallback
+        if hotfix == '':
+            hotfix = '0'
     return fooocusplus_ver, hotfix
