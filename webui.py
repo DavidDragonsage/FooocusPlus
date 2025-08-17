@@ -331,7 +331,8 @@ with common.GRADIO_ROOT:
                         preset_bar_checkbox = gr.Checkbox(label='Preset Bar', value=config.enable_preset_bar, container=False, elem_classes='min_check')
                         prompt_panel_checkbox = gr.Checkbox(label='Wildcard Panel', interactive = False, value=True, container=False, visible=False, elem_classes='min_check')
                 with gr.Column():
-                    preset_info = gr.Markdown(value=f'<b>Current Preset: {args.args.preset}</b>', container=False, visible=True, elem_classes='preset_info')
+                    preset_info = gr.Markdown(value=f'<b>Current Preset: <b>{args.args.preset}</b>', container=False, visible=True, elem_classes='preset_info')
+                    #preset_info = gr.Markdown(value=f'<h3>Current Preset:</h3> <b>{args.args.preset}</b>', container=False, visible=True, elem_classes='preset_info')
 
             with gr.Group(visible=False, elem_classes='toolbox') as image_toolbox:
                 image_tools_box_title = gr.Markdown('<b>Toolbox</b>', visible=True)
@@ -400,7 +401,7 @@ with common.GRADIO_ROOT:
                                             outputs=[ip_stop, ip_weight], queue=False, show_progress=False)
                                     ip_ad_cols.append(ad_col)
 
-                        gr.HTML('* \"Image Prompt\" is powered by Fooocus Image Mixture Engine (v1.0.1). <a href="https://github.com/lllyasviel/Fooocus/discussions/557" target="_blank">\U0001F4D4 Documentation</a>')
+                        gr.HTML('<a href="https://github.com/lllyasviel/Fooocus/discussions/557" target="_blank">\U0001F4D4 Documentation</a>&emsp; * \"Image Prompt\" is powered by the Fooocus Image Mixture Engine (v1.0.1)')
 
                         def ip_advance_checked(x):
                             return [gr.update(visible=x)] * len(ip_ad_cols) + \
@@ -464,14 +465,14 @@ with common.GRADIO_ROOT:
                             inpaint_strength = gr.Slider(label='Inpainting Strength',
                                 minimum=0.0, maximum=1.0, step=0.001, value=1.0,
                                 info='Adjusts the amount that Inpainting changes the image. '
-                                'Inpainting Strength is also called "denoising strength". '
+                                'Inpainting Strength is also called "Denoising Strength". '
                                 'Outpainting is at full strength: 1.0')
                             inpaint_respective_field = gr.Slider(label='Inpainting Area',
                                      minimum=0.0, maximum=1.0, step=0.001, value=0.618,
                                      info='An area of 0.0 means "Only the Masked Area". '
                                           'An area of 1.0 means "The Whole Image". '
                                           'Outpainting affects the whole area and uses a value of 1.0')
-                        gr.HTML('* Powered by Fooocus Inpaint Engine <a href="https://github.com/lllyasviel/Fooocus/discussions/414" target="_blank">\U0001F4D4 Documentation</a>')
+                        gr.HTML('<a href="https://github.com/lllyasviel/Fooocus/discussions/414" target="_blank">\U0001F4D4 Documentation</a>&emsp; * Powered by Fooocus Inpaint Engine')
 
                         def generate_mask(image, mask_model, cloth_category, dino_prompt_text, sam_model, box_threshold, text_threshold, sam_max_detections, dino_erode_or_dilate, dino_debug, params_extra):
                             from extras.inpaint_mask import generate_mask_from_image
@@ -512,7 +513,7 @@ with common.GRADIO_ROOT:
                             with gr.Column():
                                 enhance_checkbox = gr.Checkbox(label='Enhance',
                                 value=config.default_enhance_checkbox, container=False)
-                                enhance_input_image = grh.Image(label='Use with Enhance, skips image generation',
+                                enhance_input_image = grh.Image(label='Use with Enhance, Skips Image Generation',
                                 source='upload', type='numpy')
                                 gr.HTML('<a href="https://github.com/lllyasviel/Fooocus/discussions/3281" target="_blank">\U0001F4D4 Documentation</a>')
                             with gr.Column():
@@ -521,14 +522,14 @@ with common.GRADIO_ROOT:
                                         with gr.Tab(label='Upscale or Variation'):
                                             with gr.Row():
                                                 with gr.Column():
-                                                    enhance_uov_method = gr.Radio(label='Upscale or Variation:', choices=flags.uov_list,
+                                                    enhance_uov_method = gr.Radio(label='Upscale or Variation', choices=flags.uov_list,
                                                               value=config.default_enhance_uov_method)
                                                     enhance_uov_processing_order = gr.Radio(label='Processing Order',
                                                                         info='Use before to enhance small details and after to enhance large areas.',
                                                                         choices=flags.enhancement_uov_processing_order,
                                                                         value=config.default_enhance_uov_processing_order)
                                                     enhance_uov_prompt_type = gr.Radio(label='Prompt',
-                                                                   info='Choose which prompt to use for Upscale or Variation.',
+                                                                   info='Choose which prompt to use for Upscale or Variation',
                                                                    choices=flags.enhancement_uov_prompt_types,
                                                                    value=config.default_enhance_uov_prompt_type,
                                                                    visible=config.default_enhance_uov_processing_order == flags.enhancement_uov_after)
@@ -537,19 +538,18 @@ with common.GRADIO_ROOT:
                                                                     inputs=enhance_uov_processing_order,
                                                                     outputs=enhance_uov_prompt_type,
                                                                     queue=False, show_progress=False)
-                                                    gr.HTML('<a href="https://github.com/lllyasviel/Fooocus/discussions/3281" target="_blank">\U0001F4D4 Documentation</a>')
                                         enhance_ctrls = []
                                         enhance_inpaint_mode_ctrls = []
                                         enhance_inpaint_engine_ctrls = []
                                         enhance_inpaint_update_ctrls = []
                                         for index in range(config.default_enhance_tabs):
-                                            with gr.Tab(label=f'Region#{index + 1}') as enhance_tab_item:
+                                            with gr.Tab(label=f'Region #{index + 1}') as enhance_tab_item:
                                                 enhance_enabled = gr.Checkbox(label='Enable', value=False if index not in [0,1] else True,
                                                     elem_classes='min_check', container=False)
 
                                                 enhance_mask_dino_prompt_text = gr.Textbox(label='Detection prompt',
                                                     info='Use singular whenever possible',
-                                                    placeholder='Describe what you want to detect.',
+                                                    placeholder='Describe what you want to detect',
                                                     interactive=True,
                                                     value = '' if index not in [0,1] else 'face' if index==0 else 'hand',
                                                     visible=config.default_enhance_inpaint_mask_model == 'sam')
@@ -593,7 +593,7 @@ with common.GRADIO_ROOT:
                                                         enhance_mask_text_threshold = gr.Slider(label="Text Threshold", minimum=0.0,
                                                                             maximum=1.0, value=0.25, step=0.05,
                                                                             interactive=True)
-                                                        enhance_mask_sam_max_detections = gr.Slider(label="Maximum number of detections",
+                                                        enhance_mask_sam_max_detections = gr.Slider(label="Maximum Number of Detections",
                                                                                 info="Set to 0 to detect all",
                                                                                 minimum=0, maximum=10,
                                                                                 value=config.default_sam_max_detections,
@@ -613,25 +613,19 @@ with common.GRADIO_ROOT:
                                                     enhance_inpaint_strength = gr.Slider(label='Inpaint Denoising Strength',
                                                                      minimum=0.0, maximum=1.0, step=0.001,
                                                                      value=1.0,
-                                                                     info='Same as the denoising strength in A1111 inpaint. '
-                                                                          'Only used in inpaint, not used in outpaint. '
-                                                                          '(Outpaint always use 1.0)')
+                                                                     info='Adjusts the amount that Inpainting changes the image')
                                                     enhance_inpaint_respective_field = gr.Slider(label='Inpaint Respective Field',
-                                                                             minimum=0.0, maximum=1.0, step=0.001,
-                                                                             value=0.618,
-                                                                             info='The area to inpaint. '
-                                                                                  'Value 0 is same as "Only Masked" in A1111. '
-                                                                                  'Value 1 is same as "Whole Image" in A1111. '
-                                                                                  'Only used in inpaint, not used in outpaint. '
-                                                                                  '(Outpaint always use 1.0)')
+                                                                            minimum=0.0, maximum=1.0, step=0.001,
+                                                                            value=0.618,
+                                                                            info='An area of 0.0 means "Only the Masked Area". '
+                                                                            'An area of 1.0 means "The Whole Image". '
+                                                                            'Outpainting affects the whole area and uses a value of 1.0')
                                                     enhance_inpaint_erode_or_dilate = gr.Slider(label='Mask Erode or Dilate',
                                                                             minimum=-64, maximum=64, step=1, value=0,
                                                                             info='Positive value will make white area in the mask larger, '
                                                                                  'negative value will make white area smaller. '
                                                                                  '(default is 0, always processed before any mask invert)')
                                                     enhance_mask_invert = gr.Checkbox(label='Invert Mask', value=False)
-
-                                                gr.HTML('<a href="https://github.com/lllyasviel/Fooocus/discussions/3281" target="_blank">\U0001F4D4 Documentation</a>')
 
                                             enhance_ctrls += [
                                                 enhance_enabled,
@@ -686,7 +680,7 @@ with common.GRADIO_ROOT:
                                     iclight_enable = gr.Checkbox(label='Enable IC-Light', value=True)
                                     iclight_source_radio = gr.Radio(show_label=False, choices=comfy_task.iclight_source_names,\
                                         value=comfy_task.iclight_source_names[0], elem_classes='iclight_source', elem_id='iclight_source')
-                                gr.HTML('* The module derived from <a href="https://github.com/lllyasviel/IC-Light" target="_blank">IC-Light</a>\
+                                gr.HTML('* This module is adapted from <a href="https://github.com/lllyasviel/IC-Light" target="_blank">IC-Light</a> and \
                                     <a href="https://github.com/layerdiffusion/LayerDiffuse" target="_blank">LayerDiffuse</a>')
                         with gr.Row():
                             example_quick_subjects = gr.Dataset(samples=comfy_task.quick_subjects, label='Subject Quick List',\
@@ -831,7 +825,7 @@ with common.GRADIO_ROOT:
 
                     if not args.args.disable_image_log:
                         newest_images_first_checkbox = gr.Checkbox(label='Show Newest Images First',\
-                            info='Review the image log', value=config.show_newest_images_first)
+                            info='Review the Image Log', value=config.show_newest_images_first)
 
                         def newest_images_first_change(newest_images_first):
                             config.show_newest_images_first = newest_images_first

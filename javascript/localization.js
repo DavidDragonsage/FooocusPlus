@@ -93,9 +93,9 @@ function refresh_aspect_ratios_label(value) {
 
 function refresh_finished_images_catalog_label(value) {
     label = document.querySelector('#finished_images_catalog div span');
-    translation = getTranslation("Finished Images Catalog");
+    translation = getTranslation("Generated Images Catalog");
     if (typeof translation == "undefined") {
-        translation = "Finished Images Catalog";
+        translation = "Generated Images Catalog";
     }
     translation_stat = getTranslation("total: xxx images and yyy pages");
     if (typeof translation_stat == "undefined") {

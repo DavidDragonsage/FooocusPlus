@@ -9,15 +9,13 @@ os.chdir(ROOT)
 import enhanced.version as version
 
 old_version, old_hotfix = version.get_fooocusplus_ver()
-print(f'Welcome to FooocusPlus {old_version}: checking for updates...')
+print(f'Welcome to FooocusPlus {old_version}.{old_hotfix}: checking for updates...')
 
 
 try:
     import pygit2
     pygit2.option(pygit2.GIT_OPT_SET_OWNER_VALIDATION, 0)
-
-    repo = pygit2.Repository(os.path.abspath(os.path.dirname(__file__)))
-
+    repo = pygit2.Repository(ROOT)
     branch_name = repo.head.shorthand
 
     remote_name = 'origin'

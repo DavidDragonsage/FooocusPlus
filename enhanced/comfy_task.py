@@ -7,13 +7,13 @@ import modules.config as config
 from enhanced.backend import ComfyTaskParams
 from modules.model_loader import load_file_from_url
 
-default_method_names = ['Blending given FG and IC-light', 'Generate foreground with Conv Injection']
+default_method_names = ['Blend the Foreground with IC-Light', 'Create the Foreground with Convolutional Injection']
 default_method_list = {
     default_method_names[0]: 'iclight_fc',
     default_method_names[1]: 'layerdiffuse_fg',
 }
 
-iclight_source_names = ['Top -  Left', 'Top - Light', 'Top - Right', 'Left  Light', 'CenterLight', 'Right Light', 'Bottom Left', 'BottomLight', 'BottomRight']
+iclight_source_names = ['Top Left Light', 'Top Light', 'Top Right Light', 'Middle Left  Light', 'Middle Light', 'Middle Right Light', 'Bottom Left Light', 'Bottom Light', 'Bottom Right Light']
 iclight_source_text = {
     iclight_source_names[0]: "Top Left Light",
     iclight_source_names[1]: "Top Light",
@@ -50,20 +50,24 @@ flux_model_urls = {
     }
 
 quick_prompts = [
-    'sunshine from window',
-    'neon light, city',
-    'sunset over sea',
-    'golden time',
-    'sci-fi RGB glowing, cyberpunk',
-    'natural lighting',
-    'warm atmosphere, at home, bedroom',
-    'magic lit',
-    'evil, gothic, Yharnam',
+    'blue hour',
+    'eerie, evil, gothic',
+    'firelight',
+    'golden hour',
     'light and shadow',
-    'shadow from window',
+    'luminous',
+    'moonlight',
+    'natural lighting',
+    'nautical twilight',
+    'neon light, city',
+    'sci-fi RGB glowing, cyberpunk',
+    'shadow from the window',
     'soft studio lighting',
-    'home atmosphere, cozy bedroom illumination',
-    'neon, Wong Kar-wai, warm'
+    'sparkling, twinkling',
+    'sunshine in the forest',
+    'sunshine from the window',
+    'sunset over the sea',
+    'warm atmosphere, at home, bedroom'
 ]
 quick_prompts = [[x] for x in quick_prompts]
 

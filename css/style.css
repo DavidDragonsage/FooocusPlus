@@ -540,7 +540,7 @@ div.prose.tokenCounter {
 }
 
 .iclight_source {
-    max-width: 390px;
+    max-width: 100%;
 }
 
 #scrollable-box {

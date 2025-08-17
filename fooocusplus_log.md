@@ -1,4 +1,4 @@
-# 1.0.7
+# 1.0.7 Flux1 Krea & Enhancements
 
 * introduced three presets: Flux1Krea, Flux1Krea_5GGUF and Flux1Krea_8GGUF
 * these presets are located in the new Flux1Krea Preset Category
@@ -10,16 +10,17 @@
 * added HF-Mirror support for Chinese users, in the two Chinese batch files
 * to reduce image distortion, the main canvas is now set for a minimum height of 300px
 * updated python_embedded version to 1.06 (current users have already updated)
+* Hotfix5: UI now supports full translation
 * Hotfix4: fixed a bug with some Performance options causing an error
-* Hotfix3: removed the assert statements from Inpainting, uses recovery logic
-* added the Elsewhere preset to the General Category, a backup for the Default preset
+* Hotfix3: removed the assert statements from Inpainting: it uses error control instead
+  * added the Elsewhere preset to the General Category, a backup for the Default preset
   * this is to encourage the creation of a user created Default to suit individual needs
-* removed the "test" Random Prompt Topic and rationalized the random prompt names
+  * removed the "test" Random Prompt Topic and rationalized the random prompt names
 * Hotfix2: fix the version numbering problem
 * Hotfix1: fix startup update problem
 
 
-# 1.0.6
+# 1.0.6 Bug Fixes & UI Refinements
 
 * removed the following components that are not suitable for production code:
   * launch_support.build_launcher() and launch_with_commit.py
@@ -42,7 +43,7 @@
 * the Negative Prompt field is now just below the Preset selectors so that is always visible
 * the main prompt automatically extends to accomodate long prompts, like original Fooocus
 * the extended prompt field makes editing more practical and reduces errors
-* similarily, image quantity settings are preserved during preset switching
+* similarly, image quantity settings are preserved during preset switching
 * and image quantity values specified in a preset are used, if available
 * restored the function of the Sampler and Scheduler dropdowns
 * fixed an intermittent error with the Scheduler Name during image generation
@@ -71,7 +72,7 @@
 * Hotfix1: restored the visibility of the Stop & Skip buttons during generation
 
 
-# 1.0.5
+# 1.0.5 Bug Fixes & Enhancements
 
 * fixed a bug that prevented installation of FooocusPlus to a subfolder
 * FooocusPlus may now be installed to a subfolder, regardless of the parent folder's name
@@ -97,7 +98,7 @@
 * xformers installation now uses verify_installed_version() rather than Torchruntime
 
 
-# 1.0.4
+# 1.0.4 Bug Fix for Incorrect Model Paths & Installation Corruption by AMD Support
 
 * resolves the bug with incorrect secondary paths to the models folders
 * the user must delete config.txt and config_modification_tutorial.txt for this fix to take effect
@@ -108,7 +109,7 @@
 * to reduce clutter, the Performance Options are now available from an accordion
 
 
-# 1.0.3
+# 1.0.3 Critical Bug Fixes & NVIDIA 50xx Support
 
 * introduced full support for NVIDIA 50xx video cards
 * now using Torchruntime 1.18.1, Torch 2.7.1 and Xformers 0.0.30
@@ -127,7 +128,7 @@
 * the image seed options are now accessed through the Image Seed Control accordion
 
 
-# 1.0.2
+# 1.0.2 LowVRAM Support
 
 * LowVRAM Preset mode activates if VRAM<6GB
 * also, LowVRAM Preset mode is set by config.txt "default_low_vram_presets": true
@@ -137,7 +138,7 @@
 * Styles can now be configured in UserDir, like Presets and Topics
 
 
-# 1.0.1
+# 1.0.1 Maintenance Update
 
 * pytorch-lightning now loads correctly
 * resolved the "Fooocus' is not a valid MetadataScheme" error
@@ -148,7 +149,7 @@
 * if an obsolete "Flux" folder is found and it is empty, it is automatically deleted
 
 
-# 1.0.0
+# 1.0.0 Welcome to FooocusPlus 1.0.0!
 
 * removed the irrelevant Fooocus and Simple version information. FooocusPlus does not synchronize with either of them
 * removed legacy upstream references and moved the master subfolders to a new masters parent folder
