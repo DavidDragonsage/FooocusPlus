@@ -360,7 +360,7 @@ with common.GRADIO_ROOT:
                                 minimum=0, maximum=1.0, step=0.001, value=0.50,
                                 info='0.0="None", 0.50="Subtle", 0.85="Strong", 1.0="Max"')
 
-                        gr.HTML('<a href="https://github.com/lllyasviel/Fooocus/discussions/390" target="_blank">\U0001F4D4 Documentation</a>')
+                        gr.HTML('<a href="https://github.com/lllyasviel/Fooocus/discussions/390" target="_blank">\U0001F4DA Documentation</a>')
 
                     with gr.Tab(label='Image Prompt', id='ip_tab') as ip_tab:
                         with gr.Row():
@@ -401,7 +401,7 @@ with common.GRADIO_ROOT:
                                             outputs=[ip_stop, ip_weight], queue=False, show_progress=False)
                                     ip_ad_cols.append(ad_col)
 
-                        gr.HTML('<a href="https://github.com/lllyasviel/Fooocus/discussions/557" target="_blank">\U0001F4D4 Documentation</a>&emsp; * \"Image Prompt\" is powered by the Fooocus Image Mixture Engine (v1.0.1)')
+                        gr.HTML('<a href="https://github.com/lllyasviel/Fooocus/discussions/557" target="_blank">\U0001F4DA Documentation</a>&emsp; * \"Image Prompt\" is powered by the Fooocus Image Mixture Engine (v1.0.1)')
 
                         def ip_advance_checked(x):
                             return [gr.update(visible=x)] * len(ip_ad_cols) + \
@@ -472,7 +472,7 @@ with common.GRADIO_ROOT:
                                      info='An area of 0.0 means "Only the Masked Area". '
                                           'An area of 1.0 means "The Whole Image". '
                                           'Outpainting affects the whole area and uses a value of 1.0')
-                        gr.HTML('<a href="https://github.com/lllyasviel/Fooocus/discussions/414" target="_blank">\U0001F4D4 Documentation</a>&emsp; * Powered by Fooocus Inpaint Engine')
+                        gr.HTML('<a href="https://github.com/lllyasviel/Fooocus/discussions/414" target="_blank">\U0001F4DA Documentation</a>&emsp; * Powered by Fooocus Inpaint Engine')
 
                         def generate_mask(image, mask_model, cloth_category, dino_prompt_text, sam_model, box_threshold, text_threshold, sam_max_detections, dino_erode_or_dilate, dino_debug, params_extra):
                             from extras.inpaint_mask import generate_mask_from_image
@@ -515,7 +515,7 @@ with common.GRADIO_ROOT:
                                 value=config.default_enhance_checkbox, container=False)
                                 enhance_input_image = grh.Image(label='Use with Enhance, Skips Image Generation',
                                 source='upload', type='numpy')
-                                gr.HTML('<a href="https://github.com/lllyasviel/Fooocus/discussions/3281" target="_blank">\U0001F4D4 Documentation</a>')
+                                gr.HTML('<a href="https://github.com/lllyasviel/Fooocus/discussions/3281" target="_blank">\U0001F4DA Documentation</a>')
                             with gr.Column():
                                 with gr.Row(visible=True) as enhance_input_panel:
                                     with gr.Tabs():
@@ -839,12 +839,12 @@ with common.GRADIO_ROOT:
                     if args.args.disable_image_log:
                         return gr.update(value=f'<font size="3">\
                         &emsp;<a href="https://www.facebook.com/groups/fooocus" target="_blank">\U0001F4D4 Forum</a>\
-                        &emsp;&emsp;<a href="https://github.com/DavidDragonsage/FooocusPlus/wiki" target="_blank">\U0001F4D4 Wiki</a>')
+                        &emsp;&emsp;<a href="https://github.com/DavidDragonsage/FooocusPlus/wiki" target="_blank">\U0001F4DA Wiki</a>')
                     else:
                         return gr.update(value=f'<font size="3">&emsp;<a href="file={get_current_html_path(output_format)}"\
                         target="_blank">\U0001F4DA Image Log</a>\
                         &emsp;<a href="https://www.facebook.com/groups/fooocus" target="_blank">\U0001F4D4 Forum</a>\
-                        &emsp;<a href="https://github.com/DavidDragonsage/FooocusPlus/wiki target="_blank">\U0001F4D4 Wiki</a>')
+                        &emsp;<a href="https://github.com/DavidDragonsage/FooocusPlus/wiki target="_blank">\U0001F4DA Wiki</a>')
 
                 history_link = gr.HTML()
                 common.GRADIO_ROOT.load(update_history_link, outputs=history_link,
@@ -900,7 +900,7 @@ with common.GRADIO_ROOT:
                             with gr.Column():
                                 describe_image_size = gr.Textbox(label='Original Size / Recommended Size', elem_id='describe_image_size', visible=False)
                                 describe_btn = gr.Button(value='Describe this Image into Prompt')
-                                gr.HTML('<a href="https://github.com/lllyasviel/Fooocus/discussions/1363" target="_blank">\U0001F4D4 Documentation</a>')
+                                gr.HTML('<a href="https://github.com/lllyasviel/Fooocus/discussions/1363" target="_blank">\U0001F4DA Documentation</a>')
 
                                 def trigger_show_image_properties(image):
                                     image_size = modules.util.get_image_size_info(image,
@@ -1315,7 +1315,7 @@ with common.GRADIO_ROOT:
                     FooocusPlus {fooocusplus_ver}, Hotfix {hotfix}')
 
                 with gr.Row():
-                    gr.HTML('<font size="4">&emsp;<a href="https://github.com/DavidDragonsage/FooocusPlus/blob/main/fooocusplus_log.md" target="_blank">\U0001F4D4 Version Info</a>')
+                    gr.HTML('<font size="4">&emsp;<a href="https://github.com/DavidDragonsage/FooocusPlus/blob/main/fooocusplus_log.md" target="_blank">\U0001F4DA Version Info</a>')
 
             iclight_enable.change(lambda x: [gr.update(interactive=x, value='' if not x else comfy_task.iclight_source_names[0]),\
                     gr.update(value=AR.add_ratio('1024*1024') if not x else config.default_aspect_ratio_values[0])],\

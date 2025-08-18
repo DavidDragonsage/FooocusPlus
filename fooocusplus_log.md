@@ -10,6 +10,7 @@
 * added HF-Mirror support for Chinese users, in the two Chinese batch files
 * to reduce image distortion, the main canvas is now set for a minimum height of 300px
 * updated python_embedded version to 1.06 (current users have already updated)
+* Hotfix6: fixed another ""assert" bug with Inpainting
 * Hotfix5: UI now supports full translation
 * Hotfix4: fixed a bug with some Performance options causing an error
 * Hotfix3: removed the assert statements from Inpainting: it uses error control instead

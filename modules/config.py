@@ -1048,7 +1048,8 @@ def update_files(engine='Fooocus', task_method=None):    # called by the webui u
     return model_filenames, lora_filenames, vae_filenames
 
 def downloading_inpaint_models(v):
-    assert v in modules.flags.inpaint_engine_versions
+    if not v:
+        v = 'v2.6'
 
     load_file_from_url(
         url='https://huggingface.co/lllyasviel/fooocus_inpaint/resolve/main/fooocus_inpaint_head.pth',

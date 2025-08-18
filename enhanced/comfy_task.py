@@ -13,7 +13,7 @@ default_method_list = {
     default_method_names[1]: 'layerdiffuse_fg',
 }
 
-iclight_source_names = ['Top Left Light', 'Top Light', 'Top Right Light', 'Middle Left  Light', 'Middle Light', 'Middle Right Light', 'Bottom Left Light', 'Bottom Light', 'Bottom Right Light']
+iclight_source_names = ['Top Left Light', 'Top Light', 'Top Right Light', 'Middle Left Light', 'Middle Light', 'Middle Right Light', 'Bottom Left Light', 'Bottom Light', 'Bottom Right Light']
 iclight_source_text = {
     iclight_source_names[0]: "Top Left Light",
     iclight_source_names[1]: "Top Light",
