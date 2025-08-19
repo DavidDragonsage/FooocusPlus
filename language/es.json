@@ -533,7 +533,7 @@
     "See the results from preprocessors.": "Ver los resultados de los preprocesadores.",
     "Skip Preprocessors": "Omitir preprocesadores",
     "Do not preprocess images. (Inputs are already canny/depth/cropped-face/etc.)": "No preprocesar imágenes. (Las entradas ya son canny/profundidad/rostro recortado/etc.)",
-    "Mix Image Prompt and Vary/Upscale": "Mezclar Prompt de Imagen y Variar/Ampliar",
+    "Mix Image Prompt & Vary/Upscale": "Mezclar Prompt de Imagen y Variar/Ampliar",
     "Mix Image Prompt & Inpaint": "Mezclar Prompt de Imagen y Pintar",
     "Softness of ControlNet": "Suavidad de ControlNet",
     "Similar to the Control Mode in A1111 (use 0.0 to disable).": "Similar al modo de control en A1111 (usar 0.0 para deshabilitar).",

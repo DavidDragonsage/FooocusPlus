@@ -7,8 +7,6 @@ from common import ROOT
 
 print('[System ARGV] ' + str(sys.argv))
 print(f'Root {ROOT}')
-# sys.path.append(ROOT)
-# os.chdir(ROOT)
 
 REINSTALL_ALL = False
 
@@ -152,6 +150,10 @@ def ini_args():
 
 args = ini_args()
 cleanup_structure(args.directml, python_embedded_path, win32_root)
+
+if not args.language.startswith('en'):
+    from enhanced.translator_support import load_translator
+    load_translator(args.language, args.user_dir)
 
 prepare_environment()
 print('Analyzing the graphics system...')

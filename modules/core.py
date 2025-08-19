@@ -60,7 +60,8 @@ class StableDiffusionModel:
     @torch.no_grad()
     @torch.inference_mode()
     def refresh_loras(self, loras):
-        assert isinstance(loras, list)
+        if not isinstance(loras, list):
+            return
 
         if self.visited_loras == str(loras):
             return
@@ -76,7 +77,7 @@ class StableDiffusionModel:
         loras_to_load = []
 
         for filename, weight in loras:
-            if filename == 'None':
+            if filename == 'None' or filename is None:
                 continue
 
             if os.path.exists(filename):

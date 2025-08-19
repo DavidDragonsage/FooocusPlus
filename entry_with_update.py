@@ -71,7 +71,7 @@ new_version, new_hotfix = version.get_fooocusplus_ver()
 if new_version != old_version:
     print(f'Updated FooocusPlus from {old_version} to {new_version}')
 elif new_hotfix != old_hotfix:
-    print(f'Updated FooocusPlus to Hotfix {new_version}')
+    print(f'Updated FooocusPlus to Hotfix {new_hotfix}')
 print()
 
 from launch import *
