@@ -156,9 +156,9 @@ def get_comfy_task(task_name, task_method, default_params, input_images, options
         total_ram = ldm_patched.modules.model_management.get_sysram()
         total_vram = ldm_patched.modules.model_management.get_vram()
         if base_model == 'auto':
-            model_dev = 'Flux\\flux1-dev-bnb-nf4-v2.safetensors'
-            model_nf4 = 'Flux\\flux1-dev-bnb-nf4-v2.safetensors'
-            model_hyp8 = 'Flux\\hyperfluxDiversity_q5KS.gguf'
+            model_dev = 'FluxDev\\flux1-dev-bnb-nf4-v2.safetensors'
+            model_nf4 = 'FluxDev\\flux1-dev-bnb-nf4-v2.safetensors'
+            model_hyp8 = 'FluxDev\\hyperfluxDiversity_q5KS.gguf'
             base_model = model_nf4 if total_vram<=VRAM8G1 else model_dev
             if not common.MODELS_INFO.exists_model(catalog="checkpoints", model_path=base_model) and common.MODELS_INFO.exists_model(catalog="checkpoints", model_path=model_hyp8):
                 base_model = model_hyp8
@@ -249,7 +249,7 @@ def check_download_kolors_model(path_root):
         )
         downfile = os.path.join(path_temp, 'KwaiKolors.zip')
         with zipfile.ZipFile(downfile, 'r') as zipf:
-            print(f'Extracting: {downfile} to {path_root}')
+            print(f'[ComfyTask] Extracting: {downfile} to {path_root}')
             zipf.extractall(path_root)
         if os.path.exists(downfile): os.remove(downfile)
         if os.path.exists(path_temp) and os.path.isdir(path_temp):
@@ -258,13 +258,13 @@ def check_download_kolors_model(path_root):
     if not common.MODELS_INFO.exists_model_key(check_model_file[1]):
         path_dst = os.path.join(config.paths_diffusers[0], 'Kolors/unet/diffusion_pytorch_model.fp16.safetensors')
         path_org = os.path.join(config.path_unet, 'kolors_unet_fp16.safetensors')
-        print(f'model file copy: {path_org} to {path_dst}')
+        print(f'[ComfyTask] Model file copy: {path_org} to {path_dst}')
         shutil.copy(path_org, path_dst)
 
     if not common.MODELS_INFO.exists_model_key(check_model_file[2]):
         path_dst = os.path.join(config.paths_diffusers[0], 'Kolors/vae/diffusion_pytorch_model.fp16.safetensors')
         path_org = os.path.join(config.path_vae, 'sdxl_fp16.vae.safetensors')
-        print(f'model file copy: {path_org} to {path_dst}')
+        print(f'[ComfyTask] Model file copy: {path_org} to {path_dst}')
         shutil.copy(path_org, path_dst)
 
     common.MODELS_INFO.refresh_from_path()
@@ -321,8 +321,8 @@ def check_download_flux_model(base_model, clip_model=None):
                     file_name=base_model
                 )
         else:
-            print(f'FooocusPlus could not automatically download {base_model}')
-            print('Please download this Flux file manually and place it in the \Flux subfolder')
+            print(f'[ComfyTask] Could not automatically download {base_model}')
+            print('Please download this Flux file manually and place it in the correct Flux subdirectory')
 
     if clip_model:
         if not common.MODELS_INFO.exists_model(catalog="clip", model_path=clip_model):

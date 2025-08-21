@@ -50,13 +50,13 @@ def execute_prestartup_script():
                 success = execute_script(script_path)
                 node_prestartup_times.append((time.perf_counter() - time_before, module_path, success))
     if len(node_prestartup_times) > 0:
-        print("[Comfy] Prestartup times for custom nodes:")
+        print("[ComfyMain] Prestartup times for custom nodes:")
         for n in sorted(node_prestartup_times):
             if n[2]:
                 import_message = ""
             else:
                 import_message = " (PRESTARTUP FAILED)"
-            print("[Comfy]    {:6.1f} seconds{}:".format(n[0], import_message), n[1])
+            print("[ComfyMain]    {:6.1f} seconds{}:".format(n[0], import_message), n[1])
         #print()
 
 #execute_prestartup_script()

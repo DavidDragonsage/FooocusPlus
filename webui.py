@@ -147,8 +147,10 @@ def inpaint_mode_change(mode, inpaint_engine_version):
             False, 'None', 0.5, 0.0
         ]
 
-    if inpaint_engine_version == 'empty':
-        inpaint_engine_version = config.default_inpaint_engine_version
+    if inpaint_engine_version == 'empty' or inpaint_engine_version == None or not inpaint_engine_version:
+            inpaint_engine_version = config.default_inpaint_engine_version
+            if inpaint_engine_version == None or not inpaint_engine_version:
+                inpaint_engine_version = 'v2.6'
 
     if mode == modules.flags.inpaint_option_modify:
         return [
@@ -173,8 +175,10 @@ def enhance_inpaint_mode_change(mode, inpaint_engine_version):
             False, 'None', 0.5, 0.0
         ]
 
-    if inpaint_engine_version == 'empty':
+    if inpaint_engine_version == 'empty' or inpaint_engine_version == None or not inpaint_engine_version:
         inpaint_engine_version = config.default_inpaint_engine_version
+        if inpaint_engine_version == None or not inpaint_engine_version:
+            inpaint_engine_version = 'v2.6'
 
     if mode == modules.flags.inpaint_option_modify:
         return [
@@ -271,7 +275,7 @@ with common.GRADIO_ROOT:
                             random_button = gr.Button(value="Random Prompt",
                             elem_classes='type_row_third', size="sm", min_width = 75)
                             translator_button = gr.Button(visible=True,
-                            value="Translator", elem_classes='type_row_third',
+                            value="Translate", elem_classes='type_row_third',
                             size='sm', min_width = 75)
                             super_prompter = gr.Button(value="SuperPrompt",
                             elem_classes='type_row_third', size="sm", min_width = 75)
@@ -279,7 +283,7 @@ with common.GRADIO_ROOT:
                             random_button = gr.Button(value="Random Prompt",
                             elem_classes='type_row_half', size="sm", min_width = 75)
                             translator_button = gr.Button(visible=False,
-                            value="Translator", elem_classes='type_row_third',
+                            value="Translate", elem_classes='type_row_third',
                             size='sm', min_width = 75)
                             super_prompter = gr.Button(value="SuperPrompt", elem_classes='type_row_half', size="sm", min_width = 75)
                     with gr.Column(scale=2, min_width=75):
@@ -600,31 +604,30 @@ with common.GRADIO_ROOT:
                                                                                 step=1, interactive=True)
 
                                                 with gr.Accordion("Inpaint", visible=True, open=False):
-                                                    enhance_inpaint_mode = gr.Dropdown(choices=modules.flags.inpaint_options, allow_custom_value=True,
-                                                                   value=config.default_inpaint_method if index not in [0,1] else modules.flags.inpaint_option_detail,
-                                                                   label='Method', interactive=True)
+                                                    enhance_inpaint_mode = gr.Dropdown(choices=modules.flags.inpaint_options,             allow_custom_value=True,
+                                                        value=config.default_inpaint_method if index not in [0,1] else modules.flags.inpaint_option_detail,
+                                                        label='Method', interactive=True)
                                                     enhance_inpaint_disable_initial_latent = gr.Checkbox(
                                                         label='Disable Initial Latent in Inpaint', value=False)
                                                     enhance_inpaint_engine = gr.Dropdown(label='Inpaint Engine',
-                                                                     value=config.default_inpaint_engine_version,
-                                                                     choices=flags.inpaint_engine_versions,
-                                                                     allow_custom_value=True,
-                                                                     info='Version of Fooocus inpaint model. If set, use performance Quality or Speed (no performance LoRAs) for best results.')
+                                                        value=config.default_inpaint_engine_version,
+                                                        choices=flags.inpaint_engine_versions,
+                                                        info='Version of Fooocus inpaint model. If set, use performance Quality or Speed (no performance LoRAs) for best results.')
                                                     enhance_inpaint_strength = gr.Slider(label='Inpaint Denoising Strength',
-                                                                     minimum=0.0, maximum=1.0, step=0.001,
-                                                                     value=1.0,
-                                                                     info='Adjusts the amount that Inpainting changes the image')
+                                                        minimum=0.0, maximum=1.0, step=0.001,
+                                                        value=1.0,
+                                                        info='Adjusts the amount that Inpainting changes the image')
                                                     enhance_inpaint_respective_field = gr.Slider(label='Inpaint Respective Field',
-                                                                            minimum=0.0, maximum=1.0, step=0.001,
-                                                                            value=0.618,
-                                                                            info='An area of 0.0 means "Only the Masked Area". '
-                                                                            'An area of 1.0 means "The Whole Image". '
-                                                                            'Outpainting affects the whole area and uses a value of 1.0')
+                                                        minimum=0.0, maximum=1.0, step=0.001,
+                                                        value=0.618,
+                                                        info='An area of 0.0 means "Only the Masked Area". '
+                                                        'An area of 1.0 means "The Whole Image". '
+                                                        'Outpainting affects the whole area and uses a value of 1.0')
                                                     enhance_inpaint_erode_or_dilate = gr.Slider(label='Mask Erode or Dilate',
-                                                                            minimum=-64, maximum=64, step=1, value=0,
-                                                                            info='Positive value will make white area in the mask larger, '
-                                                                                 'negative value will make white area smaller. '
-                                                                                 '(default is 0, always processed before any mask invert)')
+                                                        minimum=-64, maximum=64, step=1, value=0,
+                                                        info='Positive value will make white area in the mask larger, '
+                                                             'negative value will make white area smaller. '
+                                                             '(default is 0, always processed before any mask invert)')
                                                     enhance_mask_invert = gr.Checkbox(label='Invert Mask', value=False)
 
                                             enhance_ctrls += [
@@ -889,7 +892,7 @@ with common.GRADIO_ROOT:
                     with gr.Tab(label='Describe Image', id='describe_tab', visible=True) as image_describe:
                         with gr.Row():
                             with gr.Column():
-                                describe_input_image = grh.Image(label='Image to be described', source='upload', type='numpy', show_label=True)
+                                describe_input_image = grh.Image(label='Image to be Described', source='upload', type='numpy', show_label=True)
                             with gr.Column():
                                 describe_methods = gr.CheckboxGroup(
                                     label='Content Type',
@@ -912,7 +915,7 @@ with common.GRADIO_ROOT:
 
                     with gr.Tab(label='Metadata', id='metadata_tab', visible=True) as metadata_tab:
                         with gr.Column():
-                            metadata_input_image = grh.Image(label='Drop a Fooocus image here', source='upload', type='pil')
+                            metadata_input_image = grh.Image(label='Place a Fooocus Image Here', source='upload', type='pil')
                             with gr.Accordion("Preview Metadata", open=True, visible=True) as metadata_preview:
                                 metadata_json = gr.JSON(label='Metadata')
                             metadata_import_button = gr.Button(value='Apply Metadata', interactive=False)
@@ -1181,7 +1184,7 @@ with common.GRADIO_ROOT:
                         inpaint_disable_initial_latent = gr.Checkbox(label='Disable Initial Latent in Inpaint', value=False)
                         inpaint_engine = gr.Dropdown(label='Inpaint Engine',
                             value=config.default_inpaint_engine_version,
-                            choices=flags.inpaint_engine_versions, allow_custom_value=True,
+                            choices=flags.inpaint_engine_versions,
                             info='Version of Fooocus inpaint model. If set, use performance Quality or Speed (no performance LoRAs) for best results.')
                         inpaint_erode_or_dilate = gr.Slider(label='Mask Erode or Dilate',
                             minimum=-64, maximum=64, step=1, value=0,
@@ -1438,8 +1441,10 @@ with common.GRADIO_ROOT:
 
 
         def inpaint_engine_state_change(inpaint_engine_version, *args):
-            if inpaint_engine_version == 'empty':
+            if inpaint_engine_version == 'empty' or inpaint_engine_version == None or not inpaint_engine_version:
                 inpaint_engine_version = config.default_inpaint_engine_version
+                if inpaint_engine_version == None or not inpaint_engine_version:
+                    inpaint_engine_version = 'v2.6'
             result = []
             for inpaint_mode in args:
                 if inpaint_mode != modules.flags.inpaint_option_detail:

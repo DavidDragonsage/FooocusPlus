@@ -281,13 +281,19 @@ def model_config_from_unet_config(unet_config, state_dict=None):
     return None
 
 def model_config_from_unet(state_dict, unet_key_prefix, use_base_if_no_match=False):
+#    print()
+#    print(f'unet_key_prefix {unet_key_prefix}')
+#    print()
     unet_config = detect_unet_config(state_dict, unet_key_prefix)
     if unet_config is None:
+        print('unet_config is None')
         return None
     model_config = model_config_from_unet_config(unet_config, state_dict)
     if model_config is None and use_base_if_no_match:
+#        print('unet_base unet_config')
         return comfy.supported_models_base.BASE(unet_config)
     else:
+#        print('unet_config')
         return model_config
 
 def unet_prefix_from_state_dict(state_dict):
@@ -472,12 +478,12 @@ def unet_config_from_diffusers_unet(state_dict, dtype=None):
             'transformer_depth': [0, 1, 1], 'channel_mult': [1, 2, 4], 'transformer_depth_middle': -2, 'use_linear_in_transformer': False,
             'context_dim': 768, 'num_head_channels': 64, 'transformer_depth_output': [0, 0, 1, 1, 1, 1],
             'use_temporal_attention': False, 'use_temporal_resblock': False}
-    
+
     SD15_diffusers_inpaint = {'use_checkpoint': False, 'image_size': 32, 'out_channels': 4, 'use_spatial_transformer': True, 'legacy': False, 'adm_in_channels': None,
             'dtype': dtype, 'in_channels': 9, 'model_channels': 320, 'num_res_blocks': [2, 2, 2, 2], 'transformer_depth': [1, 1, 1, 1, 1, 1, 0, 0],
             'channel_mult': [1, 2, 4, 4], 'transformer_depth_middle': 1, 'use_linear_in_transformer': False, 'context_dim': 768, 'num_heads': 8,
             'transformer_depth_output': [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-            'use_temporal_attention': False, 'use_temporal_resblock': False}  
+            'use_temporal_attention': False, 'use_temporal_resblock': False}
 
 
     supported_models = [SDXL, SDXL_refiner, SD21, SD15, SD21_uncliph, SD21_unclipl, SDXL_mid_cnet, SDXL_small_cnet, SDXL_diffusers_inpaint, SSD_1B, Segmind_Vega, KOALA_700M, KOALA_1B, SD09_XS, SD_XS, SDXL_diffusers_ip2p, SD15_diffusers_inpaint]

@@ -18,10 +18,10 @@ AR_template = AR_template_init()
 
 # Used in the webui aspect_info textbox info field
 # Set by get_aspect_info_info()
-aspect_info_help = 'Vertical (9:16), Portrait (4:3), Landscape (3:2), Widescreen (16:9), Ultrawide (12:5).'
-aspect_info_SD1_5 = 'Vertical (9:16), Photo (4:5), Portrait (4:3), Landscape (3:2), Widescreen (16:9).'
-aspect_info_PixArt = 'Vertical (9:16), Photo (4:5), Portrait (4:3), Landscape (3:2), Widescreen (16:9), Ultrawide (12:5).'
-aspect_info_SDXL = ' For SDXL, 1280*1280 is experimental.'
+aspect_info_help = 'Vertical (9:16), Portrait (4:3), Landscape (3:2), Widescreen (16:9), Ultrawide (12:5)'
+aspect_info_SD1_5 = 'Vertical (9:16), Photo (4:5), Portrait (4:3), Landscape (3:2), Widescreen (16:9)'
+aspect_info_PixArt = 'Vertical (9:16), Photo (4:5), Portrait (4:3), Landscape (3:2), Widescreen (16:9), Ultrawide (12:5)'
+aspect_info_SDXL = '. For SDXL, 1280*1280 is experimental'
 
 
 def assign_default_by_template(template):
@@ -148,7 +148,8 @@ def save_current_aspect(x):
         x = common.current_AR
     print(f'{AR_template} Aspect Ratio: {common.current_AR}')
     aspect_info_info = get_aspect_info_info()
-    return gr.update(), gr.update(value=f'{AR_template} Template'),\
+    aspect_info_value = f'{AR_template} Template'
+    return gr.update(), gr.update(value=aspect_info_value),\
         gr.update(info=aspect_info_info)
 
 def overwrite_aspect_ratios(width, height):

@@ -1059,14 +1059,6 @@ def downloading_inpaint_models(v):
     head_file = os.path.join(paths_inpaint[0], 'fooocus_inpaint_head.pth')
     patch_file = None
 
-    if v == 'v1':
-        load_file_from_url(
-            url='https://huggingface.co/lllyasviel/fooocus_inpaint/resolve/main/inpaint.fooocus.patch',
-            model_dir=paths_inpaint[0],
-            file_name='inpaint.fooocus.patch'
-        )
-        patch_file = os.path.join(paths_inpaint[0], 'inpaint.fooocus.patch')
-
     if v == 'v2.5':
         load_file_from_url(
             url='https://huggingface.co/lllyasviel/fooocus_inpaint/resolve/main/inpaint_v25.fooocus.patch',
@@ -1074,8 +1066,7 @@ def downloading_inpaint_models(v):
             file_name='inpaint_v25.fooocus.patch'
         )
         patch_file = os.path.join(paths_inpaint[0], 'inpaint_v25.fooocus.patch')
-
-    if v == 'v2.6':
+    else:   # i.e. v=='v2.6'
         load_file_from_url(
             url='https://huggingface.co/lllyasviel/fooocus_inpaint/resolve/main/inpaint_v26.fooocus.patch',
             model_dir=paths_inpaint[0],

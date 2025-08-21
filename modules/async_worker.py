@@ -1025,7 +1025,7 @@ def worker():
                     inpaint_head_model_path, inpaint_patch_model_path = config.downloading_inpaint_models(
                         async_task.inpaint_engine)
                     base_model_additional_loras += [(inpaint_patch_model_path, 1.0)]
-                    print(f'[Inpaint] Current inpaint model is {inpaint_patch_model_path}')
+                    print(f'[Inpaint] Current Inpaint model is {inpaint_patch_model_path}')
                     if async_task.refiner_model_name == 'None':
                         use_synthetic_refiner = True
                         async_task.refiner_switch = 0.8

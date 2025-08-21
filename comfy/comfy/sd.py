@@ -32,6 +32,9 @@ import comfy.t2i_adapter.adapter
 import comfy.supported_models_base
 import comfy.taesd.taesd
 
+
+# sd = state dictionary
+
 def load_lora_for_models(model, clip, lora, strength_model, strength_clip):
     key_map = {}
     if model is not None:
@@ -493,37 +496,6 @@ def load_gligen(ckpt_path):
         model = model.half()
     return comfy.model_patcher.ModelPatcher(model, load_device=model_management.get_torch_device(), offload_device=model_management.unet_offload_device())
 
-def load_checkpoint(config_path=None, ckpt_path=None, output_vae=True, output_clip=True, embedding_directory=None, state_dict=None, config=None):
-    logging.warning("Warning: The load checkpoint with config function is deprecated and will eventually be removed, please use the other one.")
-    model, clip, vae, _ = load_checkpoint_guess_config(ckpt_path, output_vae=output_vae, output_clip=output_clip, output_clipvision=False, embedding_directory=embedding_directory, output_model=True)
-    #TODO: this function is a mess and should be removed eventually
-    if config is None:
-        with open(config_path, 'r') as stream:
-            config = yaml.safe_load(stream)
-    model_config_params = config['model']['params']
-    clip_config = model_config_params['cond_stage_config']
-    scale_factor = model_config_params['scale_factor']
-
-    if "parameterization" in model_config_params:
-        if model_config_params["parameterization"] == "v":
-            m = model.clone()
-            class ModelSamplingAdvanced(comfy.model_sampling.ModelSamplingDiscrete, comfy.model_sampling.V_PREDICTION):
-                pass
-            m.add_object_patch("model_sampling", ModelSamplingAdvanced(model.model.model_config))
-            model = m
-
-    layer_idx = clip_config.get("params", {}).get("layer_idx", None)
-    if layer_idx is not None:
-        clip.clip_layer(layer_idx)
-
-    return (model, clip, vae)
-
-def load_checkpoint_guess_config(ckpt_path, output_vae=True, output_clip=True, output_clipvision=False, embedding_directory=None, output_model=True, model_options={}, te_model_options={}):
-    sd = comfy.utils.load_torch_file(ckpt_path)
-    out = load_state_dict_guess_config(sd, output_vae, output_clip, output_clipvision, embedding_directory, output_model, model_options, te_model_options=te_model_options)
-    if out is None:
-        raise RuntimeError("ERROR: Could not detect model type of: {}".format(ckpt_path))
-    return out
 
 def load_state_dict_guess_config(sd, output_vae=True, output_clip=True, output_clipvision=False, embedding_directory=None, output_model=True, model_options={}, te_model_options={}):
     clip = None
@@ -536,6 +508,13 @@ def load_state_dict_guess_config(sd, output_vae=True, output_clip=True, output_c
     parameters = comfy.utils.calculate_parameters(sd, diffusion_model_prefix)
     weight_dtype = comfy.utils.weight_dtype(sd, diffusion_model_prefix)
     load_device = model_management.get_torch_device()
+
+    if not diffusion_model_prefix:
+        diffusion_model_prefix = 'model.diffusion_model.'
+#    print()
+#    print(f'sd {sd}')
+#    print(f'diffusion_model_prefix {diffusion_model_prefix}')
+#    print()
 
     model_config = model_detection.model_config_from_unet(sd, diffusion_model_prefix)
     if model_config is None:
@@ -600,6 +579,44 @@ def load_state_dict_guess_config(sd, output_vae=True, output_clip=True, output_c
             model_management.load_models_gpu([model_patcher], force_full_load=True)
 
     return (model_patcher, clip, vae, clipvision)
+
+
+def load_checkpoint_guess_config(ckpt_path, output_vae=True, output_clip=True, output_clipvision=False, embedding_directory=None, output_model=True, model_options={}, te_model_options={}):
+#    print()
+#    print(f'ckpt_path {ckpt_path}')
+#    print()
+    sd = comfy.utils.load_torch_file(ckpt_path)
+    out = load_state_dict_guess_config(sd, output_vae, output_clip, output_clipvision, embedding_directory, output_model, model_options, te_model_options=te_model_options)
+    if out is None:
+        raise RuntimeError("ERROR: Could not detect model type of: {}".format(ckpt_path))
+#        print(f'Guess output {out}')
+    return out
+
+
+def load_checkpoint(config_path=None, ckpt_path=None, output_vae=True, output_clip=True, embedding_directory=None, state_dict=None, config=None):
+    logging.warning("Warning: The load checkpoint with config function is deprecated and will eventually be removed, please use the other one.")
+    model, clip, vae, _ = load_checkpoint_guess_config(ckpt_path, output_vae=output_vae, output_clip=output_clip, output_clipvision=False, embedding_directory=embedding_directory, output_model=True)
+    #TODO: this function is a mess and should be removed eventually
+    if config is None:
+        with open(config_path, 'r') as stream:
+            config = yaml.safe_load(stream)
+    model_config_params = config['model']['params']
+    clip_config = model_config_params['cond_stage_config']
+    scale_factor = model_config_params['scale_factor']
+
+    if "parameterization" in model_config_params:
+        if model_config_params["parameterization"] == "v":
+            m = model.clone()
+            class ModelSamplingAdvanced(comfy.model_sampling.ModelSamplingDiscrete, comfy.model_sampling.V_PREDICTION):
+                pass
+            m.add_object_patch("model_sampling", ModelSamplingAdvanced(model.model.model_config))
+            model = m
+
+    layer_idx = clip_config.get("params", {}).get("layer_idx", None)
+    if layer_idx is not None:
+        clip.clip_layer(layer_idx)
+
+    return (model, clip, vae)
 
 
 def load_diffusion_model_state_dict(sd, model_options={}): #load unet in diffusers or regular format

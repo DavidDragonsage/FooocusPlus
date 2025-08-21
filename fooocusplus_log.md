@@ -10,6 +10,9 @@
 * added HF-Mirror support for Chinese users, in the two Chinese batch files
 * to reduce image distortion, the main canvas is now set for a minimum height of 300px
 * updated python_embedded version to 1.06 (current users have already updated)
+* Hotfix8: removed the Flux1Krea preset due to unreliability
+  * the Spanish language user interface (UI) is now complete
+  * fixed a bug with Inpainting that in some cases prevented use of the Inpainting model
 * Hotfix7: fixed a "NoneType" error with Inpainting, initialized Argos Translate
 * Hotfix6: fixed another "assert" bug with Inpainting
 * Hotfix5: UI now supports full translation
