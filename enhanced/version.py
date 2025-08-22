@@ -6,6 +6,7 @@ from pathlib import Path
 
 fooocusplus_ver = ''
 hotfix = ''
+hotfix_title = ''
 
 required_path = Path('required_library.py')
 
@@ -37,7 +38,7 @@ def get_required_library():
         return False
 
 def get_fooocusplus_ver():
-    global fooocusplus_ver, hotfix
+    global fooocusplus_ver, hotfix, hotfix_title
     current_dir = Path.cwd().resolve()
     log_txt = US.load_textfile(Path(current_dir/'fooocusplus_log.md'))
     if log_txt == False:
@@ -49,4 +50,8 @@ def get_fooocusplus_ver():
             return '0.9.9', '0' # secondary fallback
     if hotfix == '':
         hotfix = '0'
-    return fooocusplus_ver, hotfix
+    if int(hotfix) < 10:
+        hotfix_title = '0' + hotfix
+    else:
+        hotfix_title = hotfix
+    return fooocusplus_ver, hotfix, hotfix_title

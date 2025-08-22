@@ -28,6 +28,7 @@ sorted_styles.json
 /venv
 /tmp
 /ui-config.json
+/language
 /outputs
 /presets
 /sdxl_styles

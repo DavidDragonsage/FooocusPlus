@@ -9,7 +9,10 @@
 * debugged and updated support for AMD graphics card users
 * added HF-Mirror support for Chinese users, in the two Chinese batch files
 * to reduce image distortion, the main canvas is now set for a minimum height of 300px
-* updated python_embedded version to 1.06 (current users have already updated)
+* updated python_embedded version to 1.06 (current users are already updated)
+* Hotfix9: added the Flux1Krea_FP8 preset
+  * users can add or amend languages with the UserDir/user_language directory
+  * hotfix numbers can now exceed 9
 * Hotfix8: removed the Flux1Krea preset due to unreliability
   * the Spanish language user interface (UI) is now complete
   * fixed a bug with Inpainting that in some cases prevented use of the Inpainting model

@@ -490,8 +490,8 @@ def worker():
             d.append(('Metadata Scheme', 'metadata_scheme',
                       metadata_temp if async_task.save_metadata_to_images else async_task.save_metadata_to_images))
             d.append(('Preset', 'current_preset', args_manager.args.preset))
-            fooocusplus_ver, hotfix = version.get_fooocusplus_ver()
-            d.append(('Version', 'version', f'{fooocusplus_ver}.{hotfix}'))
+            fooocusplus_ver, hotfix, hotfix_title = version.get_fooocusplus_ver()
+            d.append(('Version', 'version', f'{fooocusplus_ver}.{hotfix_title}'))
             img_paths.append(log(x, d, metadata_parser, async_task.output_format, task, persist_image))
 
         return img_paths

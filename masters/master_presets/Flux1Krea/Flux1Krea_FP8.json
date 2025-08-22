@@ -1,0 +1,61 @@
+{ 
+    "default_engine": {
+	"backend_engine": "Flux",
+	"disvisible": ["backend_selection", "performance_selection", "negative_prompt",  "refiner_model"],
+	"disinteractive": ["input_image_checkbox", "enhance_checkbox", "loras-4"],
+	"backend_params": {
+                "task_method": "flux_base",
+	"clip_model": "auto",
+                "base_model_dtype": "auto"
+	    }
+    	},
+    "default_model": "FluxKrea/flux1KreaDevFP8_fp8E4m3fn.safetensors",
+    "default_refiner": "None",
+    "default_refiner_switch": 0.6,
+    "default_loras": [
+        [
+            true,
+            "None",
+            1.0
+        ],
+        [
+            true,
+            "None",
+            1.0
+        ],
+        [
+            true,
+            "None",
+            1.0
+        ],
+        [
+            true,
+            "None",
+            1.0
+        ],
+        [
+            true,
+            "None",
+            1.0
+        ]
+    ],
+    "default_cfg_scale": 4.5,
+    "default_sample_sharpness": 2,
+    "default_sampler": "euler",
+    "default_scheduler": "simple",
+    "default_performance": "Speed",
+    "default_prompt": "",
+    "default_styles": [
+        "Fooocus V2"
+    ],
+    "default_aspect_ratio": "0*0",
+    "default_overwrite_step": 20,
+    "checkpoint_downloads": {
+        "FluxKrea/flux1KreaDevFP8_fp8E4m3fn.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/flux1KreaDevFP8_fp8E4m3fn.safetensors"
+    },
+    "embeddings_downloads": {},
+    "lora_downloads": {},
+    "vae_downloads": {
+        "ae.safetensors": "https://huggingface.co/lovis93/testllm/resolve/ed9cf1af7465cebca4649157f118e331cf2a084f/ae.safetensors?download=true"
+    } 
+}

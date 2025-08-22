@@ -291,7 +291,24 @@ def create_user_structure(user_dir):
     print(f' {working_topics_path.resolve()}')
 
 
-    # in a similar way, initialize the Presets structure
+    # in a similar way, initialize the Language structure
+    master_language_path = Path('masters/master_language')
+    ref_master_language_path = Path(user_dir_path/'master_language')
+    remove_dirs(ref_master_language_path)
+    copy_dirs(master_language_path, ref_master_language_path)
+
+    working_language_path = Path('language').resolve()
+    remove_dirs(working_language_path)
+    copy_dirs(master_language_path, working_language_path)
+
+    user_language_path = Path(user_dir_path/'user_language')
+    make_dir(user_language_path)
+    copy_dir_structure(master_language_path, user_language_path)
+    copy_dirs(user_language_path, working_language_path)
+    print(f'Updated the working language folder: {working_language_path}')
+
+
+    # also initialize the Presets structure
     master_presets_path = Path('masters/master_presets')
     ref_master_presets_path = Path(user_dir_path/'master_presets')
     remove_dirs(ref_master_presets_path)

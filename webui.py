@@ -192,8 +192,8 @@ def enhance_inpaint_mode_change(mode, inpaint_engine_version):
 
 reload_javascript()
 
-fooocusplus_ver, hotfix = version.get_fooocusplus_ver()
-title = f'FooocusPlus {fooocusplus_ver}.{hotfix}'
+fooocusplus_ver, hotfix, hotfix_title = version.get_fooocusplus_ver()
+title = f'FooocusPlus {fooocusplus_ver}.{hotfix_title}'
 common.GRADIO_ROOT = gr.Blocks(
     title=title, css=toolbox.css).queue()
 
@@ -1306,7 +1306,7 @@ with common.GRADIO_ROOT:
                     torch_ver, xformers_ver, cuda_ver = torch_info()
                     if xformers_ver == '':
                         xformers_ver = "not installed"
-                    fooocusplus_ver, hotfix = version.get_fooocusplus_ver()
+                    fooocusplus_ver, hotfix, hotfix_title = version.get_fooocusplus_ver()
                     gr.Markdown(value=f'<h3>System Information</h3>\
                     System RAM: {int(model_management.get_sysram())} MB,\
                     Video RAM: {int(model_management.get_vram())} MB<br>\

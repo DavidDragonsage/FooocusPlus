@@ -10,7 +10,7 @@ print(f'Root {ROOT}')
 
 REINSTALL_ALL = False
 
-fooocusplus_ver, hotfix = version.get_fooocusplus_ver()
+fooocusplus_ver, hotfix, hotfix_title = version.get_fooocusplus_ver()
 
 if not version.get_required_library():
     print()
