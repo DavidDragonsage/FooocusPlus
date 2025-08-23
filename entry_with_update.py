@@ -9,7 +9,7 @@ os.chdir(ROOT)
 import enhanced.version as version
 
 old_version, old_hotfix, old_hotfix_title = version.get_fooocusplus_ver()
-print(f'Welcome to FooocusPlus {old_version}.{old_hotfix}: checking for updates...')
+print(f'Welcome to FooocusPlus {old_version}.{old_hotfix_title}: checking for updates...')
 
 
 try:
