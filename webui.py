@@ -847,7 +847,7 @@ with common.GRADIO_ROOT:
                         return gr.update(value=f'<font size="3">&emsp;<a href="file={get_current_html_path(output_format)}"\
                         target="_blank">\U0001F4DA Image Log</a>\
                         &emsp;<a href="https://www.facebook.com/groups/fooocus" target="_blank">\U0001F4D4 Forum</a>\
-                        &emsp;<a href="https://github.com/DavidDragonsage/FooocusPlus/wiki target="_blank">\U0001F4DA Wiki</a>')
+                        &emsp;<a href="https://github.com/DavidDragonsage/FooocusPlus/wiki" target="_blank">\U0001F4DA Wiki</a>')
 
                 history_link = gr.HTML()
                 common.GRADIO_ROOT.load(update_history_link, outputs=history_link,
