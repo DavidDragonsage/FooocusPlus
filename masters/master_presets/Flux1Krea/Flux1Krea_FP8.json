@@ -51,7 +51,7 @@
     "default_aspect_ratio": "0*0",
     "default_overwrite_step": 20,
     "checkpoint_downloads": {
-        "FluxKrea/flux1KreaDevFP8_fp8E4m3fn.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/flux1KreaDevFP8_fp8E4m3fn.safetensors"
+        "FluxKrea/flux1KreaDevFP8_fp8E4m3fn.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/flux1KreaDevFP8_fp8E4m3fn.safetensors"
     },
     "embeddings_downloads": {},
     "lora_downloads": {},
