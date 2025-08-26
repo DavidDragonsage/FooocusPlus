@@ -31,7 +31,7 @@ ssl._create_default_https_context = ssl._create_unverified_context
 
 import comfy.comfy_version
 from modules.launch_util import is_installed, verify_installed_version,\
-    run, python, run_pip, run_pip_url, requirements_met,\
+    run, python, run_pip, run_pip_url, requirements_met, windows_patch,\
     git_clone, index_url, target_path_install, met_diff
 
 from launch_support import delete_torch_dependencies,\
@@ -41,6 +41,7 @@ from launch_support import delete_torch_dependencies,\
 
 print()
 print('Checking for required library files...')
+windows_patch()
 requirements_file = os.environ.get('REQS_FILE', "requirements_versions.txt")
 if requirements_met(requirements_file):
     print('All requirements met')

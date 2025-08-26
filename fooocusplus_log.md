@@ -10,6 +10,7 @@
 * added HF-Mirror support for Chinese users, in the two Chinese batch files
 * to reduce image distortion, the main canvas is now set for a minimum height of 300px
 * updated python_embedded version to 1.06 (current users are already updated)
+* Hotfix11: added Insightface wheel for Linux and macOS
 * Hotfix10: Inpainting help popup uses correct text in English & Spanish
 * Hotfix9: added the Flux1Krea_FP8 preset
   * users can add or amend languages with the UserDir/user_language directory

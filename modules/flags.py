@@ -102,7 +102,6 @@ describe_type_anime = 'Art/Anime'
 describe_types = [describe_type_photo, describe_type_anime]
 
 translation_methods = ['Slim Model', 'Third APIs']
-#translation_methods = ['Slim Model', 'Big Model', 'Third APIs']
 
 COMFY_KSAMPLER_NAMES = ["euler", "euler_cfg_pp", "euler_ancestral", "euler_ancestral_cfg_pp", "heun", "heunpp2","dpm_2", "dpm_2_ancestral",
                   "lms", "dpm_fast", "dpm_adaptive", "dpmpp_2s_ancestral", "dpmpp_sde", "dpmpp_sde_gpu",

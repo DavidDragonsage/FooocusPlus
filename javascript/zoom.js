@@ -90,6 +90,7 @@ onUiLoaded(async() => {
             adjust_brush_size = getTranslation("Adjust Brush Size")
             fullscreen_mode = getTranslation("Fullscreen Mode")
             move_canvas = getTranslation("Move Canvas")
+            plus_wheel = getTranslation("+Wheel")
             reset_zoom = getTranslation("Reset Zoom")
             undo_last_action = getTranslation("Undo Last Action")
             zoom_canvas = getTranslation("Zoom Canvas")
@@ -106,12 +107,12 @@ onUiLoaded(async() => {
                 {
                     configKey: "canvas_hotkey_adjust",
                     action: adjust_brush_size,
-                    keySuffix: "+Wheel"
+                    keySuffix: plus_wheel
                 },
                 {
                     configKey: "canvas_hotkey_zoom",
                     action: zoom_canvas,
-                    keySuffix: "+Wheel"
+                    keySuffix: plus_wheel
                 }
             ];
 

@@ -2,7 +2,7 @@
 --extra-index-url https://www.piwheels.org/simple
 https://developer.download.nvidia.com/compute/redist/onnx-graphsurgeon/onnx_graphsurgeon-0.3.27-py2.py3-none-any.whl
 https://developer.download.nvidia.com/compute/redist/polygraphy/polygraphy-0.47.1-py2.py3-none-any.whl
-https://github.com/Gourieff/Assets/raw/main/Insightface/insightface-0.7.3-cp310-cp310-win_amd64.whl; platform_system == "Windows"
-insightface==0.7.3; platform_system != "Windows"
-cmake; platform_system != "Windows"
+https://huggingface.co/iwr-redmond/linux-wheels/resolve/main/insightface-0.7.3-cp310-cp310-linux_x86_64.whl; platform_system == "linux"
+insightface==0.7.3; platform_system == "darwin"
+cmake
 nvidia-pyindex

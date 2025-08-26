@@ -175,6 +175,15 @@ def verify_installed_version(package_name, package_ver, dependencies = False, us
             result = run_pip(f"install -U -I --no-deps {package_name}=={package_ver} {index_url_line}", {package_name}, live=True)
     return result
 
+def windows_patch():
+    if is_win32_standalone_build:
+        result = verify_installed_version('insightface', '0.7.3', False, use_index = 'https://github.com/Gourieff/Assets/raw/main/Insightface/insightface-0.7.3-cp310-cp310-win_amd64.whl')
+        if result:
+            print('All required library patch modules are installed')
+        else:
+            print('Could not install a required library patch module')
+    return
+
 met_diff = {}
 def requirements_met(requirements_file):
     global met_diff

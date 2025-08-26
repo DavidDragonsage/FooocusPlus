@@ -1,4 +1,5 @@
 {
+	"+Wheel": "+Rueda del Ratón",
     "(Experimental) This may cause performance problems on some computers and certain Internet conditions": "(Experimental) Esto puede causar problemas de rendimiento en algunas computadoras y ciertas condiciones de internet",
     "* \"Image Prompt\" is powered by the Fooocus Image Mixture Engine (v1.0.1)": "  * \"Image Prompt\" funciona con el motor de mezcla de imágenes Fooocus (v1.0.1)",
     "* Powered by Fooocus Inpaint Engine": "  * Desarrollado por Fooocus Motor de Pintura",
@@ -550,7 +551,6 @@
     "Set to 0 to detect all": "Establece en 0 para detectar todo",
     "Settings": "Configuraciones",
     "sgm_uniform": "sgm_uniforme",
-	"Shift+Wheel - Zoom Canvas": "Shift+Wheel - Zoom Canvas2",
     "Shortlist Template": "Plantilla de Lista Corta",
     "Show enhance masks in preview and final results": "Mostrar máscaras de mejora en la vista previa y resultados finales",
     "Show Newest Images First": "Mostrar las Imágenes más Nuevas Primero",
@@ -611,7 +611,7 @@
     "Use \"Fooocus\" to regenerate images and \"A1111\" for upload to Civitai": "Utilice \"Fooocus\" para regenerar imágenes y \"A1111\" para subirlas a Civitai",
     "Use before to enhance small details and after to enhance large areas": "Usa antes para mejorar detalles pequeños y después para mejorar áreas grandes",
     "Use black image if NSFW is detected": "Usar imagen negra si se detecta contenido NSFW",
-	"Use brush": "Ajustar el Tamaño del Pincel (Ctrl+Wheel)",
+	"Use brush": "Ajustar el Tamaño del Pincel (Ctrl+Rueda del Ratón)",
     "Use GroundingDINO boxes instead of more detailed SAM masks": "Usar cajas GroundingDINO en lugar de máscaras SAM más detalladas",
     "Use singular whenever possible": "Usa singular siempre que sea posible",
     "Use the Aspect Ratio Shortlist": "Utilice la Lista de Opciones de Relación de Aspecto",
