@@ -227,7 +227,7 @@ div:has(> #positive_prompt) {
   top: 40px;
   left: 10px;
   width: 250px;
-  font-size: 16px;
+  font-size: 12px;
   opacity: 0;
   border-radius: 8px;
   box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
