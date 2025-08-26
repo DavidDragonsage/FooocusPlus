@@ -1,15 +1,15 @@
 import os
 import importlib
+import importlib.metadata
 import importlib.util
 import shutil
-import subprocess
 import sys
 import re
 import logging
-import importlib.metadata
 import packaging.version
 import pygit2
 from launch_support import is_win32_standalone_build, python_embedded_path
+from modules.launch_installer import run, verify_installed_version
 from pathlib import Path
 
 pygit2.option(pygit2.GIT_OPT_SET_OWNER_VALIDATION, 0)
@@ -26,7 +26,8 @@ default_command_live = (os.environ.get('LAUNCH_LIVE_OUTPUT') == "1")
 # the mainline Fooocus and RuinedFooocus statement:
 index_url = os.environ.get('INDEX_URL', "")
 
-target_path_install = f' -t {os.path.abspath(os.path.join(python_embedded_path, "Lib/site-packages"))}'\
+package_path = Path(python_embedded_path/"Lib/site-packages")
+target_path_install = f' -t {package_path}'\
     if sys.platform.startswith("win") else ''
 
 modules_path = os.path.dirname(os.path.realpath(__file__))
@@ -92,50 +93,6 @@ def is_installed(package):
     return spec is not None
 
 
-def run(command, desc=None, errdesc=None, custom_env=None, live: bool = default_command_live) -> str:
-    if desc is not None:
-        print(desc)
-
-    run_kwargs = {
-        "args": command,
-        "shell": True,
-        "env": os.environ if custom_env is None else custom_env,
-        "encoding": 'utf8',
-        "errors": 'ignore',
-    }
-
-    if not live:
-        run_kwargs["stdout"] = run_kwargs["stderr"] = subprocess.PIPE
-
-    result = subprocess.run(**run_kwargs)
-
-    if result.returncode != 0:
-        error_bits = [
-            f"{errdesc or 'Error running command'}.",
-            f"Command: {command}",
-            f"Error code: {result.returncode}",
-        ]
-        if result.stdout:
-            error_bits.append(f"stdout: {result.stdout}")
-        if result.stderr:
-            error_bits.append(f"stderr: {result.stderr}")
-        raise RuntimeError("\n".join(error_bits))
-
-    return (result.stdout or "")
-
-
-def run_pip(command, desc=None, live=default_command_live):
-    result = True
-    try:
-        index_url_line = f' --index-url {index_url}' if index_url != '' else ''
-        return run(f'"{python}" -m pip {command} {target_path_install} --prefer-binary --disable-pip-version-check {index_url_line}', desc=f"Installing {desc}",
-                   errdesc=f"Could not install {desc}", live=live)
-    except Exception as e:
-        print(e)
-        print(f'Pip {desc} command failed: {command}')
-        result = False
-    return result
-
 def run_pip_url(command, desc=None, arg_index=index_url, live=default_command_live):
     result = True
     try:
@@ -150,38 +107,11 @@ def run_pip_url(command, desc=None, arg_index=index_url, live=default_command_li
     return result
 
 
-def is_installed_version(package, version_required):
-    try:
-        version_installed = importlib.metadata.version(package)
-    except Exception:
-        print()
-        print(f'Installing the required version of {package}: {version_required}')
-        return False
-    if packaging.version.parse(version_required) != packaging.version.parse(version_installed):
-        print()
-        print(f'The current version of {package} is: {version_installed}. Installing the required version: {version_required}')
-        return False
-    return True
-
-def verify_installed_version(package_name, package_ver, dependencies = False, use_index = ''):
-    result = True
-    index_url_line = f' --index-url {use_index}' if use_index != '' else ''
-    if not is_installed_version(package_name, package_ver):
-        if dependencies:
-            run(f'"{python}" -m pip uninstall -y {package_name}')
-            result = run_pip(f"install -U -I {package_name}=={package_ver} {index_url_line}", {package_name}, live=True)
-        else:
-            run(f'"{python}" -m pip uninstall -y {package_name}')
-            result = run_pip(f"install -U -I --no-deps {package_name}=={package_ver} {index_url_line}", {package_name}, live=True)
-    return result
-
 def windows_patch():
     if is_win32_standalone_build:
-        result = verify_installed_version('insightface', '0.7.3', False, use_index = 'https://github.com/Gourieff/Assets/raw/main/Insightface/insightface-0.7.3-cp310-cp310-win_amd64.whl')
+        result = verify_installed_version('insightface', '0.7.3', False, use_index='', package_url='https://github.com/Gourieff/Assets/raw/main/Insightface/insightface-0.7.3-cp310-cp310-win_amd64.whl')
         if result:
             print('All required library patch modules are installed')
-        else:
-            print('Could not install a required library patch module')
     return
 
 met_diff = {}

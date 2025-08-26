@@ -7,6 +7,7 @@ sys.path.append(str(ROOT))
 os.chdir(ROOT)
 
 import enhanced.version as version
+from modules.launch_installer import verify_installed_version
 
 try:
     old_version, old_hotfix, old_hotfix_title = version.get_fooocusplus_ver()
@@ -15,6 +16,10 @@ except:
     print('Please restart FooocusPlus to complete the update')
     print()
     quit()
+
+# ensure that pygit2 is available
+# pygit2 is needed until dulwich:
+verify_installed_version('pygit2', '1.18.0', False)
 
 try:
     import pygit2

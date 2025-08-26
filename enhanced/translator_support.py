@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from modules.launch_util import verify_installed_version
+from modules.launch_installer import verify_installed_version
 import modules.user_structure as US
 
 

@@ -86,7 +86,6 @@ psutil==6.0.0
 pycocotools==2.0.9
 pydantic==2.11.1
 pydantic-core==2.33.0
-pygit2>=1.18.0 # needed until dulwich
 pymatting==1.1.14
 pyparsing==3.2.3
 pyyaml==6.0.1

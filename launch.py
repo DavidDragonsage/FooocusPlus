@@ -30,8 +30,11 @@ ssl._create_default_https_context = ssl._create_unverified_context
 
 
 import comfy.comfy_version
-from modules.launch_util import is_installed, verify_installed_version,\
-    run, python, run_pip, run_pip_url, requirements_met, windows_patch,\
+from modules.launch_installer import run, run_pip, \
+    verify_installed_version
+
+from modules.launch_util import is_installed, \
+    python, run_pip_url, requirements_met, windows_patch,\
     git_clone, index_url, target_path_install, met_diff
 
 from launch_support import delete_torch_dependencies,\
