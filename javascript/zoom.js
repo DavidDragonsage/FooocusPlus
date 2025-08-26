@@ -34,10 +34,10 @@ onUiLoaded(async() => {
         canvas_hotkey_zoom: "Shift",
         canvas_hotkey_adjust: "Ctrl",
         canvas_zoom_undo_extra_key: "Ctrl",
-        canvas_zoom_hotkey_undo: "KeyZ",
+        canvas_hotkey_fullscreen: "KeyF",
+        canvas_hotkey_move: "KeyM",
         canvas_hotkey_reset: "KeyR",
-        canvas_hotkey_fullscreen: "KeyS",
-        canvas_hotkey_move: "KeyF",
+        canvas_zoom_hotkey_undo: "KeyZ",
         canvas_show_tooltip: true,
         canvas_auto_expand: true,
         canvas_blur_prompt: true,
@@ -87,54 +87,61 @@ onUiLoaded(async() => {
             const tooltipContent = document.createElement("div");
             tooltipContent.className = "canvas-tooltip-content";
 
+            adjust_brush_size = getTranslation("Adjust Brush Size")
+            fullscreen_mode = getTranslation("Fullscreen Mode")
+            move_canvas = getTranslation("Move Canvas")
+            reset_zoom = getTranslation("Reset Zoom")
+            undo_last_action = getTranslation("Undo Last Action")
+            zoom_canvas = getTranslation("Zoom Canvas")
+
             // Define an array with hotkey information and their actions
             const hotkeysInfo = [
                 {
-                    configKey: "canvas_hotkey_zoom",
-                    action: "缩放画布",
-                    keySuffix: " + wheel"
+                    configKey: "canvas_hotkey_fullscreen",
+                    action: fullscreen_mode
                 },
+                {configKey: "canvas_hotkey_move", action: move_canvas},
+                {configKey: "canvas_hotkey_reset", action: reset_zoom},
+                {configKey: "canvas_zoom_hotkey_undo", action: undo_last_action, keyPrefix: `${hotkeysConfig.canvas_zoom_undo_extra_key}+`},
                 {
                     configKey: "canvas_hotkey_adjust",
-                    action: "调整笔刷大小",
-                    keySuffix: " + wheel"
+                    action: adjust_brush_size,
+                    keySuffix: "+Wheel"
                 },
-                {configKey: "canvas_zoom_hotkey_undo", action: "回退上一步", keyPrefix: `${hotkeysConfig.canvas_zoom_undo_extra_key} + ` },
-                {configKey: "canvas_hotkey_reset", action: "重置画布"},
                 {
-                    configKey: "canvas_hotkey_fullscreen",
-                    action: "全屏模式"
-                },
-                {configKey: "canvas_hotkey_move", action: "移动画布"}
+                    configKey: "canvas_hotkey_zoom",
+                    action: zoom_canvas,
+                    keySuffix: "+Wheel"
+                }
             ];
 
             // Create hotkeys array based on the config values
             const hotkeys = hotkeysInfo.map((info) => {
                 const configValue = hotkeysConfig[info.configKey];
-        
+
                 let key = configValue.slice(-1);
-        
+
                 if (info.keySuffix) {
                   key = `${configValue}${info.keySuffix}`;
                 }
-        
+
                 if (info.keyPrefix && info.keyPrefix !== "None + ") {
                   key = `${info.keyPrefix}${configValue[3]}`;
                 }
-        
+
                 return {
                   key,
                   action: info.action,
                 };
               });
-        
+
               hotkeys
                 .forEach(hotkey => {
                   const p = document.createElement("p");
                   p.innerHTML = `<b>${hotkey.key}</b> - ${hotkey.action}`;
                   tooltipContent.appendChild(p);
                 });
-        
+
               tooltip.append(info, tooltipContent);
 
               // Add a hint element to the target element
@@ -235,7 +242,7 @@ onUiLoaded(async() => {
 
         // Reset zoom when uploading a new image
         const fileInput = gradioApp().querySelector(
-	    `${elemId} input[type="file"][accept="image/*"].svelte-116rqfv`
+            `${elemId} input[type="file"][accept="image/*"].svelte-116rqfv`
         );
         fileInput.addEventListener("click", resetZoom);
 
@@ -253,7 +260,7 @@ onUiLoaded(async() => {
             targetElement.style.overflow = "visible";
 
             toggleOverlap("on");
- 
+
             return newZoomLevel;
         }
 
@@ -331,7 +338,7 @@ onUiLoaded(async() => {
         function undoLastAction(e) {
             let isCtrlPressed = isModifierKey(e, hotkeysConfig.canvas_zoom_undo_extra_key)
             const isAuxButton = e.button >= 3;
-            
+
             if (isAuxButton) {
               isCtrlPressed = true
             } else {
@@ -340,7 +347,7 @@ onUiLoaded(async() => {
 
             // Move undoBtn query outside the if statement to avoid unnecessary queries
             const undoBtn = document.querySelector(`${activeElement} button[aria-label="Undo"]`);
-        
+
             if ((isCtrlPressed) && undoBtn ) {
                 e.preventDefault();
                 undoBtn.click();
@@ -498,7 +505,7 @@ onUiLoaded(async() => {
               }
             }
           });
-      
+
           // Apply auto expand if enabled
           if (hotkeysConfig.canvas_auto_expand) {
             targetElement.addEventListener("mousemove", autoExpand);

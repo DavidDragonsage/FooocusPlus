@@ -167,7 +167,7 @@ def toggle_prompt_info(state_params):
     infobox_state = state_params["infobox_state"]
     infobox_state = not infobox_state
     state_params.update({"infobox_state": infobox_state})
-    #print(f'[ToolBox] Toggle_image_info: {infobox_state}')
+    #print(f'[Toolbox] Toggle_image_info: {infobox_state}')
     [choice, selected] = state_params["prompt_info"]
     prompt_info = gallery.get_images_prompt(choice, selected, state_params["__max_per_page"])
     return gr.update(value=make_infobox_markdown(prompt_info, state_params['__theme']), visible=infobox_state), state_params
@@ -271,7 +271,7 @@ def delete_image(state_params):
                 line = log_file.readline()
         with open(log_path, "w", encoding="utf-8") as log_file:
             log_file.write(file_text)
-        print(f'[ToolBox] Delete item from log.html: {file_name}')
+        print(f'[Toolbox] Delete item from log.html: {file_name}')
 
     log_name = os.path.join(dir_path, "log_ads.json")
     log_ext = {}
@@ -287,7 +287,7 @@ def delete_image(state_params):
     file_path = os.path.join(dir_path, file_name)
     if os.path.exists(file_path):
         os.remove(file_path)
-    print(f'[ToolBox] Delete image file: {file_path}')
+    print(f'[Toolbox] Delete image file: {file_path}')
 
     image_list_nums = len(gallery.refresh_images_catalog(output_index[0], True))
     if image_list_nums<=0:
@@ -344,7 +344,7 @@ def reset_params_by_image_meta(metadata, state_params, is_generating, inpaint_mo
     results += meta_parser.load_parameter_button_click(parsed_parameters, is_generating, inpaint_mode)
 
     engine_name = parsed_parameters.get("Backend Engine", parsed_parameters.get("backend_engine", "SDXL-Fooocus"))
-    print(f'[ToolBox] Reset_params_from_image: -->{engine_name} params from the image with embedded parameters.')
+    print(f'[Toolbox] Reset_params_from_image: -->{engine_name} params from the image with embedded parameters.')
     return results
 
 def reset_image_params(state_params, is_generating, inpaint_mode):
@@ -465,7 +465,7 @@ def save_preset(*args):
         # perm. save to user presets
         user_path = US.mkdir_copy_file(save_path, user_category)
         if user_path:
-            print(f'[ToolBox] Saved the current parameters to {user_path.resolve()}')
+            print(f'[Toolbox] Saved the current parameters to {user_path.resolve()}')
             state_params.update({"__preset": save_name})
             args_manager.args.preset = save_name
         else:

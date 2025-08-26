@@ -8,9 +8,13 @@ os.chdir(ROOT)
 
 import enhanced.version as version
 
-old_version, old_hotfix, old_hotfix_title = version.get_fooocusplus_ver()
-print(f'Welcome to FooocusPlus {old_version}.{old_hotfix_title}: checking for updates...')
-
+try:
+    old_version, old_hotfix, old_hotfix_title = version.get_fooocusplus_ver()
+    print(f'Welcome to FooocusPlus {old_version}.{old_hotfix_title}: checking for updates...')
+except:
+    print('Please restart FooocusPlus to complete the update')
+    print()
+    quit()
 
 try:
     import pygit2

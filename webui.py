@@ -277,7 +277,7 @@ with common.GRADIO_ROOT:
                             translator_button = gr.Button(visible=True,
                             value="Translate", elem_classes='type_row_third',
                             size='sm', min_width = 75)
-                            super_prompter = gr.Button(value="SuperPrompt",
+                            super_prompter = gr.Button(value="Super Prompt",
                             elem_classes='type_row_third', size="sm", min_width = 75)
                         else:
                             random_button = gr.Button(value="Random Prompt",
@@ -285,7 +285,7 @@ with common.GRADIO_ROOT:
                             translator_button = gr.Button(visible=False,
                             value="Translate", elem_classes='type_row_third',
                             size='sm', min_width = 75)
-                            super_prompter = gr.Button(value="SuperPrompt", elem_classes='type_row_half', size="sm", min_width = 75)
+                            super_prompter = gr.Button(value="Super Prompt", elem_classes='type_row_half', size="sm", min_width = 75)
                     with gr.Column(scale=2, min_width=75):
                         generate_button = gr.Button(label="Generate",
                         value="Generate", elem_classes='type_row',
@@ -358,7 +358,7 @@ with common.GRADIO_ROOT:
                             overwrite_upscale_strength = gr.Slider(label='Adjust the Strength of Upscale Variation',
                                 minimum=0, maximum=1.0, step=0.001,
                                 value=config.default_overwrite_upscale,
-                                info='Variation Strength is also called "denoising strength"')
+                                info='Variation Strength is also called "Denoising Strength"')
 
                             overwrite_vary_strength = gr.Slider(label='Adjust the Strength of Image Variation',
                                 minimum=0, maximum=1.0, step=0.001, value=0.50,
@@ -451,7 +451,7 @@ with common.GRADIO_ROOT:
                                     show_progress=False, queue=False)
 
                                 with gr.Accordion("Advanced Options", visible=False, open=False) as inpaint_mask_advanced_options:
-                                    inpaint_mask_sam_model = gr.Dropdown(label='SAM model', choices=flags.inpaint_mask_sam_model, value=config.default_inpaint_mask_sam_model, allow_custom_value=True)
+                                    inpaint_mask_sam_model = gr.Dropdown(label='SAM Model', choices=flags.inpaint_mask_sam_model, value=config.default_inpaint_mask_sam_model, allow_custom_value=True)
                                     inpaint_mask_box_threshold = gr.Slider(label="Box Threshold", minimum=0.0, maximum=1.0, value=0.3, step=0.05)
                                     inpaint_mask_text_threshold = gr.Slider(label="Text Threshold", minimum=0.0, maximum=1.0, value=0.25, step=0.05)
                                     inpaint_mask_sam_max_detections = gr.Slider(label="Maximum Number of Detections", info="Set to 0 to detect all", minimum=0, maximum=10, value=config.default_sam_max_detections, step=1, interactive=True)
@@ -529,7 +529,7 @@ with common.GRADIO_ROOT:
                                                     enhance_uov_method = gr.Radio(label='Upscale or Variation', choices=flags.uov_list,
                                                               value=config.default_enhance_uov_method)
                                                     enhance_uov_processing_order = gr.Radio(label='Processing Order',
-                                                                        info='Use before to enhance small details and after to enhance large areas.',
+                                                                        info='Use before to enhance small details and after to enhance large areas',
                                                                         choices=flags.enhancement_uov_processing_order,
                                                                         value=config.default_enhance_uov_processing_order)
                                                     enhance_uov_prompt_type = gr.Radio(label='Prompt',
@@ -568,10 +568,10 @@ with common.GRADIO_ROOT:
                                                     show_progress=False, queue=False)
 
                                                 enhance_prompt = gr.Textbox(label="Enhancement Positive Prompt",
-                                                    placeholder="Uses original prompt instead if empty.",
+                                                    placeholder="Uses original prompt instead if empty",
                                                     elem_id='enhance_prompt')
                                                 enhance_negative_prompt = gr.Textbox(label="Enhancement Negative Prompt",
-                                                     placeholder="Uses original negative prompt instead if empty.",
+                                                     placeholder="Uses original negative prompt instead if empty",
                                                      elem_id='enhance_negative_prompt')
 
                                                 with gr.Accordion("Detection", open=False):
@@ -612,7 +612,7 @@ with common.GRADIO_ROOT:
                                                     enhance_inpaint_engine = gr.Dropdown(label='Inpaint Engine',
                                                         value=config.default_inpaint_engine_version,
                                                         choices=flags.inpaint_engine_versions,
-                                                        info='Version of Fooocus inpaint model. If set, use performance Quality or Speed (no performance LoRAs) for best results.')
+                                                        info='Version of Fooocus Inpaint model. If set, use performance Quality or Speed (no performance LoRAs) for best results')
                                                     enhance_inpaint_strength = gr.Slider(label='Inpaint Denoising Strength',
                                                         minimum=0.0, maximum=1.0, step=0.001,
                                                         value=1.0,
@@ -754,7 +754,7 @@ with common.GRADIO_ROOT:
                         overwrite_step = gr.Slider(label='Forced Overwrite of Sampling Step',
                             minimum=-1, maximum=200, step=1,
                             value=config.default_overwrite_step,
-                            info='Set to -1 to disable.')
+                            info='Set to -1 to disable')
 
                     image_quantity = gr.Slider(label='Image Quantity', minimum=1,
                         maximum=config.default_max_image_quantity,
@@ -1125,7 +1125,7 @@ with common.GRADIO_ROOT:
                         adaptive_cfg = gr.Slider(label='CFG Mimicking from TSNR', minimum=1.0, maximum=30.0, step=0.01, \
                             value=config.default_cfg_tsnr, \
                             info='Enabling Fooocus\'s implementation of CFG mimicking for TSNR ' \
-                                '(effective when real CFG > mimicked CFG).')
+                                '(effective when real CFG > mimicked CFG)')
 
                         refiner_swap_method = gr.Dropdown(label='Refiner Swap Method',
                             value=flags.refiner_swap_method,
@@ -1134,22 +1134,22 @@ with common.GRADIO_ROOT:
                         overwrite_switch = gr.Slider(label='Forced Overwrite of Refiner Switch Step',
                             minimum=-1, maximum=200, step=1,
                             value=config.default_overwrite_switch,
-                            info='Set to -1 to disable.')
+                            info='Set to -1 to disable')
 
                         generate_image_grid = gr.Checkbox(label='Generate Image Grid for Each Batch',
-                            info='(Experimental) This may cause performance problems on some computers and certain internet conditions.',
+                            info='(Experimental) This may cause performance problems on some computers and certain internet conditions',
                             value=False)
 
                         disable_preview = gr.Checkbox(label='Disable Preview', value=config.default_black_out_nsfw,
                             interactive=not config.default_black_out_nsfw,
-                            info='Disable preview during generation.')
+                            info='Disable preview during generation')
                         disable_intermediate_results = gr.Checkbox(label='Disable Intermediate Results',
                             value=flags.Performance.has_restricted_features(config.default_performance),
-                            info='Disable intermediate results during generation, only show the final gallery.')
+                            info='Disable intermediate results during generation, only show the final gallery')
 
                         black_out_nsfw = gr.Checkbox(label='Black Out NSFW', value=config.default_black_out_nsfw,
                             interactive=not config.default_black_out_nsfw,
-                            info='Use black image if NSFW is detected.')
+                            info='Use black image if NSFW is detected')
 
                         black_out_nsfw.change(lambda x: gr.update(value=x, interactive=not x),
                             inputs=black_out_nsfw, outputs=disable_preview, queue=False,
@@ -1161,13 +1161,13 @@ with common.GRADIO_ROOT:
 
                     with gr.Tab(label='Control'):
                         debugging_cn_preprocessor = gr.Checkbox(label='Debug Preprocessors', value=False,
-                            info='See the results from preprocessors.')
+                            info='See the results from preprocessors')
                         skipping_cn_preprocessor = gr.Checkbox(label='Skip Preprocessors', value=False,
                             info='Do not preprocess images. (Inputs are already canny/depth/cropped-face/etc.)')
 
                         controlnet_softness = gr.Slider(label='Softness of ControlNet', minimum=0.0, maximum=1.0,
                             step=0.001, value=0.25,
-                            info='Similar to the Control Mode in A1111 (use 0.0 to disable). ')
+                            info='Similar to the Control Mode in A1111 (use 0.0 to disable)')
 
                         with gr.Tab(label='Canny'):
                             canny_low_threshold = gr.Slider(label='Canny Low Threshold', minimum=1, maximum=255,
@@ -1185,7 +1185,7 @@ with common.GRADIO_ROOT:
                         inpaint_engine = gr.Dropdown(label='Inpaint Engine',
                             value=config.default_inpaint_engine_version,
                             choices=flags.inpaint_engine_versions,
-                            info='Version of Fooocus inpaint model. If set, use performance Quality or Speed (no performance LoRAs) for best results.')
+                            info='Version of Fooocus Inpaint model. If set, use performance Quality or Speed (no performance LoRAs) for best results')
                         inpaint_erode_or_dilate = gr.Slider(label='Mask Erode or Dilate',
                             minimum=-64, maximum=64, step=1, value=0,
                             info='Positive value will make white area in the mask larger, '
@@ -1266,22 +1266,19 @@ with common.GRADIO_ROOT:
                     gr.Markdown(value='All current parameters will be saved. Clear the positive and negative prompts unless you want them to be part of the preset.')
                 with gr.Group():
                     comfyd_active_checkbox = gr.Checkbox(label='Enable Comfyd Always Active', value=not args.args.disable_comfyd,\
-                        info='Enabling will improve execution speed but occupy some memory.')
+                        info='Enabling will improve execution speed but occupy some memory')
                     image_tools_checkbox = gr.Checkbox(label='Enable Catalog Toolbox', value=True,\
                         info='Located on the main canvas, use the Toolbox to View Info, Regenerate or Delete an image from the catalog')
                     backfill_prompt = gr.Checkbox(label='Copy Prompts While Switching Images', value=config.default_backfill_prompt,\
-                        interactive=True, info='Fill the positive and negative prompts from the catalog images.')
+                        interactive=True, info='Fill the positive and negative prompts from the catalog images')
                     if (args.args.language=='cn'):
-                        translation_methods = gr.Radio(visible=True, label='Translation Methods',\
-                            choices=modules.flags.translation_methods, value=config.default_translation_methods,\
-                            info='\'Model\' requires more GPU/CPU and \'APIs\' rely on third parties.')
+                        translation_methods = gr.Radio(visible=True, label='',\
+                            choices=modules.flags.translation_methods, value=config.default_translation_methods)
                     else:
-                        translation_methods = gr.Radio(visible=False, label='Translation Methods',\
-                            choices=modules.flags.translation_methods, value=config.default_translation_methods,\
-                            info='\'Model\' requires more GPU/CPU and \'APIs\' rely on third parties.')
-                    mobile_url = gr.Checkbox(label=f'http://{args.args.listen}:{args.args.port}{args.args.webroot}/',\
-                        value=True, info='Mobile phone access address within the LAN. If you want WAN access, consulting QQ group: 938075852.',\
-                        interactive=False, visible=False)
+                        translation_methods = gr.Radio(visible=False, label='',\
+                            choices=modules.flags.translation_methods, value=config.default_translation_methods)
+                    mobile_url = gr.Checkbox(label=f'http://{args.args.listen}:{args.args.port}{args.args.webroot}/',
+                        value=True, interactive=False, visible=False)
 
                     def sync_params_backend(key, v, params):
                         params.update({key:v})
@@ -1293,8 +1290,8 @@ with common.GRADIO_ROOT:
                 import custom.OneButtonPrompt.ui_onebutton as ui_onebutton
                 run_event = gr.Number(visible=False, value=0)
                 ui_onebutton.ui_onebutton(prompt, run_event, random_button)
-                super_prompter_prompt = gr.Textbox(label='SuperPrompt Prefix', value='',
-                    info='Expand the following prompt to add more detail:', lines=1, visible=False)
+                super_prompter_prompt = gr.Textbox(label='', value='',
+                    info='', lines=1, visible=False)
 
                 with gr.Row():
                     if args.args.always_offload_from_vram:

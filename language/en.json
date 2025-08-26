@@ -443,9 +443,7 @@
   "Enable Comfyd Always Active": "Enable Comfyd Always Active",
   "Enabling will improve execution speed but occupy some memory.":
       "Enabling will improve execution speed but occupy some memory.",
-
-  "SuperPrompter": "SuperPrompter",
-  "SuperPrompt": "SuperPrompt",
+  "Super Prompt": "Super Prompt",
   "SuperPrompt Prefix": "SuperPrompt Prefix",
   "OneButtonPrompt": "OneButtonPrompt",
   "Random Prompt": "Random Prompt",
@@ -455,7 +453,6 @@
   "hyperprompt": "Hyperprompt",
   "Model type": "Model Type",
   "Standard": "Standard",
-
     "B1": "B1",
     "B2": "B2",
     "S1": "S1",
@@ -549,5 +546,18 @@
     "mouth": "mouth",
     "hair": "hair",
     "hand": "hand",
-    "body": "body"
+    "body": "body",
+    "Image Format": "Image Format",
+    "Start drawing": "Start drawing",
+    "Adjust Brush Size": "Adjust Brush Size",
+    "Clear": "Erase Paint",
+    "Fullscreen Mode": "Fullscreen Mode",
+    "Move Canvas": "Move Canvas",
+    "Remove Image": "Remove Image",
+    "Reset Zoom": "Reset Zoom",
+    "Undo": "Undo (Ctrl+Z)",
+    "Undo Last Action": "Undo Last Action",
+    "Use brush": "Adjust Brush Size (Ctrl+Wheel)",
+    "Zoom Canvas": "Zoom Canvas",
+    "Use via API": ""
 }

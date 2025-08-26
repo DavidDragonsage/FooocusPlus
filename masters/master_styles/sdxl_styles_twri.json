@@ -200,7 +200,7 @@
         "negative_prompt": "peaceful, calm, minimalist, photorealistic"
     },
     {
-        "name": "game-gta",
+        "name": "game-GTA",
         "prompt": "GTA-style artwork {prompt} . satirical, exaggerated, pop art style, vibrant colors, iconic characters, action-packed",
         "negative_prompt": "realistic, black and white, low contrast, impressionist, cubist, noisy, blurry, deformed"
     },
@@ -230,7 +230,7 @@
         "negative_prompt": "realistic, photorealistic, 35mm film, deformed, glitch, low contrast, noisy"
     },
     {
-        "name": "game-rpg fantasy game",
+        "name": "game-RPG fantasy game",
         "prompt": "role-playing game (RPG) style fantasy {prompt} . detailed, vibrant, immersive, reminiscent of high fantasy RPG games",
         "negative_prompt": "sci-fi, modern, urban, futuristic, low detailed"
     },
