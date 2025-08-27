@@ -415,7 +415,7 @@
         "negative_prompt": "ugly, deformed, noisy, blurry, distorted, grainy, sketch, low contrast, dull, plain, modest"
     },
     {
-        "name": "photo-hdr",
+        "name": "photo-HDR",
         "prompt": "HDR photo of {prompt} . High dynamic range, vivid, rich details, clear shadows and highlights, realistic, intense, enhanced contrast, highly detailed",
         "negative_prompt": "flat, low contrast, oversaturated, underexposed, overexposed, blurred, noisy"
     },

@@ -7,7 +7,6 @@ sys.path.append(str(ROOT))
 os.chdir(ROOT)
 
 import enhanced.version as version
-from modules.launch_installer import verify_installed_version
 
 try:
     old_version, old_hotfix, old_hotfix_title = version.get_fooocusplus_ver()
@@ -16,6 +15,15 @@ except:
     print('Please restart FooocusPlus to complete the update')
     print()
     quit()
+
+# transition between the two possible locations
+# for verify_installed_version
+# modules.launch_util was where it was
+# originally and where it should be now
+try:
+    from modules.launch_util import verify_installed_version
+except:
+    from modules.launch_installer import verify_installed_version
 
 # ensure that pygit2 is available
 # pygit2 is needed until dulwich:

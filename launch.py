@@ -30,17 +30,18 @@ ssl._create_default_https_context = ssl._create_unverified_context
 
 
 import comfy.comfy_version
-from modules.launch_installer import run, run_pip, \
-    verify_installed_version
 
-from modules.launch_util import is_installed, \
+from modules.launch_requirements import is_installed, \
     python, run_pip_url, requirements_met, windows_patch,\
     git_clone, index_url, target_path_install, met_diff
 
 from launch_support import delete_torch_dependencies,\
     dependency_resolver, is_win32_standalone_build,\
-    python_embedded_path, read_torch_base, write_torch_base,\
-    win32_root
+    python_embedded_path, read_torch_base, \
+    write_torch_base, win32_root
+
+from modules.launch_util import run, run_pip, \
+    verify_installed_version
 
 print()
 print('Checking for required library files...')

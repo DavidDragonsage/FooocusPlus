@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from modules.launch_installer import verify_installed_version
+from modules.launch_util import verify_installed_version
 import modules.user_structure as US
 
 
@@ -19,11 +19,17 @@ def load_translator(arg_language, arg_user_dir):
         import argostranslate.package
         import argostranslate.translate
 
-        package_dir = Path(arg_user_dir/'translator_packs').resolve()
+        translator_dir = Path(arg_user_dir/'translator_packs').resolve()
+        if not US.make_dir(translator_dir):
+            print(f'[Translator Support] Could not initialize the {translator_dir} directory')
+            return
+        return # the package install code is not working yet
+
+        package_dir = Path(translator_dir/'packages').resolve()
         if not US.make_dir(package_dir):
             print(f'[Translator Support] Could not initialize the {package_dir} directory')
             return
-        return # the package install code is not working yet
+
 
         os.environ["ARGOS_TRANSLATE_PACKAGE_DIR"] = str(package_dir)
         os.environ["ARGOS_PACKAGES_DIR"] = str(package_dir)
