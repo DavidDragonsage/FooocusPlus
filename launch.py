@@ -31,20 +31,27 @@ ssl._create_default_https_context = ssl._create_unverified_context
 
 import comfy.comfy_version
 
-from modules.launch_requirements import is_installed, \
-    python, run_pip_url, requirements_met, windows_patch,\
-    git_clone, index_url, target_path_install, met_diff
+try:
+    from modules.launch_requirements import is_installed, \
+        python, run_pip_url, requirements_met, windows_patch, \
+        git_clone, index_url, target_path_install, met_diff
 
-from launch_support import delete_torch_dependencies,\
-    dependency_resolver, is_win32_standalone_build,\
-    python_embedded_path, read_torch_base, \
-    write_torch_base, win32_root
+    from launch_support import delete_torch_dependencies, \
+        dependency_resolver, read_torch_base, \
+        write_torch_base
 
-from modules.launch_util import run, run_pip, \
-    verify_installed_version
+    from modules.launch_util import is_win32_standalone_build, \
+        python_embedded_path, run, run_pip, \
+        verify_installed_version, win32_root
 
-print()
-print('Checking for required library files...')
+    print()
+    print('Checking for required library files...')
+
+except:
+    print('Please restart FooocusPlus to complete the update')
+    print()
+    quit()
+
 windows_patch()
 requirements_file = os.environ.get('REQS_FILE', "requirements_versions.txt")
 if requirements_met(requirements_file):

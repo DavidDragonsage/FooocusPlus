@@ -6,9 +6,9 @@ ROOT = Path(__file__).parent
 sys.path.append(str(ROOT))
 os.chdir(ROOT)
 
-import enhanced.version as version
 
 try:
+    import enhanced.version as version
     old_version, old_hotfix, old_hotfix_title = version.get_fooocusplus_ver()
     print(f'Welcome to FooocusPlus {old_version}.{old_hotfix_title}: checking for updates...')
 except:

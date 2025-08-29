@@ -8,9 +8,11 @@ import re
 import logging
 import packaging.version
 import pygit2
-from launch_support import is_win32_standalone_build, python_embedded_path
-from modules.launch_util import run, verify_installed_version
 from pathlib import Path
+
+from modules.launch_util import is_win32_standalone_build, \
+    python_embedded_path, run, verify_installed_version
+
 
 pygit2.option(pygit2.GIT_OPT_SET_OWNER_VALIDATION, 0)
 

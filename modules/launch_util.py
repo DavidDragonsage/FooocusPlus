@@ -12,10 +12,11 @@ index_url = os.environ.get('INDEX_URL', "")
 python = sys.executable
 
 current_dir = Path.cwd()
-win32_root = current_dir.resolve().parent.parent
+win32_root = current_dir.parent.parent.resolve()
 python_embedded_path = Path(win32_root/'python_embedded')
-package_path = Path(python_embedded_path/"Lib/site-packages")
+is_win32_standalone_build = python_embedded_path.is_dir()
 
+package_path = Path(python_embedded_path/"Lib/site-packages")
 if package_path.is_dir():
     target_path_install = f' -t {package_path}'
 else:

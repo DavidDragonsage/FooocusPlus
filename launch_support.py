@@ -7,10 +7,8 @@ import args_manager
 import modules.user_structure as US
 from pathlib import Path
 
-current_dir = Path.cwd()
-win32_root = current_dir.resolve().parent
-python_embedded_path = Path(win32_root/'python_embedded')
-is_win32_standalone_build = python_embedded_path.is_dir()
+from modules.launch_util import is_win32_standalone_build, \
+    python_embedded_path, win32_root
 
 # moved from args_parser, but uses is_win32_standalone_build
 # instead of the obsolete args.is_windows_embedded_python

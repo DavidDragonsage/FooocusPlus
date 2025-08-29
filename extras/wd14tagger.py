@@ -18,7 +18,7 @@ from PIL import Image
 from onnxruntime import InferenceSession
 from modules.config import path_clip_vision
 from modules.model_loader import load_file_from_url
-from launch_support import is_win32_standalone_build
+from modules.launch_util import is_win32_standalone_build
 
 
 global_model = None

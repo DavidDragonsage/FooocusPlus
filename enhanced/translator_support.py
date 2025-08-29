@@ -30,7 +30,6 @@ def load_translator(arg_language, arg_user_dir):
             print(f'[Translator Support] Could not initialize the {package_dir} directory')
             return
 
-
         os.environ["ARGOS_TRANSLATE_PACKAGE_DIR"] = str(package_dir)
         os.environ["ARGOS_PACKAGES_DIR"] = str(package_dir)
 
@@ -46,7 +45,7 @@ def load_translator(arg_language, arg_user_dir):
 
         # If the package is found, download and install it
         if package_to_install:
-            print(f"Installing package for {from_code} to {to_code}...")
+            print(f"Installing package for {package_to_install}...")
             argostranslate.package.install_from_path(package_to_install.download())
             print("Package installed successfully")
         else:

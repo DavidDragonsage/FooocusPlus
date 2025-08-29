@@ -1,8 +1,11 @@
 import os
 import sys
 import modules.user_structure as US
-from launch_support import is_win32_standalone_build, python_embedded_path
 from pathlib import Path
+
+from modules.launch_util import is_win32_standalone_build, \
+    python_embedded_path
+
 
 fooocusplus_ver = ''
 hotfix = ''

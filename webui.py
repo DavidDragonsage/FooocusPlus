@@ -1190,12 +1190,12 @@ with common.GRADIO_ROOT:
                             minimum=-64, maximum=64, step=1, value=0,
                             info='Positive value will make white area in the mask larger, '
                             'negative value will make white area smaller. '
-                            '(default is 0, always processed before any mask invert)')
+                            '(Default is 0, always processed before any mask invert)')
                         dino_erode_or_dilate = gr.Slider(label='GroundingDINO Box Erode or Dilate',
                             minimum=-64, maximum=64, step=1, value=0,
                             info='Positive value will make white area in the mask larger, '
                             'negative value will make white area smaller. '
-                            '(default is 0, processed before SAM)')
+                            '(Default is 0, processed before SAM)')
 
                         inpaint_ctrls = [debugging_inpaint_preprocessor, inpaint_disable_initial_latent, inpaint_engine,
                             inpaint_strength, inpaint_respective_field,
