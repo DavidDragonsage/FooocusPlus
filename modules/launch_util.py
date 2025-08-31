@@ -84,15 +84,14 @@ def is_installed_version(package, version_required):
 def verify_installed_version(package_name, package_ver, dependencies = False, use_index = '', package_url = ''):
     result = True
     index_url_line = f' --index-url {use_index}' if use_index != '' else ''
-    if not package_url and not use_index:
-        package_line = f'{package_name}=={package_ver}'
-    else:
+    if package_url:
         package_line = package_url
+    else:
+        package_line = f'{package_name}=={package_ver}'
     if not is_installed_version(package_name, package_ver):
+        run(f'"{python}" -m pip uninstall -y {package_name}')
         if dependencies:
-            run(f'"{python}" -m pip uninstall -y {package_name}')
-            result = run_pip(f"install -U -I {package_line} {index_url_line}", {package_name}, live=True)
+            result = run_pip(f"install -U -I {package_line} {index_url_line} --no-warn-script-location", {package_name}, live=True)
         else:
-            run(f'"{python}" -m pip uninstall -y {package_name}')
-            result = run_pip(f"install -U -I --no-deps {package_line} {index_url_line}", {package_name}, live=True)
+            result = run_pip(f"install -U -I --no-deps {package_line} {index_url_line} --no-warn-script-location", {package_name}, live=True)
     return result

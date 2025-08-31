@@ -10,6 +10,7 @@
 * added HF-Mirror support for Chinese users, in the two Chinese batch files
 * to reduce image distortion, the main canvas is now set for a minimum height of 300px
 * updated python_embedded version to 1.06 (current users are already updated)
+* Hotfix15: * fixed a bug with loading Xformers - improved verify_installed_version()
 * Hotfix14: introduced the CheyenneAlt preset in the Illustrative category
   * also updated the English UK language file & cleaned up the startup code
 * Hotfix13: improved error handling for PyGit2 verification
