@@ -1,4 +1,5 @@
 import os
+import platform
 import sys
 import importlib          # Python standard library
 import importlib.metadata # required by importlib
@@ -14,7 +15,7 @@ python = sys.executable
 current_dir = Path.cwd()
 win32_root = current_dir.parent.parent.resolve()
 python_embedded_path = Path(win32_root/'python_embedded')
-is_win32_standalone_build = python_embedded_path.is_dir()
+is_win32_standalone_build = python_embedded_path.is_dir() and platform.system() == "Windows"
 
 package_path = Path(python_embedded_path/"Lib/site-packages")
 if package_path.is_dir():
