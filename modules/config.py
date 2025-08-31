@@ -81,7 +81,7 @@ def get_path_output() -> str:
     path_output = Path(user_dir/'Outputs').resolve()
     path_output = get_dir_or_set_default('path_outputs', path_output, make_directory=True)
     if args_manager.args.output_path:
-        config_dict['path_outputs'] = path_output = Path(args_manager.args.output_path).resolve()
+        config_dict['path_outputs'] = path_output = str(Path(args_manager.args.output_path).resolve())
     print(f'Generated images will be stored in {path_output}')
     return path_output
 
