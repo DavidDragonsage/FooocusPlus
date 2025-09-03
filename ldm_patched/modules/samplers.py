@@ -2,8 +2,10 @@ from ldm_patched.k_diffusion import sampling as k_diffusion_sampling
 from ldm_patched.unipc import uni_pc
 import torch
 import collections
-from ldm_patched.modules import model_management
 import math
+from ldm_patched.modules import model_management
+from modules.meta_parser import verify_scheduler
+
 
 def get_area_and_mult(conds, x_in, timestep_in):
     area = (x_in.shape[2], x_in.shape[3], 0, 0)
@@ -75,6 +77,7 @@ def get_area_and_mult(conds, x_in, timestep_in):
 
     cond_obj = collections.namedtuple('cond_obj', ['input_x', 'mult', 'conditioning', 'area', 'control', 'patches'])
     return cond_obj(input_x, mult, conditioning, area, control, patches)
+
 
 def cond_equal_size(c1, c2):
     if c1 is c2:
@@ -621,7 +624,9 @@ def sample(model, noise, positive, negative, cfg, device, sampler, sigmas, model
 SCHEDULER_NAMES = ["normal", "karras", "exponential", "sgm_uniform", "simple", "ddim_uniform"]
 SAMPLER_NAMES = KSAMPLER_NAMES + ["ddim", "uni_pc", "uni_pc_bh2"]
 
-def calculate_sigmas_scheduler(model, scheduler_name, steps):
+
+def calculate_sigmas_scheduler(model, arg_scheduler, steps):
+    scheduler_name = verify_scheduler(arg_scheduler)
     if scheduler_name == "karras":
         sigmas = k_diffusion_sampling.get_sigmas_karras(n=steps, sigma_min=float(model.model_sampling.sigma_min), sigma_max=float(model.model_sampling.sigma_max))
     elif scheduler_name == "exponential":

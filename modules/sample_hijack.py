@@ -12,7 +12,7 @@ from ldm_patched.modules.conds import CONDRegular
 from ldm_patched.modules.sample import get_additional_models, get_models_from_cond, cleanup_additional_models
 from ldm_patched.modules.samplers import resolve_areas_and_cond_masks, wrap_model, calculate_start_end_timesteps, \
     create_cond_with_same_area_if_none, pre_run_control, apply_empty_x_to_equal_area, encode_model_conds
-
+from modules.meta_parser import verify_scheduler
 
 current_refiner = None
 refiner_switch_step = -1
@@ -161,7 +161,8 @@ def sample_hacked(model, noise, positive, negative, cfg, device, sampler, sigmas
 
 @torch.no_grad()
 @torch.inference_mode()
-def calculate_sigmas_scheduler_hacked(model, scheduler_name, steps):
+def calculate_sigmas_scheduler_hacked(model, arg_scheduler, steps):
+    scheduler_name = verify_scheduler(arg_scheduler)
     if scheduler_name == "karras":
         sigmas = k_diffusion_sampling.get_sigmas_karras(n=steps, sigma_min=float(model.model_sampling.sigma_min), sigma_max=float(model.model_sampling.sigma_max))
     elif scheduler_name == "exponential":

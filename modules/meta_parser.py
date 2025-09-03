@@ -28,6 +28,25 @@ get_layout_toggle_visible_inter = lambda x,y,z: gr.update(visible=x not in y, in
 get_layout_choices_visible_inter = lambda l,x,y,z:gr.update(choices=l, visible=x not in y, interactive=x not in z)
 get_layout_empty_visible_inter = lambda x,y,z: gr.update(visible=x not in y, interactive=x not in z) if x not in z else gr.update(value='', visible=x not in y, interactive=x not in z)
 
+
+def verify_sampler(arg_sampler):
+    if arg_sampler in sampler_list:
+        common.sampler_name = arg_sampler
+    elif common.scheduler_name in scheduler_list:
+        return common.sampler_name
+    else:
+        common.sampler_name = config.default_sampler
+    return common.sampler_name
+
+def verify_scheduler(arg_scheduler):
+    if arg_scheduler in scheduler_list:
+        common.scheduler_name = arg_scheduler
+    elif common.scheduler_name in scheduler_list:
+        return common.scheduler_name
+    else:
+        common.scheduler_name = config.default_sampler
+    return common.scheduler_name
+
 def get_layout_visible_inter_loras(y,z,max_number):
     x = 'loras'
     y1 = max_number if x in y else -1
@@ -433,12 +452,12 @@ def parse_meta_from_preset(preset_content):
                     common.refiner_slider = config.default_refiner_switch
         elif settings_key == "default_sampler":
             try:
-                common.sampler_name = items[settings_key]
+                verify_sampler(items[settings_key])
             except:
                 common.sampler_name = config.default_sampler
         elif settings_key == "default_scheduler":
             try:
-                common.scheduler_name = items[settings_key]
+                verify_scheduler(items[settings_key])
             except:
                 common.scheduler_name = config.default_scheduler
         elif settings_key not in items and settings_key in config.allow_missing_preset_key:

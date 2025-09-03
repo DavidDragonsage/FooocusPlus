@@ -12,7 +12,7 @@ try:
     old_version, old_hotfix, old_hotfix_title = version.get_fooocusplus_ver()
     print(f'Welcome to FooocusPlus {old_version}.{old_hotfix_title}: checking for updates...')
 except:
-    print('Please restart FooocusPlus to complete the update')
+    print('Please restart FooocusPlus to finish the update')
     print()
     quit()
 
