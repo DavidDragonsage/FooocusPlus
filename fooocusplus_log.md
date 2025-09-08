@@ -10,6 +10,7 @@
 * added HF-Mirror support for Chinese users, in the two Chinese batch files
 * to reduce image distortion, the main canvas is now set for a minimum height of 300px
 * updated python_embedded version to 1.06 (current users are already updated)
+* Hotfix19: a disabled Preset Bar no longer reappears when changing presets
 * Hotfix18: added three point error control for Scheduler values
 * Hotfix17: using the --output-path startup argument no longer causes an error
 * Hotfix16: fixed a bug in Windows detection that affected Linux users

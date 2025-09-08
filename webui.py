@@ -1402,8 +1402,8 @@ with common.GRADIO_ROOT:
 
         state_is_generating = gr.State(False)
 
-        #substituted preset_bar_checkbox for advanced_checkbox to avoid toggling Advanced when preset_bar activated
-        load_data_outputs = [preset_bar_checkbox, image_quantity, prompt, negative_prompt,
+        #substituted prompt_panel_checkbox for advanced_checkbox to avoid toggling Advanced
+        load_data_outputs = [prompt_panel_checkbox, image_quantity, prompt, negative_prompt,
             style_selections, performance_selection, overwrite_step, overwrite_switch,
             aspect_ratios_selection, overwrite_width, overwrite_height, guidance_scale,
             sharpness, adm_scaler_positive, adm_scaler_negative, adm_scaler_end,
