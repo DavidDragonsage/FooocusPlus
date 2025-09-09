@@ -52,8 +52,18 @@ class AsyncTask:
         self.refiner_model_name = args.pop()
         self.refiner_switch = args.pop()
         self.refiner_switch = common.refiner_slider
-        self.loras = get_enabled_loras([(bool(args.pop()), str(args.pop()),
-             float(args.pop())) for _ in range(default_max_lora_number)])
+        self.loras = []
+        for _ in range(default_max_lora_number):
+            lora_enable = bool(args.pop())
+            lora_name = str(args.pop())
+            try:
+                lora_strength = float(args.pop())
+            except:
+                lora_strength = 1.0
+                print(f'Fallback to LoRA Strength = 1.0, {lora_name}')
+            self.loras.append([lora_enable, lora_name, lora_strength])
+        self.loras = get_enabled_loras(self.loras)
+
         self.input_image_checkbox = args.pop()
         self.current_tab = args.pop()
         self.uov_method = args.pop()
