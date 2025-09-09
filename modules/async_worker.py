@@ -60,7 +60,9 @@ class AsyncTask:
                 lora_strength = float(args.pop())
             except:
                 lora_strength = 1.0
+                print()
                 print(f'Fallback to LoRA Strength = 1.0, {lora_name}')
+                print()
             self.loras.append([lora_enable, lora_name, lora_strength])
         self.loras = get_enabled_loras(self.loras)
 
