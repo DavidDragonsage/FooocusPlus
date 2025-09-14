@@ -82,8 +82,7 @@ import torchruntime
 import platform
 from modules.user_structure import cleanup_structure
 
-
-try:
+try:    # prevent error during upgrade to 1.0.8
     cleanup_structure(args.directml, args.user_dir,
         python_embedded_path, win32_root)
 except:
@@ -105,7 +104,7 @@ def prepare_environment():
     print()
     interpret('Program Versions:')
     print(f"Python {sys.version}")
-    print(f"Python Library {version.get_library_ver()}, Comfy version: {comfy.comfy_version.version}")
+    print(f"Python Library {version.get_library_ver()}, Comfy Version: {comfy.comfy_version.version}")
     if torch_ver == torch_base_ver:
         from backend_base.__init__ import get_torch_xformers_cuda_version as get_torch_info
         torch_info, xformers_info, cuda_info = get_torch_info()
@@ -117,7 +116,7 @@ def prepare_environment():
         print(f"Torch {torch_info}{cuda_info}, Xformers {xformers_info}")
     else:
         print(f"Torch {torch_base_ver}")
-    print(f"FooocusPlus version: {fooocusplus_ver}, Hotfix: {hotfix}")
+    print(f"FooocusPlus Version: {fooocusplus_ver}, Hotfix: {hotfix}")
     print()
 
     if REINSTALL_ALL or torch_ver != torch_base_ver or \

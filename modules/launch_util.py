@@ -13,7 +13,7 @@ index_url = os.environ.get('INDEX_URL', "")
 python = sys.executable
 
 current_dir = Path.cwd()
-win32_root = current_dir.parent.parent.resolve()
+win32_root = current_dir.parent.resolve()
 python_embedded_path = Path(win32_root/'python_embedded')
 is_win32_standalone_build = python_embedded_path.is_dir() and platform.system() == "Windows"
 
