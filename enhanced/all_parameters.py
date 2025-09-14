@@ -93,7 +93,6 @@ default = {
     'input_image_checkbox': False,
     'advanced_checkbox': False,
     'backfill_prompt': False,
-    'translation_methods': 'Third APIs',
     'backend': 'SDXL',
     'comfyd_active_checkbox': False,
     'image_catalog_max_number': 100,

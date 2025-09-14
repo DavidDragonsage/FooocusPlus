@@ -7,7 +7,7 @@ from typing import Optional, Any
 
 from .diffusionmodules.util import checkpoint, AlphaBlender, timestep_embedding
 from .sub_quadratic_attention import efficient_dot_product_attention
-
+from enhanced.translator import interpret
 from ldm_patched.modules import model_management
 
 if model_management.xformers_enabled():
@@ -20,7 +20,7 @@ ops = ldm_patched.modules.ops.disable_weight_init
 
 # CrossAttn precision handling
 if args.disable_attention_upcast:
-    print("disabling upcasting of attention")
+    interpret("[Attention] Disabling upcasting of attention")
     _ATTN_PRECISION = "fp16"
 else:
     _ATTN_PRECISION = "fp32"
@@ -255,12 +255,13 @@ def attention_split(q, k, v, heads, mask=None):
                 model_management.soft_empty_cache(True)
                 if cleared_cache == False:
                     cleared_cache = True
-                    print("out of memory error, emptying cache and trying again")
+                    interpret("[Attention] Out of memory error, emptying cache and trying again")
                     continue
                 steps *= 2
                 if steps > 64:
                     raise e
-                print("out of memory error, increasing steps and trying again", steps)
+                interpret("[Attention] Out of memory error, increasing steps and trying again")
+                interpret("Steps:", steps)
             else:
                 raise e
 
@@ -332,17 +333,18 @@ def attention_pytorch(q, k, v, heads, mask=None):
 optimized_attention = attention_basic
 
 if model_management.xformers_enabled():
-    print("Using xformers cross attention")
+    interpret("[Attention] Using xformers cross attention")
     optimized_attention = attention_xformers
 elif model_management.pytorch_attention_enabled():
-    print("Using pytorch cross attention")
+    interpret("[Attention] Using pytorch cross attention")
     optimized_attention = attention_pytorch
 else:
     if args.attention_split:
-        print("Using split optimization for cross attention")
+        interpret("[Attention] Using split optimization for cross attention")
         optimized_attention = attention_split
     else:
-        print("Using sub quadratic optimization for cross attention, if you have memory or speed issues try using: --attention-split")
+        interpret("[Attention] Using sub quadratic optimization for cross attention.")
+        interpret("If you have memory or speed issues try using: --attention-split")
         optimized_attention = attention_sub_quad
 
 optimized_attention_masked = optimized_attention

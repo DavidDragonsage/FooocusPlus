@@ -13,7 +13,7 @@ hat
 lamp
 lantern
 musical instrument
-plushy
+plushie
 sceptre
 small pet
 snack

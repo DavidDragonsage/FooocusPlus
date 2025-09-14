@@ -3,9 +3,10 @@ import re
 import json
 import math
 import gradio as gr
-import enhanced.translator as translator
+import common
+import args_manager as args
+from enhanced.translator import interpret
 from modules.util import get_files_from_folder
-from args_manager import args
 from modules.config import path_wildcards
 
 wildcards_max_bfs_depth = 64
@@ -35,6 +36,7 @@ def set_wildcard_path_list(name, list_value):
             wildcards_list[name].append(list_value)
     else:
         wildcards_list.update({name: [list_value]})
+    return
 
 
 def get_wildcards_samples(path="root"):
@@ -70,40 +72,27 @@ def get_wildcards_samples(path="root"):
             set_wildcard_path_list(f'{wildcard_path[0]}/{wildcard_path[1]}', wildcard_path[2])
             set_wildcard_path_list(wildcard_path[0], wildcard_path[1])
         else:
-            print(f'[Wildcards] The level of wildcards is too deep: {path_wildcards}.')
+            interpret('[Wildcards] The level of wildcards is too deep:', path_wildcards)
     if wildcards_list_all:
-        load_words_translation(True)
-        print(f'[Wildcards] Refresh and Load {len(wildcards_list_all)}/{len(wildcards.keys())} wildcards: {", ".join(wildcards_list_all)}.')
-    if args.language=='cn':
-        if len(wildcards_translation.keys())==0:
-            wildcards_translation_file = os.path.join(path_wildcards, 'cn_list.json')
-            if os.path.exists(wildcards_translation_file):
-                with open(wildcards_translation_file, "r", encoding="utf-8") as json_file:
-                    wildcards_translation.update(json.load(json_file))
-    return [[get_wildcard_translation(x)] for x in wildcards_list[path]]
-
-
-get_wildcard_translation = lambda x: x if args.language!='cn' or f'list/{x}' not in wildcards_translation else wildcards_translation[f'list/{x}']
-def load_words_translation(reload_flag=False):
-    global path_wildcards, wildcards_words_translation
-    if len(wildcards_words_translation.keys())==0 or reload_flag:
-        translation_file = os.path.join(path_wildcards, 'cn_words.json')
-        if os.path.exists(translation_file):
-            with open(translation_file, "r", encoding="utf-8") as json_file:
-                wildcards_words_translation.update(json.load(json_file))
+        interpret(f'[Wildcards] Refresh and Load {len(wildcards_list_all)}/{len(wildcards.keys())} wildcards: {", ".join(wildcards_list_all)}.')
+        print()
+    return [[interpret(x, '', True)] for x in wildcards_list[path]]
 
 
 def get_words_of_wildcard_samples(wildcard="root"):
     global wildcards, wildcards_list, path_wildcards, wildcards_words_translation
-
     if wildcard == "root":
         wildcard = wildcards_list[wildcard][0]
-    if args.language=='cn':
-        if len(wildcards_words_translation.keys())==0:
-            load_words_translation()
-        words = [[x if x not in wildcards_words_translation else wildcards_words_translation[x]] for x in wildcards[wildcard]]
-    else:
+    if args.args.language == 'en' or args.args.language == 'en_uk':
         words = [[x] for x in wildcards[wildcard]]
+    else:
+        # keep response time reasonable:
+        if len(wildcards[wildcard]) > common.wildcard_lines_to_interpret:
+            words = [[x] for x in wildcards[wildcard]]
+        else:
+            if len(wildcards[wildcard]) > 5:
+                interpret(f'Interpreting {len(wildcards[wildcard])} wildcard words...')
+            words = [[interpret(x, '', True)] for x in wildcards[wildcard]]
     return words
 
 
@@ -138,7 +127,7 @@ def get_words_with_wildcard(wildcard, rng, method='R', number=1, start_at=1):
             words_each = rng.sample(words, nums)
             words_result.append(words_each[0] if nums==1 else f'({" ".join(words_each)})')
     words_result = [replace_wildcard(txt, rng) for txt in words_result]
-    print(f'[Wildcards] Get words from wildcard:__{wildcard}__, method:{method}, number:{number}, start_at:{start_at}, result:{words_result}')
+    interpret(f'[Wildcards] Get words from wildcard:__{wildcard}__, method:{method}, number:{number}, start_at:{start_at}, result:{words_result}')
     return words_result
 
 
@@ -178,11 +167,12 @@ def add_wildcards_and_array_to_prompt(wildcard, prompt, state_params):
             state_params["array_wildcards_mode"] = '_'
             if len(prompt)==1 or len(prompt)>2 and prompt[-2]!='_':
                 prompt = prompt[:-1]
-    
+
     new_tag = f'__{wildcard}__'
     prompt = f'{prompt.strip()} {new_tag}'
-    return gr.update(value=prompt), gr.Dataset.update(label=f'{get_wildcard_translation(wildcard)}:', samples=get_words_of_wildcard_samples(wildcard)), gr.update(open=True)
-
+    content_label = interpret(f'{wildcard}:', '', True)
+    return gr.update(value=prompt), gr.Dataset.update(label=content_label, samples=get_words_of_wildcard_samples(wildcard)), gr.update(open=True)
+    return
 
 def add_word_to_prompt(wildcard, index, prompt):
     global wildcards, wildcards_list

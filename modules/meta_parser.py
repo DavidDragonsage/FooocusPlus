@@ -14,6 +14,7 @@ import enhanced.version
 import modules.config as config
 import modules.aspect_ratios as AR
 import modules.sdxl_styles
+from enhanced.translator import interpret
 from modules.flags import MetadataScheme, Performance, Steps, task_class_mapping, get_taskclass_by_fullname
 from modules.flags import default_class_params, scheduler_list, sampler_list, SAMPLERS, CIVITAI_NO_KARRAS
 from modules.util import quote, unquote, extract_styles_from_prompt, is_json, sha256
@@ -99,7 +100,7 @@ def switch_layout_template(presetdata: dict | str, state_params, preset_url=''):
     #for i in range(config.default_max_lora_number):
     #    results += [get_layout_visible_inter('loras', visible, inter)] * 3
 
-    #[output_format, inpaint_advanced_masking_checkbox, mixing_image_prompt_and_vary_upscale, mixing_image_prompt_and_inpaint, backfill_prompt, translation_methods, input_image_checkbox, state_topbar]
+    #[output_format, inpaint_advanced_masking_checkbox, mixing_image_prompt_and_vary_upscale, mixing_image_prompt_and_inpaint, backfill_prompt, input_image_checkbox, state_topbar]
     # if default_X in config_prese then update the value to gr.X else update with default value in ads.default[X]
     update_value_if_existed = lambda x: gr.update() if x not in presetdata_dict else presetdata_dict[x]
     results.append(update_value_if_existed("output_format"))
@@ -249,7 +250,7 @@ def get_resolution(key: str, fallback: str | None, source_dict: dict, results: l
 
         if 'SD1.5' in str(common.preset_file_path) and template!='SD1.5':
             template = 'SD1.5'
-            print(f'Selected the SD1.5 template for the {common.preset_file_path} file')
+            interpret(f'Selected the SD1.5 template for the {common.preset_file_path} file')
 
         if template == 'Standard' and config.enable_shortlist_aspect_ratios:
             template = 'Shortlist'
@@ -425,13 +426,13 @@ def parse_meta_from_preset(preset_content):
                 items[settings_key] = common.positive
             else:
                 common.positive = items[settings_key]
-                print(f'[MetaParser] Positive prompt set by preset')
+                interpret('[MetaParser] Positive prompt set by preset')
         elif settings_key == "default_prompt_negative":
             if items[settings_key] == "":
                 items[settings_key] = common.negative
             else:
                 common.negative = items[settings_key]
-                print(f'[MetaParser] Negative prompt set by preset')
+                interpret(f'[MetaParser] Negative prompt set by preset')
         elif settings_key == "default_aspect_ratio":
             if settings_key in items and (items[settings_key] is not None or items[settings_key] != '0*0'):
                 default_aspect_ratio = items[settings_key]
@@ -441,7 +442,7 @@ def parse_meta_from_preset(preset_content):
                     default_aspect_ratio = common.current_AR
                 else:
                     default_aspect_ratio = AR.default_standard_AR
-                    print(f'Metadata fallback to default aspect ratio: {default_aspect_ratio}')
+                    interpret('Metadata fallback to default aspect ratio:', default_aspect_ratio)
                 width, height = AR.AR_split(default_aspect_ratio)
             preset_prepared[meta_key] = (width, height)
         elif settings_key == "default_refiner_switch":
@@ -503,9 +504,9 @@ class MetadataParser(ABC):
     def set_data(self, raw_prompt, full_prompt, raw_negative_prompt, full_negative_prompt, steps, base_model_name,
                  refiner_model_name, loras, vae_name, styles_definition):
         self.raw_prompt = raw_prompt
-        print(f'Metadata raw_prompt {raw_prompt}')
+        interpret('Metadata raw_prompt:', raw_prompt)
         self.full_prompt = full_prompt
-        print(f'Metadata full_prompt {full_prompt}')
+        interpret('Metadata full_prompt:', full_prompt)
         self.raw_negative_prompt = raw_negative_prompt
         self.full_negative_prompt = full_negative_prompt
         self.steps = steps
@@ -817,7 +818,7 @@ class SIMPLEMetadataParser(MetadataParser):
             if key in ['base_model', 'refiner_model', 'Base Model', 'Refiner Model']:
                 metadata[key] = self.replace_value_with_filename(key, value, model_filenames)
                 if metadata[key]=='None':
-                    print(f'[MetaParser] ⚠️  WARNING! The model is not available in the local: {value}.')
+                    interpret('[MetaParser] ⚠️  WARNING! The model is not available:', value)
             elif key.startswith('LoRA '):
                 metadata[key] = self.replace_value_with_filename(key, value, config.lora_filenames)
             elif key in ['vae', 'VAE']:

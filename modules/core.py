@@ -12,6 +12,7 @@ import modules.sample_hijack
 import ldm_patched.modules.samplers
 import ldm_patched.modules.latent_formats
 
+from enhanced.translator import interpret
 from ldm_patched.modules.sd import load_checkpoint_guess_config
 from ldm_patched.contrib.external import VAEDecode, EmptyLatentImage, VAEEncode, VAEEncodeTiled, VAEDecodeTiled, \
     ControlNetApplyAdvanced
@@ -71,7 +72,7 @@ class StableDiffusionModel:
         if self.unet is None:
             return
 
-        print(f'[Core] Request to load LoRAs {str(loras)} for model:')
+        interpret(f'[Core] Request to load LoRAs {str(loras)} for model:')
         print(f' {self.filename}')
 
         loras_to_load = []
@@ -86,7 +87,7 @@ class StableDiffusionModel:
                 lora_filename = get_file_from_folder_list(filename, modules.config.paths_loras)
 
             if not os.path.exists(lora_filename):
-                print(f'[Core] Lora file not found: {lora_filename}')
+                interpret(f'[Core] Lora file not found: {lora_filename}')
                 continue
 
             loras_to_load.append((lora_filename, weight))
@@ -104,27 +105,27 @@ class StableDiffusionModel:
                 continue
 
             if len(lora_unmatch) > 0:
-                print(f'[Core] Loaded LoRA [{lora_filename}]')
-                print(f'for model [{self.filename}]')
-                print(f'with unmatched keys {list(lora_unmatch.keys())}')
+                interpret(f'[Core] Loaded LoRA [{lora_filename}]')
+                interpret(f'for model [{self.filename}]')
+                interpret(f'with unmatched keys {list(lora_unmatch.keys())}')
 
             if self.unet_with_lora is not None and len(lora_unet) > 0:
                 loaded_keys = self.unet_with_lora.add_patches(lora_unet, weight)
-                print(f'[Core] Loaded LoRA [{lora_filename}]')
-                print(f'for UNet [{self.filename}]')
-                print(f'with {len(loaded_keys)} keys at weight {weight}')
+                interpret('[Core] Loaded LoRA:', [lora_filename])
+                interpret('for UNet:', [self.filename])
+                interpret(f'with {len(loaded_keys)} keys at weight {weight}')
                 for item in lora_unet:
                     if item not in loaded_keys:
-                        print("[Core] UNet LoRA key skipped: ", item)
+                        interpret("[Core] UNet LoRA key skipped: ", item)
 
             if self.clip_with_lora is not None and len(lora_clip) > 0:
                 loaded_keys = self.clip_with_lora.add_patches(lora_clip, weight)
-                print(f'[Core] Loaded LoRA [{lora_filename}]')
-                print(f'for CLIP [{self.filename}]')
-                print(f'with {len(loaded_keys)} keys at weight {weight}')
+                interpret('[Core] Loaded LoRA:' [lora_filename])
+                interpret('for CLIP', [self.filename])
+                interpret(f'with {len(loaded_keys)} keys at weight {weight}')
                 for item in lora_clip:
                     if item not in loaded_keys:
-                        print("[Core] CLIP LoRA key skipped: ", item)
+                        interpret("[Core] CLIP LoRA key skipped: ", item)
 
 
 @torch.no_grad()

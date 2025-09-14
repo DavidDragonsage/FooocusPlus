@@ -22,6 +22,7 @@ import safetensors.torch
 import modules.constants as constants
 
 from pathlib import Path
+from enhanced.translator import interpret
 from ldm_patched.modules.samplers import calc_cond_uncond_batch
 from ldm_patched.k_diffusion.sampling import BatchedBrownianTree
 from ldm_patched.ldm.modules.diffusionmodules.openaimodel import forward_timestep_embed, apply_control
@@ -448,7 +449,7 @@ def patched_load_models_gpu(*args, **kwargs):
     y = ldm_patched.modules.model_management.load_models_gpu_origin(*args, **kwargs)
     moving_time = time.perf_counter() - execution_start_time
     if moving_time > 0.1:
-        print(f'[Fooocus Patch] Moving model(s) has taken {moving_time:.2f} seconds')
+        interpret(f'[Patch] Moving model(s) has taken {moving_time:.2f} seconds')
     return y
 
 

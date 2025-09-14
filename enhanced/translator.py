@@ -1,206 +1,176 @@
 import os
-import random
-import torch
-import tarfile
-import time
-import translators as ts
-import enhanced.enhanced_parameters as ehps
+import logging
+from pathlib import Path
+from modules.launch_util import verify_installed_version
+import args_manager as args
+import common
+import modules.user_structure as US
 
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, pipeline
-from modules.config import paths_llms
-from modules.model_loader import load_file_from_url
-from download import download
-from functools import lru_cache
-
-
-Q_punct = '｀～！＠＃＄％＾＆＊（）＿＋＝－｛｝［］：＂；｜＜＞？，．／。　１２３４５６７８９０'
-B_punct = '`~!@#$%^&*()_+=-{}[]:";|<>?,./. 1234567890'
-Q_alphabet = 'ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ'
-B_alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
-
-translator_org = ['baidu', 'alibaba', 'sogou', 'caiyun']
-translator_default = translator_org[random.randint(1,2)]
-translator_path = os.path.join(paths_llms[0], 'nllb-200-distilled-600M')
-translator_slim_path = os.path.join(paths_llms[0], 'Helsinki-NLP/opus-mt-zh-en')
-is_chinese = lambda x: sum([1 if u'\u4e00' <= i <= u'\u9fa5' else 0 for i in x]) > 0
-
-translator_path_old = os.path.join(paths_llms[0], '../translator')
-if os.path.exists(translator_path_old) and not os.path.exists(paths_llms[0]):
-    os.rename(translator_path_old, paths_llms[0])
+full_file = True # identifies if language file is complete
+english_from_language = ''
+english_to_language = ''
+language_from_english = ''
+language_to_english = ''
+language_name = ''
 
 
-g_tokenizer = ''
-g_model = ''
-g_model_type = ''
-
-def Q2B_number_punctuation(text):
-    global Q_punct, B_punct
-
-    texts = list(text)
-    Bpunct = list(B_punct)
-    for i in range(0,len(texts)):
-        j = Q_punct.find(texts[i])
-        if j >= 0:
-            texts[i] = Bpunct[j]
-    return ''.join(texts)
-
-def Q2B_alphabet(text):
-    global Q_alphabet, B_alphabet
-
-    texts = list(text)
-    Balphabet = list(B_alphabet)
-    for i in range(0,len(texts)):
-        j = Q_alphabet.find(texts[i])
-        if j >= 0:
-            texts[i] = Balphabet[j]
-    return ''.join(texts)
+def interpret(txt_translate, txt_no_translate = '', silent = False):
+    # for console messages only, not for the UI
+    # always translates from English to the selected language
+    if not args.args.language.startswith('en') and txt_translate:
+        import argostranslate.translate
+        txt_translate = txt_translate.replace('_',' ')
+        logging.getLogger("stanza").disabled = True
+        try:    # workaround for occasional "Access is denied" errors
+            txt_translate = argostranslate.translate.translate(txt_translate, "en", args.args.language)
+        except:
+            pass
+    txt_translate = (txt_translate + " " + str(txt_no_translate)).strip()
+    if not silent:
+        print(txt_translate)
+    return txt_translate
 
 
-def translate2en_model(model, tokenizer, text_zh):
-    inputs = tokenizer(text_zh, return_tensors="pt")
-    translated_tokens = model.generate(
-        **inputs, forced_bos_token_id=tokenizer.convert_tokens_to_ids("eng_Latn"), max_length=60
-    )
-    return tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)[0].lower()
-
-def translate2zh_model(model, tokenizer, text_en):
-    inputs = tokenizer(text_en, return_tensors="pt")
-    translated_tokens = model.generate(
-        **inputs, forced_bos_token_id=tokenizer.convert_tokens_to_ids("zho_Hans"), max_length=60
-    )
-    return tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)[0].lower()
-
-
-@lru_cache(maxsize=32, typed=False)
-def translate2en_apis(text):
-    global translator_default
-    if not text:
-        return text
-    try:
-        return ts.translate_text(text, translator=translator_default, to_language='en')
-    except Exception as e:
-        try:
-            print(f'[Translator] Change another translator because of {e}')
-            translator_default = translator_org[random.randint(1,2)]
-            return ts.translate_text(text, translator=translator_default, to_language='en')
-        except Exception as e:
-            print(f'[Translator] Error during translation of APIs methods: {e}')
-            return text
-
-def init_or_load_translator_model(method='Slim Model'):
-    global g_tokenizer, g_model, g_model_type
-
-    print(f'init_or_load_translator_model: {method}')
-    if method != g_model_type or g_tokenizer is None or g_model is None:
-        if method == "Big Model":
-            if not os.path.exists(translator_path):
-                os.makedirs(translator_path)
-                url = 'https://gitee.com/metercai/SimpleSDXL/releases/download/win64/nllb_200_distilled_600m.tar.gz'
-                cached_file = os.path.join(translator_path, 'nllb_200_distilled_600m.tar.gz')
-                download(url, cached_file, progressbar=True)
-                with tarfile.open(cached_file, 'r:gz') as tarf:
-                    tarf.extractall(translator_path)
-                os.remove(cached_file)
-            if not os.path.exists(os.path.join(translator_path, 'pytorch_model.bin')):
-                load_file_from_url(
-                    url='https://huggingface.co/facebook/nllb-200-distilled-600M/resolve/main/pytorch_model.bin',
-                    model_dir=translator_path,
-                    file_name='pytorch_model.bin')
-            print(f'[Translator] load model form : {translator_path}')
-            g_tokenizer = AutoTokenizer.from_pretrained(translator_path, src_lang="zho_Hans")
-            g_model = AutoModelForSeq2SeqLM.from_pretrained(translator_path)
+def translate(txt_translate, auto=False):
+    # auto = txt_translate entered by code, not from UI Translate button
+    # do not translate English or pre-translated text that starts with a space)
+    global english_from_language, english_to_language, language_from_english, language_to_english
+    if not args.args.language.startswith('en') and txt_translate and common.prompt_translator:
+        if txt_translate.startswith(' ') and auto:
+            return txt_translate
+        import argostranslate.translate
+        print()
+        logging.getLogger("stanza").disabled = True
+        if txt_translate.startswith(' '):
+            print(f'{language_from_english}: "{txt_translate}"')
+            txt_translate = argostranslate.translate.translate(txt_translate, "en", args.args.language)
+            print()
+            print(f'{english_to_language}: "{txt_translate}"')
         else:
-            if not os.path.exists(translator_slim_path):
-                os.makedirs(translator_slim_path)
-                url = 'https://gitee.com/metercai/SimpleSDXL/releases/download/win64/opus_mt_zh_en.tar.gz'
-                cached_file = os.path.join(translator_slim_path, 'opus_mt_zh_en.tar.gz')
-                download(url, cached_file, progressbar=True)
-                with tarfile.open(cached_file, 'r:gz') as tarf:
-                    tarf.extractall(translator_slim_path)
-                os.remove(cached_file)
-            if not os.path.exists(os.path.join(translator_slim_path, 'pytorch_model.bin')):
-                load_file_from_url(
-                    url='https://huggingface.co/Helsinki-NLP/opus-mt-zh-en/resolve/main/pytorch_model.bin',
-                    model_dir=translator_slim_path,
-                    file_name='pytorch_model.bin')
-            print(f'[Translator] load slim model form : {translator_slim_path}')
-            g_tokenizer = AutoTokenizer.from_pretrained(translator_slim_path)
-            g_model = AutoModelForSeq2SeqLM.from_pretrained(translator_slim_path).eval()
-        g_model_type = method
-    return g_tokenizer, g_model
+            print(f'{english_from_language}: "{txt_translate}"')
+            txt_translate = argostranslate.translate.translate(txt_translate, args.args.language, "en")
+            if auto == False:
+               txt_translate = ' ' + txt_translate # space indicates text that is already translated
+            print()
+            print(f'{language_to_english}: "{txt_translate}"')
+        print()
+    return txt_translate
 
-def free_translator_model():
-    global g_tokenizer, g_model
-    del g_tokenizer
-    del g_model
+
+def find_language_file(arg_code, fallback = False):
+    global full_file
+    localization_path = Path('language')
+    full_file = True
+    full_path = None
+    if isinstance(arg_code, str):
+        filename = arg_code + '.json'
+        full_path = Path(localization_path/filename)
+
+        # adjust for incomplete language files
+        # that are flagged with an initial "_":
+        if not full_path.is_file():
+            temp_code = '_' + arg_code + '.json'
+            full_path = Path(localization_path/temp_code)
+            full_file = False
+
+        if fallback:
+            # if no language file, revert to English master:
+            if not full_path.is_file():
+                arg_code = 'en_master'
+                full_path = Path(localization_path/'en_master.json')
+            # if no master language file, revert to US English:
+            if not full_path.is_file():
+                arg_code = 'en'
+                full_path = Path(localization_path/'en.json')
+    return full_path, arg_code
+
+
+def check_localization(arg_code):
+    global language_name
+    full_path, arg_code = find_language_file(arg_code)
+    if not full_path.is_file():
+        print()
+        interpret(f'The FooocusPlus user interface does not support: {language_name}')
+    elif not full_file:
+        print()
+        interpret(f'The FooocusPlus user interface has incomplete support for: {language_name}')
+    else:
+        return
+
+    interpret('We are looking for a volunteer interpreter!')
+    if arg_code == 'zh':  # "Wiki" sends the Chinese translator ballistic!
+        interpret('Please check this FooocusPlus article:')
+    else:
+        interpret('Please check this FooocusPlus Wiki article:')
+    print(' https://github.com/DavidDragonsage/FooocusPlus/wiki/Language-Localization-File-Editing')
+    interpret('Contact us at the Discussion page:')
+    print(' https://github.com/DavidDragonsage/FooocusPlus/discussions')
+    interpret('or at the Facebook group:')
+    print(' https://www.facebook.com/groups/fooocus')
+    interpret(' if you are able to help out.')
+    print()
+
     return
 
-def toggle(text: str, method: str = 'Slim Model') -> str:
-    is_chinese_ext = lambda x: (Q_alphabet + B_punct).find(x) < -1
-    if is_chinese(text):
-        return convert(text, method)
-    else:
-        return convert(text, method, 'cn')
 
+def make_translation_msgs(package_to_install):
+    global english_from_language, english_to_language, language_from_english, language_to_english, language_name
+    str_language = str(package_to_install).split()
+    language_name = str_language[-1]
+    english_from_language = interpret('Translate from', language_name, True)
+    english_to_language = interpret('Translate to', language_name, True)
+    language_from_english = interpret('Translate from English', '', True)
+    language_to_english = interpret('Translate to English', '', True)
+    return
 
-def convert(text: str, method: str = 'Slim Model', lang: str = 'en' ) -> str:
-    global Q_alphabet, B_puncti, is_chinese
+def load_translator_pack(from_code, to_code):
+    # Download and install Argos Translate language package
+    import argostranslate.package
+    import argostranslate.translate
+    argostranslate.package.update_package_index()
+    available_packages = argostranslate.package.get_available_packages()
+    package_to_install = next(
+        filter(
+            lambda x: x.from_code == from_code and x.to_code == to_code, available_packages
+        ),
+        None  # Return None if no matching package is found
+    )
 
-    start = time.perf_counter()
-
-    if lang=='cn':
-        tokenizer, model = init_or_load_translator_model('Big Model')
-        text_zh = translate2zh_model(model, tokenizer, text)
-        stop = time.perf_counter()
-        print(f'[Translator] Translate by "Big Model" in {(stop-start):.2f}s: "{text}" to "{text_zh}"')
-        return text_zh
-    is_chinese_ext = lambda x: (Q_alphabet + B_punct).find(x) < -1 
-    #text = Q2B_number_punctuation(text)
-    if is_chinese(text):
-        if method == 'Third APIs':
-            print(f'[Translator] Using an online translation APIs.')
+    # If the package is found, download and install it
+    if package_to_install:
+        print()
+        print(f"Activating the package for {package_to_install}...")
+        argostranslate.package.install_from_path(package_to_install.download())
+        install_msg = f'The {package_to_install} package is now available'
+        # Translate
+        if from_code == 'en':
+            translated_msg = argostranslate.translate.translate(install_msg, from_code, to_code)
+            make_translation_msgs(package_to_install)
         else:
-            tokenizer, model = init_or_load_translator_model(method)
+            translated_msg = argostranslate.translate.translate(install_msg, to_code, from_code)
+        print(translated_msg)
+    else:
+        args.args.language = 'en' # revert to English for non-supported languages
+        print(f"No package found for translating from '{from_code}' to '{to_code}'")
+    return
 
 
-        def T_ZH2EN(text_zh):
-            if method=="Slim Model":
-                encoded = tokenizer([text_zh], return_tensors="pt")
-                sequences = model.generate(**encoded)
-                return 'Slim Model', tokenizer.batch_decode(sequences, skip_special_tokens=True)[0]
-            elif method=="Big Model":
-                inputs = tokenizer(text_zh, return_tensors="pt")
-                translated_tokens = model.generate(**inputs, forced_bos_token_id=tokenizer.convert_tokens_to_ids("eng_Latn"), max_length=60)
-                return 'Big Model', tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)[0].lower()
-            else:
-                return translator_default, translate2en_apis(text_zh)
+def load_translator():
+    print()
+    print('[Translator] Verifying the prompt translation function:')
+    if verify_installed_version('argostranslate', '1.9.6', False):
+        verify_installed_version('ctranslate2', '4.0', False)
+        verify_installed_version('spacy', '3.8.7', False)
+        print(' Loading the Argos Translate library')
 
+        # hide warnings: "Language %s package %s expects mwt, which has been added"
+        #logging.getLogger("stanza").setLevel(logging.ERROR) # no effect
+        logging.getLogger("stanza").disabled = True
 
-        text_eng = ""
-        text_zh = ""
-        for _char in iter(text):
-            if is_chinese(_char):
-                text_zh += _char
-            else:
-                if len(text_zh) > 0:
-                    if is_chinese_ext(_char):
-                        text_zh += _char
-                        continue
-                    else:
-                        #text_zh = Q2B_alphabet(text_zh)
-                        ts_methods, text_en=T_ZH2EN(text_zh)
-                        #print(f'translate: {text_zh} -> {text_en}')
-                        text_eng += text_en  
-                        text_zh = ""
-                text_eng += _char
-        if len(text_zh) > 0:
-            ts_methods, text_en=T_ZH2EN(text_zh)
-            text_eng += text_en
-        text_eng = Q2B_number_punctuation(text_eng)
-        text_eng = Q2B_alphabet(text_eng)
-        stop = time.perf_counter()
-        print(f'[Translator] Translate by "{ts_methods}" in {(stop-start):.2f}s: "{text}" to "{text_eng}"')
-        return text_eng
-    return text
-
-
+        # Download and install an Argos Translate language package
+        if args.args.language == 'cn':
+            args.args.language = 'zh' # use language code instead of country code
+        load_translator_pack("en", args.args.language)
+        load_translator_pack(args.args.language, "en")
+        check_localization(args.args.language)
+    return

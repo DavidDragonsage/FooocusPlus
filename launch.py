@@ -23,7 +23,6 @@ if not version.get_required_library():
 
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
-os.environ["translators_default_region"] = "China"
 if "GRADIO_SERVER_PORT" not in os.environ:
     os.environ["GRADIO_SERVER_PORT"] = "7865"
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -58,7 +57,18 @@ if requirements_met(requirements_file):
     print('All requirements met')
 else:
     print('Some requirements have not been met')
-print('Checking installed software...')
+
+def ini_args():
+    from args_manager import args
+    return args
+
+args = ini_args()
+if not args.language.startswith('en'):
+    from enhanced.translator import load_translator
+    load_translator()
+from enhanced.translator import interpret
+
+interpret('Checking installed software...')
 
 patch_requirements = "requirements_patch.txt"
 if (REINSTALL_ALL or not requirements_met(patch_requirements)) and not\
@@ -71,6 +81,9 @@ torch_info = ""
 import torchruntime
 import platform
 from modules.user_structure import cleanup_structure
+
+cleanup_structure(args.directml, args.user_dir,
+    python_embedded_path, win32_root)
 
 
 def prepare_environment():
@@ -87,7 +100,7 @@ def prepare_environment():
     torch_base_ver = read_torch_base()
 
     print()
-    print('Program Versions:')
+    interpret('Program Versions:')
     print(f"Python {sys.version}")
     print(f"Python Library {version.get_library_ver()}, Comfy version: {comfy.comfy_version.version}")
     if torch_ver == torch_base_ver:
@@ -134,9 +147,9 @@ def prepare_environment():
     if REINSTALL_ALL or not is_installed("xformers"):
         if platform.python_version().startswith("3.10"):
             if torch_platform_ver == 'cu128':
-                verify_installed_version('xformers', xformers_ver, False, use_index = 'https://download.pytorch.org/whl/cu128')
+                verify_installed_version('xformers', xformers_ver, False, use_index = 'https://download.pytorch.org/whl/cu128', package_url = '')
             elif torch_platform_ver == 'cu124':
-                verify_installed_version('xformers', xformers_ver, False, use_index = 'https://download.pytorch.org/whl/cu124')
+                verify_installed_version('xformers', xformers_ver, False, use_index = 'https://download.pytorch.org/whl/cu124', package_url = '')
             else:
                 xformers_statement = "xformers==" + xformers_ver
                 torchruntime.install(["--no-deps", xformers_statement])
@@ -156,22 +169,10 @@ vae_approx_filenames = [
 ]
 
 
-def ini_args():
-    from args_manager import args
-    return args
-
-args = ini_args()
-cleanup_structure(args.directml, python_embedded_path, win32_root)
-
-if not args.language.startswith('en'):
-    from enhanced.translator_support import load_translator
-    load_translator(args.language, args.user_dir)
-
 prepare_environment()
-print('Analyzing the graphics system...')
-# build_launcher()
-args = ini_args()
+interpret('Analyzing the graphics system...')
 
+# build_launcher()
 if args.gpu_device_id is not None:
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu_device_id)
     print("Set device to:", args.gpu_device_id)
@@ -197,31 +198,30 @@ write_torch_base(torch_ver)
 
 if config.temp_path_cleanup_on_launch:
     print()
-    print(f'Attempting to cleanup the temporary directory: {Path(config.temp_path).resolve()}')
+    interpret('Attempting to cleanup the temporary directory:')
+    print(Path(config.temp_path).resolve())
     result = empty_dir(config.temp_path)
     if result:
-        print("Cleanup successful")
+        interpret("Cleanup successful")
     else:
-        print(f"Failed to cleanup the content of the temp. directory")
+        interpret("Failed to cleanup the content of the temporary directory")
 print()
-print('Initializing image processors...')
+interpret('Initializing image processors...')
 
 
 launch_vram = int(get_vram()/1000)
 if launch_vram<6:
     print()
-    print(f'The video card has only {launch_vram}GB of memory (VRAM) but FooocusPlus')
-    print('will give you access to models that are optimized for Low VRAM systems.')
-    print('However, any system with less than 6GB of VRAM will tend to be slow')
-    print('and unreliable, and may or may not be able to generate Flux images.')
-    print('Some 4GB VRAM cards may even be unable to generate SDXL images.')
+    interpret(f'The video card has only {launch_vram}GB of memory (VRAM) but FooocusPlus')
+    interpret('will give you access to models that are optimized for Low VRAM systems.')
+    interpret('However, any system with less than 6GB of VRAM will tend to be slow')
+    interpret('and unreliable, and may or may not be able to generate Flux images.')
+    interpret('Some 4GB VRAM cards may even be unable to generate SDXL images.')
 
     if launch_vram<4: # some folks actually can run Flux with 4GB VRAM cards, so only lock out those with less than that
         print()
-        if args.language == 'cn':
-            print(f'系统GPU显存容量太小，无法正常运行Flux, SD3, Kolors和HyDiT等最新模型，将自动禁用Comfyd引擎。请知晓，尽早升级硬件。')
-        else:
-            print('Systems with less than 4GB of VRAM are not be able to run large models such as Flux, SD3, Kolors and HyDiT.')
+        interpret('Systems with less than 4GB of VRAM are not be able to run large models, including:',
+            'Flux, SD3, Kolors, HyDiT')
         args.async_cuda_allocation = False
         args.disable_async_cuda_allocation = True
         args.disable_comfyd = True

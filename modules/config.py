@@ -12,6 +12,7 @@ import modules.user_structure as US
 import tempfile
 
 from pathlib import Path
+from enhanced.translator import interpret
 from modules.extra_utils import get_files_from_folder, try_eval_env_var
 from modules.flags import OutputFormat, Performance, MetadataScheme
 from modules.model_loader import load_file_from_url
@@ -37,7 +38,7 @@ def get_dir_or_set_default(key, default_value, as_array=False, make_directory=Fa
 
     v = os.getenv(key)
     if v is not None:
-        print(f"Environment: {key} = {v}")
+        interpret('Environment:', key + ' = ' + v)
         config_dict[key] = v
     else:
         v = config_dict.get(key, None)
@@ -56,7 +57,9 @@ def get_dir_or_set_default(key, default_value, as_array=False, make_directory=Fa
 
     if v is not None:
         if not 'Outputs' in v:
-            print(f'Failed to load the directory config key: {json.dumps({key:v})} is invalid or does not exist; will use {json.dumps({key:default_value})} instead.')
+            interpret('Failed to load the directory config key:', json.dumps({key:v}))
+            interpret('That key is invalid or does not exist. Will use:',
+                json.dumps({key:default_value}))
     if isinstance(default_value, list):
         dp = []
         for path in default_value:
@@ -82,7 +85,7 @@ def get_path_output() -> str:
     path_output = get_dir_or_set_default('path_outputs', path_output, make_directory=True)
     if args_manager.args.output_path:
         config_dict['path_outputs'] = path_output = str(Path(args_manager.args.output_path).resolve())
-    print(f'Generated images will be stored in {path_output}')
+    interpret('Generated images will be stored in:', path_output)
     return path_output
 
 def get_config_path(config_file):
@@ -99,7 +102,7 @@ theme = args_manager.args.theme
 
 config_path = get_config_path('/config.txt')
 config_example_path = get_config_path('/config_modification_tutorial.txt')
-print(f'User configurations are stored in {config_path}')
+interpret('User configurations are stored in:', config_path)
 
 try:
     if os.path.exists(config_path):
@@ -109,15 +112,15 @@ try:
         for key in always_save_keys:
             if key.startswith('default_') and key[8:] in ads.default:
                 ads.default[key[8:]] = config_dict[key]
-        print(f'Loading config data from {config_path}')
+        interpret('Loading config data from:', config_path)
 except Exception as e:
-    print(f'Failed to load config data from {config_path}')
-    print(f'because of {str(e)}')
-    print('Please make sure that:')
-    print(f'1. The file "{config_path}" is a valid text file, and you have access to read it.')
-    print('2. Use "\\\\" instead of "\\" when describing paths.')
-    print('3. There is no "," before the last "}".')
-    print('4. All key and value formats are correct.')
+    interpret('Failed to load config data from:', config_path)
+    interpret('because of', str(e))
+    interpret('Please make sure that:')
+    interpret('1. The config data file is a valid text file, and you have access to read it.')
+    interpret('2. Use "\\\\" instead of "\\" when describing paths.')
+    interpret('3. There is no "," before the last "}".')
+    interpret('4. All key and value formats are correct.')
 
 if args_manager.args.models_root:
     get_dir_or_set_default('path_models_root', Path(args_manager.args.models_root).resolve())
@@ -125,8 +128,8 @@ if args_manager.args.models_root:
 else:
     path_models_root = get_dir_or_set_default('path_models_root', Path(user_dir/'models').resolve())
 path_models_root = Path(path_models_root).resolve()
-print(f'Generative models are stored in {path_models_root}')
-print('Models may also be stored in other locations, as defined in config.txt')
+interpret('Generative models are stored in:', path_models_root)
+interpret('Models may also be stored in other locations, as defined in', 'config.txt')
 
 paths_checkpoints = get_dir_or_set_default('path_checkpoints', [Path(path_models_root/'checkpoints').resolve(), Path(user_dir/'models/checkpoints').resolve()], True, False)
 paths_loras = get_dir_or_set_default('path_loras', [Path(path_models_root/'loras').resolve(), Path(user_dir/'models/loras').resolve()], True, False)
@@ -175,7 +178,7 @@ def get_config_item_or_set_default(key, default_value, validator, disable_empty_
     v = os.getenv(key)
     if v is not None:
         v = try_eval_env_var(v, expected_type)
-        print(f"Environment: {key} = {v}")
+        interpret("Environment:", key + ' = ' + v)
         config_dict[key] = v
 
     if key not in config_dict:
@@ -196,7 +199,9 @@ def get_config_item_or_set_default(key, default_value, validator, disable_empty_
             elif 'a1111' in v.lower():
                 default_value = MetadataScheme.A1111.value
             else:
-                print(f'Failed to load config key: {json.dumps({key:v})} is invalid; will use {json.dumps({key:default_value})} instead.')
+                interpret('Failed to load the config key:', json.dumps({key:v}))
+                interpret('That key is invalid or does not exist. Will use:',
+                    json.dumps({key:default_value}))
         config_dict[key] = default_value
         return default_value
 
@@ -210,11 +215,11 @@ def init_temp_path(temp_path: str | None, default_path: str) -> str:
         try:
             temp_path = Path(temp_path).resolve()
             US.make_dir(temp_path)
-            print(f'Using temp path {temp_path}')
+            interpret('Using temp path:', temp_path)
             return str(temp_path)
         except Exception as e:
-            print(f'Could not create temp path {temp_path}. Reason: {e}')
-            print(f'Using default temp path {default_path} instead.')
+            interpret('Could not create temp path', temp_path + ' Reason: ' + e)
+            interpret('Instead, using the default temp path', default_path)
 
     US.make_dir(default_path)
     return str(default_path)
@@ -815,10 +820,16 @@ default_backfill_prompt = get_config_item_or_set_default(
     default_value=ads.default['backfill_prompt'],
     validator=lambda x: isinstance(x, bool)
 )
-default_translation_methods = get_config_item_or_set_default(
-    key='default_translation_methods',
-    default_value=ads.default['translation_methods'],
-    validator=lambda x: x in modules.flags.translation_methods
+default_prompt_translator_enable = get_config_item_or_set_default(
+    key='default_prompt_translator_enable',
+    default_value=True,
+    validator=lambda x: isinstance(x, bool)
+)
+wildcard_lines_to_interpret = get_config_item_or_set_default(
+    key='wildcard_lines_to_interpret',
+    default_value=50,
+    validator=lambda x: isinstance(x, int),
+    expected_type=int
 )
 
 default_invert_mask_checkbox = get_config_item_or_set_default(
@@ -932,7 +943,6 @@ possible_preset_keys = {
     "default_mixing_image_prompt_and_vary_upscale": "mixing_image_prompt_and_vary_upscale",
     "default_mixing_image_prompt_and_inpaint": "mixing_image_prompt_and_inpaint",
     "default_backfill_prompt": "backfill_prompt",
-    "default_translation_methods": "translation_methods",
     "default_image_catalog_max_number": "image_catalog_max_number",
     "styles_definition": "styles_definition",
     "instruction": "instruction",
@@ -957,7 +967,6 @@ allow_missing_preset_key = [
     "default_mixing_image_prompt_and_vary_upscale",
     "default_mixing_image_prompt_and_inpaint",
     "default_backfill_prompt",
-    "default_translation_methods",
     "default_image_catalog_max_number",
     "styles_definition",
     "instruction",
@@ -1310,6 +1319,10 @@ common.refiner_slider = default_refiner_switch
 common.sampler_name = default_sampler
 common.scheduler_name = default_scheduler
 
+# Common support for Translator & Wildcards
+common.prompt_translator = default_prompt_translator_enable
+common.wildcard_lines_to_interpret = wildcard_lines_to_interpret
+
 # Preset support in neutral (common) ground
 common.default_bar_category = default_bar_category
 common.preset_bar_length = preset_bar_length
@@ -1317,3 +1330,4 @@ common.is_low_vram_preset = default_low_vram_presets
 
 # Flags support
 modules.flags.custom_performance = custom_performance_steps
+

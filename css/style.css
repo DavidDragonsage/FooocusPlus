@@ -103,7 +103,7 @@ div:has(> #positive_prompt) {
   overflow: hidden;
 }
 .type_row_third{
-  height: 32% !important;
+  height: 49% !important;
   max-height: 34px !important;
   font-size: 14px !important;
   min-width: 75px !important;
@@ -478,12 +478,22 @@ iframe::-webkit-scrollbar {
     padding-bottom: 5px !important;
     white-space: nowrap;
 }
+.preset_label{
+  color: blue !important;
+  font-size: 1.05em !important;
+  font-weight: bold !important;
+  margin-left: 40px !important;
+  margin-right: 0px !important;
+  text-align:  !important;
+  text-align: right !important;
+}
 .preset_info{
   color: blue !important;
   font-size: 1.05em !important;
   font-weight: bold !important;
-  margin-right: 10px !important;
-  text-align: right !important;
+  margin-left: 14px !important;
+  margin-right: 0px !important;
+  text-align: left !important;
 }
 
 #presetPreviewOverlay {

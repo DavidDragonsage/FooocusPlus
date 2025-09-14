@@ -101,7 +101,6 @@ describe_type_photo = 'Photograph'
 describe_type_anime = 'Art/Anime'
 describe_types = [describe_type_photo, describe_type_anime]
 
-translation_methods = ['Slim Model', 'Third APIs']
 
 COMFY_KSAMPLER_NAMES = ["euler", "euler_cfg_pp", "euler_ancestral", "euler_ancestral_cfg_pp", "heun", "heunpp2","dpm_2", "dpm_2_ancestral",
                   "lms", "dpm_fast", "dpm_adaptive", "dpmpp_2s_ancestral", "dpmpp_sde", "dpmpp_sde_gpu",
@@ -119,7 +118,6 @@ model_file_filter = {
         }
 model_file_filter['Fooocus'] = model_file_filter['SD3x'] + model_file_filter['Flux'] + model_file_filter['HyDiT']
 
-language_radio = lambda x: '中文' if x=='cn' else 'En'
 
 task_class_mapping = {
             'Fooocus': 'SDXL-Fooocus',

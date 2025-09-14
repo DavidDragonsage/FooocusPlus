@@ -8,6 +8,7 @@ import modules.config as config
 import enhanced.toolbox as toolbox
 import re
 from lxml import etree
+from enhanced.translator import interpret
 
 
 # app context
@@ -42,8 +43,8 @@ def refresh_output_list(max_per_page, max_catalog):
     pages = len(output_list)
     display_max_pages = max_catalog
     print()
-    print(f'The image gallery contains a total of {total_nums} images and {pages} pages,')
-    print(f'of which the last {pages if pages<display_max_pages else display_max_pages} pages are available for viewing within FooocusPlus.')
+    interpret(f'The image gallery contains a total of {total_nums} images and {pages} pages,')
+    interpret(f'of which the last {pages if pages<display_max_pages else display_max_pages} pages are available for viewing within', 'FooocusPlus.')
     print()
     output_list = output_list[:display_max_pages]
     return output_list, total_nums, pages
@@ -177,7 +178,7 @@ def get_images_prompt(choice, selected, max_per_page, display_index=False):
 
 def parse_html_log(choice: str, passthrough = False):
     global images_prompt, images_prompt_keys, images_ads
-    
+
     choice = choice.split('/')[0]
     if not passthrough and choice in images_prompt_keys and images_prompt[choice]:
         images_prompt_keys.remove(choice)
@@ -274,7 +275,7 @@ def parse_html_log(choice: str, passthrough = False):
             images_ads.pop(key)
     images_prompt.update({choice: images_prompt_list})
     images_prompt_keys.append(choice)
-    
+
     dirname, filename = os.path.split(html_file)
     log_name = os.path.join(dirname, "log_ads.json")
     log_ext = {}
@@ -282,7 +283,7 @@ def parse_html_log(choice: str, passthrough = False):
         with open(log_name, "r", encoding="utf-8") as log_file:
             log_ext.update(json.load(log_file))
     images_ads.update({choice: log_ext})
-    
+
     print(f'[Gallery] Parse_html_log: loaded {len(images_prompt[choice])} image_infos of {choice}.')
     return
 

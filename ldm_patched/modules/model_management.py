@@ -1,4 +1,5 @@
 import psutil
+from enhanced.translator import interpret
 from enum import Enum
 from ldm_patched.modules.args_parser import args
 import ldm_patched.modules.utils
@@ -30,7 +31,7 @@ lowvram_available = True
 xpu_available = False
 
 if args.pytorch_deterministic:
-    print("Using deterministic algorithms for pytorch")
+    interpret("Using deterministic algorithms for pytorch")
     torch.use_deterministic_algorithms(True, warn_only=True)
 
 directml_enabled = False
@@ -42,7 +43,7 @@ if args.directml is not None:
         directml_device = torch_directml.device()
     else:
         directml_device = torch_directml.device(device_index)
-    print("Using directml with device:", torch_directml.device_name(device_index))
+    interpret("Using directml with device:", torch_directml.device_name(device_index))
     # torch_directml.disable_tiled_resources(True)
     lowvram_available = False #TODO: need to find a way to get free memory in directml before this can be enabled by default.
 
@@ -63,7 +64,7 @@ except:
 if args.always_cpu:
     if args.always_cpu > 0:
         torch.set_num_threads(args.always_cpu)
-    print(f"Running on {torch.get_num_threads()} CPU threads")
+    interpret(f"Running on {torch.get_num_threads()} CPU threads")
     cpu_state = CPUState.CPU
 
 def is_intel_xpu():
@@ -142,8 +143,8 @@ else:
             XFORMERS_VERSION = xformers.version.__version__
             if XFORMERS_VERSION.startswith("0.0.18"):
                 print()
-                print("WARNING: This version of Xformers has a major bug where you will get black images when generating high resolution images.")
-                print("Please upgrade Xformers to a newer version.")
+                interpret("WARNING: This version of Xformers has a major bug where you will get black images when generating high resolution images.")
+                interpret("Please upgrade Xformers to a newer version.")
                 print()
                 XFORMERS_ENABLED_VAE = False
         except:
@@ -157,8 +158,8 @@ print()
 print("Total VRAM {:0.0f} MB, total RAM {:0.0f} MB".format(total_vram, total_ram))
 if not args.always_normal_vram and not args.always_cpu:
     if lowvram_available and total_vram <= 4096:
-        print("Trying to enable lowvram mode because your GPU seems to have 4GB or less.")
-        print("If you don't want this use: --always-normal-vram")
+        interpret("Trying to enable low VRAM mode because your GPU seems to have 4GB or less")
+        interpret("If you don't want this use:', --always-normal-vram")
         set_vram_to = VRAMState.LOW_VRAM
 
 try:
@@ -224,7 +225,7 @@ elif args.always_high_vram or args.always_gpu:
 FORCE_FP32 = False
 FORCE_FP16 = False
 if args.all_in_fp32:
-    print("Forcing FP32, if this improves things please report it.")
+    interpret("Forcing FP32, if this improves things please report it.")
     FORCE_FP32 = True
 
 if args.all_in_fp16:
@@ -242,7 +243,7 @@ if cpu_state != CPUState.GPU:
 if cpu_state == CPUState.MPS:
     vram_state = VRAMState.SHARED
 
-print(f"Set VRAM state to: {vram_state.name}")
+interpret('Set VRAM state to:', vram_state.name)
 
 ALWAYS_VRAM_OFFLOAD = False
 if args.disable_offload_from_vram:
@@ -250,16 +251,16 @@ if args.disable_offload_from_vram:
 elif args.always_offload_from_vram or (get_vram() < 12000):
     ALWAYS_VRAM_OFFLOAD = True
     if args.always_offload_from_vram:
-        print("Always offload VRAM")
+        interpret("Always offload VRAM")
     else:
         args.always_offload_from_vram = True
-        print("Unloading VRAM because the system has less than 12GB")
-        print("Use the --disable-offload-from-vram argument to prevent this")
+        interpret('Unloading VRAM because the system has less than 12GB')
+        interpret('To prevent this, use this batch file argument', '--disable-offload-from-vram')
         # args.always_offload_from_vram sets Comfy --disable-smart-memory
         # in simpleai_base.comfyd.py at Line 144
 if not args.always_offload_from_vram:
-    print("FooocusPlus is operating in Smart Memory mode:")
-    print("VRAM will be unloaded only when necessary")
+    interpret("FooocusPlus is operating in Smart Memory mode:")
+    interpret("VRAM will be unloaded only when necessary")
 
 def get_torch_device_name(device):
     if hasattr(device, 'type'):
@@ -277,11 +278,11 @@ def get_torch_device_name(device):
         return "CUDA {}: {}".format(device, torch.cuda.get_device_name(device))
 
 try:
-    print("Device:", get_torch_device_name(get_torch_device()))
+    interpret("Device:", get_torch_device_name(get_torch_device()))
     import common
     common.torch_device = "{}".format(get_torch_device())
 except:
-    print("Could not determine the default device.")
+    interpret("Could not determine the default device.")
 
 print("VAE dtype:", VAE_DTYPE)
 print()
@@ -327,7 +328,7 @@ class LoadedModel:
             raise e
 
         if lowvram_model_memory > 0:
-            print("loading in lowvram mode", lowvram_model_memory/(1024 * 1024))
+            interpret("Loading in low VRAM mode", lowvram_model_memory/(1024 * 1024))
             mem_counter = 0
             for m in self.real_model.modules():
                 if hasattr(m, "ldm_patched_cast_weights"):
@@ -340,7 +341,7 @@ class LoadedModel:
                 elif hasattr(m, "weight"): #only modules with ldm_patched_cast_weights can be set to lowvram mode
                     m.to(self.device)
                     mem_counter += module_size(m)
-                    print("lowvram: loaded module regularly", m)
+                    interpret("Low VRAM: loaded module regularly", m)
 
             self.model_accelerated = True
 
@@ -374,7 +375,7 @@ def unload_model_clones(model):
             to_unload = [i] + to_unload
 
     for i in to_unload:
-        print("unload clone", i)
+        interpret("Unload clone", i)
         current_loaded_models.pop(i).model_unload()
 
 def free_memory(memory_required, device, keep_loaded=[]):
@@ -851,7 +852,7 @@ def print_memory_info():
         free_cuda = f'{free_cuda/1024/1024/1024:.3f}GB'
         cuda_total = f'{cuda_total/1024/1024/1024:.3f}GB'
 
-        print(f'[Model Management] GPU memory: max_reserved={max_reserved}, max_allocated={max_allocated}')
+        print(f'[Management] GPU memory: max_reserved={max_reserved}, max_allocated={max_allocated}')
         print(f' GPU reserved={reserved}, free={free_cuda}, free_torch={free_torch}, free_total={free_total}')
         print(f' GPU Total={gpu_total}, Torch Total={torch_total}')
         torch.cuda.reset_peak_memory_stats()

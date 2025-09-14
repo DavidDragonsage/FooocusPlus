@@ -34,6 +34,10 @@ sampler_name = 'dpmpp_2m_sde_gpu'
 scheduler_name = 'karras'
 refiner_slider = 0.6
 
+# Common support for Translator & Wildcards
+prompt_translator = True
+wildcard_lines_to_interpret = 50
+
 # Aspect Ratio support in neutral (common) ground
 # set by modules.aspect_ratios
 current_AR = 1024*1024

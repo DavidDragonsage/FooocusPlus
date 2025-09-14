@@ -8,6 +8,7 @@ import args_manager as args
 import common
 import modules.user_structure as US
 from ldm_patched.modules import model_management
+from enhanced.translator import interpret
 from pathlib import Path
 
 current_preset = args.args.preset
@@ -23,7 +24,7 @@ def find_preset_file(preset):
     preset_file_path = US.find_file_path(presets_path, preset_name_path)
     if not preset_file_path:
         if preset != 'Default':
-            print(f'Could not find the {preset} preset')
+            interpret('Could not find the preset:', preset)
             print()
         return {}
     common.preset_file_path = preset_file_path # used to guarantee use of SD1.5 AR template
@@ -45,7 +46,7 @@ category_selection = find_preset_category(current_preset)
 def get_preset_list(): # called by update_files() in modules.config
     preset_list = list(presets_path.rglob('*.json'))
     if not [preset_list]:   # also used to check if preset files exist
-        print('No presets found')
+        interpret('No presets found')
         preset_list = ['initial']
         return preset_list
     return preset_list
@@ -61,10 +62,10 @@ def get_presets_in_folder(arg_folder_name):
     if folder_name.is_dir():
         presets_in_folder = list(folder_name.rglob('*.json'))
         if not presets_in_folder:
-            print(f'Could not find presets in the {arg_folder_name} folder.')
+            interpret('Could not find presets in this directory:', arg_folder_name)
             print()
     else:
-        print(f'Could not find the {arg_folder_name} folder.')
+        interpret('Could not find the preset directory:', arg_folder_name)
         print()
     return presets_in_folder
 
@@ -95,11 +96,11 @@ def get_preset_foldernames(omit_current_dir = False):
                 else:
                     preset_foldernames.append(item.name)
         if not preset_foldernames:
-            print(f'Could not find any preset subfolders in {preset_folder}')
+            interpret('Could not find any preset sub-directories in:', preset_folder)
             print()
             return preset_foldernames
     else:
-        print(f'Could not find the {presets_path} folder')
+        interpret('Could not find the directory:', presets_path)
         print()
     return preset_foldernames
 
@@ -138,7 +139,7 @@ def get_random_preset_in_category(rand_category):
         try:
             random_preset_name = preset_list[0]
         except:
-            print(f'No presets found in the {rand_category} category')
+            interpret('No presets found in the category:', rand_category)
             random_preset_name = ''
     return random_preset_name
 
@@ -159,7 +160,7 @@ def set_category_selection(arg_category_selection):
             init_countdown_blocker(2)
     return gr.update(value=category_selection),\
         gr.update(choices=preset_choices, value=current_preset),\
-        gr.update(value=f'Current Preset: {current_preset}')
+        gr.update(value=current_preset)
 
 
 def select_data_from_preset(preset_content):
@@ -187,18 +188,18 @@ def select_data_from_preset(preset_content):
     preset_quantity = items.get("default_image_quantity")
     if preset_quantity != common.image_quantity:
         common.image_quantity = preset_quantity
-        print(f'[Preset] Image Quantity set to {common.image_quantity} by preset')
+        interpret('The preset set the Image Quantity to:', common.image_quantity)
 
     preset_sampler = items.get("default_sampler")
     if preset_sampler != common.sampler_name:
         common.sampler_name = preset_sampler
         print()
-        print(f'[Preset] Sampler set to {common.sampler_name} by the {current_preset} preset')
+        interpret('The preset set the Sampler to:', {common.sampler_name})
 
     preset_scheduler = items.get("default_scheduler")
     if preset_scheduler != common.scheduler_name:
         common.scheduler_name = preset_scheduler
-        print(f'[Preset] Scheduler set to {common.scheduler_name} by the {current_preset} preset')
+        interpret('The preset set the Scheduler to:', {common.scheduler_name})
     return
 
 
@@ -209,12 +210,13 @@ def get_preset_content(preset, quiet=True):
             with open(preset_file, "r", encoding="utf-8") as json_file:
                 json_content = json.load(json_file)
                 if not quiet:
-                    print(f'[Preset] Loaded the {preset} preset content from:')
-                    print(f' {preset_file}')
+                    interpret('[Preset] Loaded the content of the preset:', preset)
+                    interpret(' from:', preset_file)
             common.preset_content = json_content
             return json_content
         except Exception as e:
-            print(f'Could not load the {preset} preset content from {preset_file}')
+            interpret('[Preset] Could not load the content of the preset:', preset)
+            interpret(' from:', preset_file)
             print(e)
         print()
     return {}
@@ -224,7 +226,7 @@ def set_preset_selection(arg_preset_selection, state_params):
     if arg_preset_selection == '' and not random_block:
         if current_preset == '':
             current_preset = args.args.preset
-        print(f'Using the {current_preset} preset...')
+        interpret('Using the preset:', f'{current_preset}...')
 
     elif (current_preset != arg_preset_selection) and not random_block and \
         (category_selection == find_preset_category(arg_preset_selection) \
@@ -241,7 +243,7 @@ def set_preset_selection(arg_preset_selection, state_params):
 
     return gr.update(value=current_preset), \
         gr.update(value=state_params), \
-        gr.update(value=f'Current Preset: {current_preset}'), \
+        gr.update(value=current_preset), \
         gr.update(value=common.current_AR), \
         gr.update(value=category_selection), \
         gr.update(value=common.positive), \
@@ -267,10 +269,10 @@ def get_initial_preset_content():
         if find_preset_file('Default'):
             preset = 'Default'
         else:
-            print('Could not find the startup preset')
+            interpret('Could not find the startup preset')
             category_selection = 'Random'
             if not preset:
-                print('Could not find any presets')
+                interpret('Could not find any presets')
                 current_preset = 'initial'
     if category_selection != 'Random' and current_preset != 'initial':
         args.args.preset = preset
@@ -291,7 +293,7 @@ def get_lowVRAM_preset_content():
         args.args.preset = '4GB_Default'
         current_preset = args.args.preset
         json_content = get_preset_content(current_preset, quiet=False)
-        print('The 4GB_Default preset is optimized for low VRAM systems')
+        interpret('The 4GB_Default preset is optimized for low VRAM systems')
     return json_content
 
 

@@ -1,4 +1,5 @@
 import os
+from enhanced.translator import interpret
 from urllib.parse import urlparse
 from typing import Optional
 
@@ -24,12 +25,12 @@ def load_file_from_url(
         file_name = os.path.basename(parts.path)
     cached_file = os.path.abspath(os.path.join(model_dir, file_name))
     if not os.path.exists(cached_file):
-        print(f'Downloading: "{url}" to {cached_file}\n')
+        interpret('Downloading:', url + ' → ' + cached_file)
         from torch.hub import download_url_to_file
-        try: 
+        try:
                 download_url_to_file(url, cached_file, progress=progress)
         except:
-                print(f'Could not download {cached_file} from {url}')
-                print('It may need to be downloaded manually')
+                interpret('Could not download', cached_file)
+                interpret('It may need to be downloaded manually from', url)
                 print()
     return cached_file

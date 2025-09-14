@@ -180,7 +180,8 @@ def save_textfile(arg_data, arg_textfile):  # the file is automatically closed
     return success
 
 
-def cleanup_structure(directml=False, python_embedded_path='', win32_root=''):
+def cleanup_structure(directml=False, user_dir = '',
+    python_embedded_path='', win32_root=''):
     # cleanup an error condition from version 1.0.0
     remove_dirs('python_embedded')
 
@@ -202,6 +203,10 @@ def cleanup_structure(directml=False, python_embedded_path='', win32_root=''):
     # cleanup batch file clutter, effective 1.0.6
     remove_file(Path(win32_root/'run_FooocusPlus_commit.bat'))
     remove_file(Path(win32_root/'run_FooocusPlus_dev.bat'))
+
+    # removed unused translator dir, from 1.0.7
+    user_dir_path = Path(user_dir).resolve()
+    remove_dirs(Path(user_dir_path/'translator_packs'))
 
     return
 
@@ -247,11 +252,12 @@ def create_model_structure(paths_checkpoints, paths_loras):
 
 
 def create_user_structure(user_dir):
+    from enhanced.translator import interpret
 
     # initialize the user directory, user_dir
     masters_path = Path('masters').resolve()
     user_dir_path = Path(user_dir).resolve()
-    print(f'Initialized the user folder at {user_dir_path}')
+    interpret('Initialized the user directory at:', user_dir_path)
     copy_dirs(Path(masters_path/'master_control_images'), Path(user_dir_path/'control_images'))
     copy_dirs(Path(masters_path/'master_welcome_images'), Path(user_dir_path/'welcome_images'))
     copy_dirs(Path(masters_path/'master_wildcards'), Path(user_dir_path/'wildcards'))
@@ -287,7 +293,7 @@ def create_user_structure(user_dir):
     user_topics_path = Path(user_dir_path/'user_topics')
     make_dir(user_topics_path)
     copy_dirs(user_topics_path, working_topics_path)
-    print('Updated the working Random Prompt (OneButtonPrompt) topics folder:')
+    interpret('Updated the working Random Prompt (OneButtonPrompt) topics directory:')
     print(f' {working_topics_path.resolve()}')
 
 
@@ -305,7 +311,7 @@ def create_user_structure(user_dir):
     make_dir(user_language_path)
     copy_dir_structure(master_language_path, user_language_path)
     copy_dirs(user_language_path, working_language_path)
-    print(f'Updated the working language folder: {working_language_path}')
+    interpret('Updated the working language directory:', working_language_path)
 
 
     # also initialize the Presets structure
@@ -322,7 +328,7 @@ def create_user_structure(user_dir):
     make_dir(user_presets_path)
     copy_dir_structure(master_presets_path, user_presets_path)
     copy_dirs(user_presets_path, working_presets_path)
-    print(f'Updated the working preset folder: {working_presets_path}')
+    interpret('Updated the working preset directory:', working_presets_path)
 
 
     # and finally, initialize the Styles structure
@@ -340,6 +346,6 @@ def create_user_structure(user_dir):
     samples_path = Path(user_styles_path/'samples')
     make_dir(samples_path)
     copy_dirs(user_styles_path, working_styles_path)
-    print(f'Updated the working styles folder: {working_styles_path}')
+    interpret('Updated the working styles directory:', working_styles_path)
 
     return

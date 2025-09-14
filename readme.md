@@ -76,12 +76,14 @@ If you were using a pre-release or Beta version of FooocusPlus, please be sure t
 
 ## Language Support
 
-Language and optional preset startup files are available in the FooocusPlus\UserDir\batch_startups folder. _Please copy whatever you need to the FooocusPlus folder before using them._ These are the current language startups:
+Language and other optional startup files are available in the FooocusPlus\UserDir\batch_startups folder. _Please copy whatever you need to the FooocusPlus folder before using them._ The following language startups files offer full support - in the user interface, the Prompt Translator, dynamic status reports and the console window:
 
 - Chinese, Simplified: 常规启动.bat and 不更新启动.bat (no update)
 - English, UK: run_FooocusPlus_UK.bat
 - French: run_FooocusPlus_française.bat
 - Spanish: run_FooocusPlus_español.bat
+
+A total of 40 languages are supported by FooocusPlus, but the majority only provide Prompt Translator, dynamic status reports and console window translation in the selected language. There are several limited support language files in the batch_startups folder, and details on how to setup other languages in the Wiki, starting [here](https://github.com/DavidDragonsage/FooocusPlus/wiki/Language-Support:-Introduction).
 
 ## Getting Help
 
@@ -115,6 +117,7 @@ This software was made possible by integrating open-source technologies from pro
 - OneButtonPrompt by AIrjen, via SimpleSDXL2 and RuinedFooocus
 - Superprompter by sammcj
 - Stable Diffusion 1.5 (SD1.5) support by Irmagon (Thomas Gaud)
+- the "All 276 Styles in Fooocus (Google table)", also by Irmagon (Thomas Gaud)
 - the members of the Pure Fooocus Facebook group for their encouragement, enthusiasm and careful Beta testing
 
 ![2025-05-23_20-21-10_1729](https://github.com/user-attachments/assets/b6217150-7f09-4641-b976-7dab9de4826c)

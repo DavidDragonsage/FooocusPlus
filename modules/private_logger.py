@@ -8,6 +8,7 @@ import enhanced.enhanced_parameters as ehs
 
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
+from enhanced.translator import interpret
 from modules.flags import OutputFormat
 from modules.meta_parser import MetadataParser, get_exif
 from modules.util import generate_temp_filename
@@ -143,11 +144,11 @@ def log(img, metadata, metadata_parser: MetadataParser | None = None, output_for
     with open(html_name, 'w', encoding='utf-8') as f:
         f.write(begin_part + middle_part + end_part)
 
-    print(f'Image saved to the log file: {html_name}')
+    interpret('[Log] Image saved to the log file:', html_name)
     if modules.config.show_newest_images_first:
-        print('The image log shows the newest images first')
+        interpret('The image log shows the newest images first')
     else:
-        print('The image log shows the newest images last')
+        interpret('The image log shows the newest images last')
 
     log_cache[html_name] = middle_part
 
@@ -174,5 +175,5 @@ def log_ext(file_name):
     with open(log_name, 'w', encoding='utf-8') as log_file:
         json.dump(log_ext, log_file)
 
-    print(f'Image generated with advanced params log at: {log_name}')
+    interpret('Image generated with advanced params log at:', log_name)
     return

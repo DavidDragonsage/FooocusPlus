@@ -15,7 +15,7 @@ let webpath = 'file';
 
 async function set_language_by_ui(newLanguage) {
     if (newLanguage === "En") {
-	newLocale="cn"
+	newLocale="zh"
     } else {
 	newLocale="en"
     }
@@ -23,7 +23,7 @@ async function set_language_by_ui(newLanguage) {
 }
 
 async function set_language(newLocale) {
-    if (newLocale !== locale_lang) { 
+    if (newLocale !== locale_lang) {
         const newTranslations = await fetchTranslationsFor(newLocale);
         locale_lang = newLocale;
         localization = newTranslations;
@@ -57,13 +57,13 @@ function set_theme_by_ui(theme) {
     }
     if (url_params["__theme"]!=null) {
         url_theme=url_params["__theme"];
-	if (url_theme == theme) 
+	if (url_theme == theme)
 	    return
 	window.location.replace(urls[0]+"?__theme="+theme+"&__lang="+url_lang+"&t="+Date.now()+"."+Math.floor(Math.random() * 10000));
     }
 }
 
-function set_iframe_src(theme = 'default', lang = 'cn', url) {
+function set_iframe_src(theme = 'default', lang = 'zh', url) {
     const urlParams = new URLSearchParams(window.location.search);
     const themeParam = urlParams.get('__theme') || theme;
     const langParam = urlParams.get('__lang') || lang;
@@ -77,7 +77,7 @@ function set_iframe_src(theme = 'default', lang = 'cn', url) {
     const iframe = gradioApp().getElementById('instruction');
     if (iframe) {
         iframe.src = newIframeUrl;
-    } 
+    }
 
 }
 
@@ -89,7 +89,7 @@ function showSysMsg(message, theme) {
     const sysmsg = gradioApp().getElementById("sys_msg");
     const sysmsgText = gradioApp().getElementById("sys_msg_text");
     sysmsgText.innerHTML = message;
-    
+
     const update_f = gradioApp().getElementById("update_f");
     const update_s = gradioApp().getElementById("update_s");
 
@@ -136,9 +136,9 @@ function setObserver() {
             if (mutation.target == tokenCounter) {
                 var divTextContent = tokenCounter.textContent;
                 if (parseInt(divTextContent) > 77 ) {
-                    tokenCounterBlock.style.backgroundColor = 'var(--primary-700)'; 
+                    tokenCounterBlock.style.backgroundColor = 'var(--primary-700)';
                 } else {
-                    tokenCounterBlock.style.backgroundColor = 'var(--secondary-400)'; 
+                    tokenCounterBlock.style.backgroundColor = 'var(--secondary-400)';
                 }
             }
         });
@@ -191,6 +191,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
     document.body.appendChild(sysmsg);
     initPresetPreviewOverlay("");
-    
+
 });
 

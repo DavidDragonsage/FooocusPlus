@@ -25,6 +25,7 @@ import modules.style_sorter as style_sorter
 import modules.util as util
 
 from enhanced.backend import comfyd
+from enhanced.translator import interpret
 from enhanced.welcome import get_welcome_image
 from modules.model_loader import load_file_from_url
 
@@ -185,14 +186,14 @@ def init_nav_bars(state_params, request: gr.Request):
     state_params.update({"init_process": 'finished'})
     results = refresh_nav_bars(state_params)
     file_welcome = get_welcome_image()
-    print('[UI Support] Welcome image:')
+    interpret('[UI Support] Welcome image:')
     if file_welcome == '':
-        print(' Not found!')
+        interpret(' Not found!')
     else:
         print(f' {file_welcome}')
     print()
     results += [gr.update(value=f'{file_welcome}')]
-    results += [gr.update(value=modules.flags.language_radio(state_params["__lang"])), gr.update(value=state_params["__theme"])]
+    results += [gr.update(value=state_params["__theme"])]
     results += [gr.update(choices=state_params["__output_list"], value=None), gr.update(visible=len(state_params["__output_list"])>0, open=False)]
     results += [gr.update(value=False if state_params["__is_mobile"] else config.default_inpaint_advanced_masking_checkbox)]
     preset = args.args.preset
@@ -301,7 +302,7 @@ def reset_layout_params(prompt, negative_prompt, state_params, is_generating, in
         gr.Info(preset_down_note_info)
     preset = state_params["bar_button"]
     print()
-    print(f'[UI Support] Changed the preset from {state_params["__preset"]} to {preset}')
+    interpret('[UI Support] Changed the preset from', state_params["__preset"] + ' → ' + preset)
     state_params.update({"__preset": preset})
 
     args.args.preset = preset
@@ -341,16 +342,16 @@ def reset_layout_params(prompt, negative_prompt, state_params, is_generating, in
 
 def download_models(default_model, previous_default_models, checkpoint_downloads, embeddings_downloads, lora_downloads, vae_downloads):
     if args.args.disable_preset_download:
-        print('[UI Support] Skipped model download.')
+        interpret('[UI Support] Skipped model download')
         return default_model, checkpoint_downloads
 
     if not args.args.always_download_new_model:
         if not os.path.isfile(common.MODELS_INFO.get_file_path_by_name('checkpoints', default_model)):
             for alternative_model_name in previous_default_models:
                 if os.path.isfile(common.MODELS_INFO.get_file_path_by_name('checkpoints', alternative_model_name)):
-                    print(f'[UI Support] You do not have [{default_model}] but you have [{alternative_model_name}].')
-                    print(f'FooocusPlus will use [{alternative_model_name}] to avoid downloading new models.')
-                    print('Use --always-download-new-model to avoid fallback and always get new models.')
+                    interpret(f'[UI Support] You do not have [{default_model}] but you have [{alternative_model_name}].')
+                    interpret(f'FooocusPlus will use [{alternative_model_name}] to avoid downloading new models.')
+                    interpret('Use --always-download-new-model to avoid fallback and always get new models.')
                     checkpoint_downloads = {}
                     default_model = alternative_model_name
                     break
@@ -375,7 +376,7 @@ cur_clip_path = Path(config_clip_path/'clip-vit-large-patch14').resolve()
 if cur_clip_path.exists():
     tokenizer = CLIPTokenizer.from_pretrained(cur_clip_path)
 else:
-    print(f'[UI Support] Cannot load the tokenizer from {cur_clip_path}')
+    interpret('[UI Support] Cannot load the tokenizer from', cur_clip_path)
     print()
 
 def remove_tokenizer():
@@ -400,7 +401,7 @@ def prompt_token_prediction(text, style_selections):
     import enhanced.wildcards as wildcards
     from modules.sdxl_styles import apply_style, fooocus_expansion
 
-    prompt = translator.convert(text, enhanced_parameters.translation_methods)
+    prompt = translator.translate(text, True)
     common.positive = prompt  # save the prompt for preset_resource & meta_parser
     return len(tokenizer.tokenize(prompt))
 

@@ -36,6 +36,7 @@ from modules.util import is_json
 import enhanced.gallery as gallery_util
 import enhanced.toolbox as toolbox
 import enhanced.translator as translator
+from enhanced.translator import interpret
 import enhanced.enhanced_parameters as enhanced_parameters
 import enhanced.version as version
 import enhanced.wildcards as wildcards
@@ -44,10 +45,14 @@ from enhanced.backend import comfyd
 from backend_base.__init__ import get_torch_xformers_cuda_version as torch_info
 
 print()
-print('[UI] Initializing the user interface...')
+translator.interpret('[UI] Initializing the user interface...')
+print()
+#import modules.lme4fp_civitai
+#modules.lme4fp_civitai.main()
+#print()
 
-image_seed = '0'    # initialize working seed
-saved_seed = '0'    # initialize seed saver
+image_seed = '0'        # initialize working seed
+saved_seed = '0'        # initialize seed saver
 
 def get_task(*args):
     args = list(args)
@@ -65,7 +70,8 @@ def generate_clicked(task: worker.AsyncTask):
     execution_start_time = time.perf_counter()
     finished = False
 
-    yield gr.update(visible=True, value=modules.html.make_progress_html(1, 'Waiting for task to start...')), \
+    status_msg = interpret('Waiting for task to start...', '', True)
+    yield gr.update(visible=True, value=modules.html.make_progress_html(1, status_msg)), \
         gr.update(visible=True, value=None), \
         gr.update(visible=False, value=None), \
         gr.update(visible=False)
@@ -111,7 +117,7 @@ def generate_clicked(task: worker.AsyncTask):
                             os.remove(filepath)
 
     execution_time = time.perf_counter() - execution_start_time
-    print(f'Total time: {execution_time:.2f} seconds')
+    interpret('Total time in seconds:', f'{execution_time:.2f}')
     return
 
 
@@ -200,7 +206,8 @@ common.GRADIO_ROOT = gr.Blocks(
 
 with common.GRADIO_ROOT:
     state_topbar = gr.State({})
-    params_backend = gr.State({'translation_methods': config.default_translation_methods})
+    # obsolete parameter
+    params_backend = gr.State({'translation_methods': ''})
     currentTask = gr.State(worker.AsyncTask(args=[]))
     inpaint_engine_state = gr.State('empty')
     with gr.Row():
@@ -271,21 +278,29 @@ with common.GRADIO_ROOT:
                         if isinstance(default_prompt, str) and default_prompt != '':
                             common.GRADIO_ROOT.load(lambda: default_prompt, outputs=prompt)
                     with gr.Column(scale=2, min_width=75):
-                        if (args.args.language=='cn'):
+                        # Note: the en_master.json reference file will display "Translate"
+                        # although no translation will occur
+                        if args.args.language == 'en' or args.args.language == 'en_uk':
                             random_button = gr.Button(value="Random Prompt",
-                            elem_classes='type_row_third', size="sm", min_width = 75)
-                            translator_button = gr.Button(visible=True,
-                            value="Translate", elem_classes='type_row_third',
-                            size='sm', min_width = 75)
+                                elem_classes='type_row_half',
+                                size="sm", min_width = 75)
                             super_prompter = gr.Button(value="Super Prompt",
-                            elem_classes='type_row_third', size="sm", min_width = 75)
+                                elem_classes='type_row_half',
+                                size="sm", min_width = 75)
+                            translator_button = gr.Button(value="Translate",
+                                elem_classes='type_row_third',
+                                size='sm', min_width = 75, visible=False,)
                         else:
                             random_button = gr.Button(value="Random Prompt",
-                            elem_classes='type_row_half', size="sm", min_width = 75)
-                            translator_button = gr.Button(visible=False,
-                            value="Translate", elem_classes='type_row_third',
-                            size='sm', min_width = 75)
-                            super_prompter = gr.Button(value="Super Prompt", elem_classes='type_row_half', size="sm", min_width = 75)
+                                elem_classes='type_row_third',
+                                size="sm", min_width = 75)
+                            super_prompter = gr.Button(value="Super Prompt",
+                                elem_classes='type_row_third',
+                                size="sm", min_width = 75)
+                            translator_button = gr.Button(value="Translate",
+                                elem_classes='type_row_third',
+                                size='sm', min_width = 75, visible=config.default_prompt_translator_enable)
+
                     with gr.Column(scale=2, min_width=75):
                         generate_button = gr.Button(label="Generate",
                         value="Generate", elem_classes='type_row',
@@ -293,7 +308,7 @@ with common.GRADIO_ROOT:
 
                         reset_button = gr.Button(label="Reconnect",
                         value="Reconnect", elem_classes='type_row',
-                        elem_id='reset_button', visible=False)
+                        elem_id='reset_button', visible=False, min_width = 75)
 
                         load_parameter_button = gr.Button(label="Load Parameters",
                         value="Load Parameters", elem_classes='type_row',
@@ -328,15 +343,23 @@ with common.GRADIO_ROOT:
                         skip_button.click(skip_clicked, inputs=currentTask, outputs=currentTask, queue=False, show_progress=False)
 
             with gr.Row():
-                with gr.Column():
+                with gr.Column(scale=0):
                     with gr.Row(elem_classes='advanced_check_row'):
-                        advanced_checkbox = gr.Checkbox(label='Advanced', value=config.default_advanced_checkbox, container=False, elem_classes='min_check')
-                        input_image_checkbox = gr.Checkbox(label='Input Image', value=config.default_image_prompt_checkbox, container=False, elem_classes='min_check')
-                        preset_bar_checkbox = gr.Checkbox(label='Preset Bar', value=config.enable_preset_bar, container=False, elem_classes='min_check')
-                        prompt_panel_checkbox = gr.Checkbox(label='Wildcard Panel', interactive = False, value=True, container=False, visible=False, elem_classes='min_check')
-                with gr.Column():
-                    preset_info = gr.Markdown(value=f'<b>Current Preset: <b>{args.args.preset}</b>', container=False, visible=True, elem_classes='preset_info')
-                    #preset_info = gr.Markdown(value=f'<h3>Current Preset:</h3> <b>{args.args.preset}</b>', container=False, visible=True, elem_classes='preset_info')
+                        advanced_checkbox = gr.Checkbox(label='Advanced',
+                            value=config.default_advanced_checkbox,
+                            container=False, elem_classes='min_check')
+                        input_image_checkbox = gr.Checkbox(label='Input Image',
+                            value=config.default_image_prompt_checkbox, container=False, elem_classes='min_check')
+                        preset_bar_checkbox = gr.Checkbox(label='Preset Bar',
+                            value=config.enable_preset_bar,
+                            container=False, elem_classes='min_check')
+                        prompt_panel_checkbox = gr.Checkbox(label='',
+                            interactive = False, value=True, container=False,
+                            visible=False, elem_classes='min_check')
+                with gr.Column(scale=0):
+                    preset_label = gr.Markdown(value=f'<b>Current Preset:</b>', container=False, visible=True, elem_classes='preset_label')
+                with gr.Column(min_width=145):
+                    preset_info = gr.Markdown(value=f'<b>{args.args.preset}</b>', container=False, visible=True, elem_classes='preset_info')
 
             with gr.Group(visible=False, elem_classes='toolbox') as image_toolbox:
                 image_tools_box_title = gr.Markdown('<b>Toolbox</b>', visible=True)
@@ -381,7 +404,8 @@ with common.GRADIO_ROOT:
                                 with gr.Column():
                                     ip_image = grh.Image(label='Image',
                                     source='upload', type='numpy',
-                                    show_label=False,                           height=300, value=config.default_ip_images[image_count])
+                                    show_label=False, height=300,
+                                    value=config.default_ip_images[image_count])
                                     ip_images.append(ip_image)
                                     ip_ctrls.append(ip_image)
                                     with gr.Column(visible=config.default_image_prompt_advanced_checkbox) as ad_col:
@@ -476,6 +500,11 @@ with common.GRADIO_ROOT:
                                      info='An area of 0.0 means "Only the Masked Area". '
                                           'An area of 1.0 means "The Whole Image". '
                                           'Outpainting affects the whole area and uses a value of 1.0')
+                            inpaint_erode_or_dilate = gr.Slider(label='Mask Erode or Dilate',
+                                minimum=-64, maximum=64, step=1, value=0, visible = False,
+                                info='Positive value will make white area in the mask larger, '
+                                'negative value will make white area smaller. '
+                                '(Default is 0, always processed before any mask invert)')
                         gr.HTML('<a href="https://github.com/lllyasviel/Fooocus/discussions/414" target="_blank">\U0001F4DA Documentation</a>&emsp; * Powered by Fooocus Inpaint Engine')
 
                         def generate_mask(image, mask_model, cloth_category, dino_prompt_text, sam_model, box_threshold, text_threshold, sam_max_detections, dino_erode_or_dilate, dino_debug, params_extra):
@@ -627,7 +656,7 @@ with common.GRADIO_ROOT:
                                                         minimum=-64, maximum=64, step=1, value=0,
                                                         info='Positive value will make white area in the mask larger, '
                                                              'negative value will make white area smaller. '
-                                                             '(default is 0, always processed before any mask invert)')
+                                                             '(Default is 0, always processed before any mask invert)')
                                                     enhance_mask_invert = gr.Checkbox(label='Invert Mask', value=False)
 
                                             enhance_ctrls += [
@@ -696,15 +725,37 @@ with common.GRADIO_ROOT:
                     example_quick_subjects.click(lambda x: x[0], inputs=example_quick_subjects, outputs=prompt, show_progress=False, queue=False)
 
             with gr.Accordion(label='Wildcards', visible=True, open=False) as prompt_wildcards:
-                wildcards_list = gr.Dataset(components=[prompt], type='index', label='Wildcard Filenames', samples=wildcards.get_wildcards_samples(), visible=True, samples_per_page=28)
-                read_wildcards_in_order = gr.Checkbox(label="Generate Wildcards in Order", value=False, visible=True)
-                with gr.Accordion(label='Wildcard Contents', visible=True, open=False) as words_in_wildcard:
-                    wildcard_tag_name_selection = gr.Dataset(components=[prompt], label='Words in the Wildcards', samples=wildcards.get_words_of_wildcard_samples(), visible=True, samples_per_page=30, type='index')
-                wildcards_list.click(wildcards.add_wildcards_and_array_to_prompt, inputs=[wildcards_list, prompt, state_topbar], outputs=[prompt, wildcard_tag_name_selection, words_in_wildcard], show_progress=False, queue=False)
-                wildcard_tag_name_selection.click(wildcards.add_word_to_prompt, inputs=[wildcards_list, wildcard_tag_name_selection, prompt], outputs=prompt, show_progress=False, queue=False)
-                wildcards_array = [prompt_wildcards, words_in_wildcard, wildcards_list, wildcard_tag_name_selection]
-                wildcards_array_show =lambda x: [gr.update(visible=True)] * 2 + [gr.Dataset.update(visible=True, samples=wildcards.get_wildcards_samples()), gr.Dataset.update(visible=True, samples=wildcards.get_words_of_wildcard_samples(x))]
-                wildcards_array_hidden = [gr.update(visible=False)] * 2 + [gr.Dataset.update(visible=False, samples=wildcards.get_wildcards_samples()), gr.Dataset.update(visible=False, samples=wildcards.get_words_of_wildcard_samples())]
+                wildcards_list = gr.Dataset(components=[prompt], type='index',
+                    label='Wildcard Filenames',
+                    samples=wildcards.get_wildcards_samples(),
+                    visible=True, samples_per_page=35)
+                read_wildcards_in_order = gr.Checkbox(label="Generate Wildcards in Order",
+                    value=False, visible=True)
+                with gr.Accordion(label='Wildcard Contents',
+                    visible=True, open=False) as words_in_wildcard:
+                    wildcard_tag_name_selection = gr.Dataset(components=[prompt],
+                    label='Words in the Wildcards',
+                        samples=wildcards.get_words_of_wildcard_samples(),
+                        visible=True, samples_per_page=30, type='index')
+                wildcards_list.click(wildcards.add_wildcards_and_array_to_prompt,
+                    inputs=[wildcards_list, prompt, state_topbar],
+                    outputs=[prompt, wildcard_tag_name_selection,
+                        words_in_wildcard], show_progress=False, queue=False)
+                wildcard_tag_name_selection.click(wildcards.add_word_to_prompt,
+                    inputs=[wildcards_list, wildcard_tag_name_selection, prompt],
+                    outputs=prompt, show_progress=False, queue=False)
+                wildcards_array = [prompt_wildcards, words_in_wildcard,
+                    wildcards_list, wildcard_tag_name_selection]
+                wildcards_array_show =lambda x: [gr.update(visible=True)] * 2 \
+                    + [gr.Dataset.update(visible=True,\
+                        samples=wildcards.get_wildcards_samples()),\
+                        gr.Dataset.update(visible=True,\
+                        samples=wildcards.get_words_of_wildcard_samples(x))]
+                wildcards_array_hidden = [gr.update(visible=False)] * 2 +\
+                    [gr.Dataset.update(visible=False,\
+                    samples=wildcards.get_wildcards_samples()),\
+                    gr.Dataset.update(visible=False,\
+                    samples=wildcards.get_words_of_wildcard_samples())]
                 wildcards_array_hold = [gr.update()] * 4
 
             switch_js = "(x) => {if(x){viewer_to_bottom(100);viewer_to_bottom(500);}else{viewer_to_top();} return x;}"
@@ -909,9 +960,10 @@ with common.GRADIO_ROOT:
                                     image_size = modules.util.get_image_size_info(image,
                                         config.config_aspect_ratios[0])
                                     return gr.update(value=image_size, visible=True)
-
-                                describe_input_image.upload(trigger_show_image_properties, inputs=describe_input_image,
-                                                            outputs=describe_image_size, show_progress=False, queue=False)
+                                describe_input_image.upload(trigger_show_image_properties,
+                                    inputs=describe_input_image,
+                                    outputs=describe_image_size,
+                                    show_progress=False, queue=False)
 
                     with gr.Tab(label='Metadata', id='metadata_tab', visible=True) as metadata_tab:
                         with gr.Column():
@@ -937,40 +989,49 @@ with common.GRADIO_ROOT:
 
                             return [results, gr.update(interactive=parameters is not None)]
 
-                        metadata_input_image.upload(trigger_metadata_preview, inputs=metadata_input_image,
-                                        outputs=[metadata_json, metadata_import_button], queue=False, show_progress=True)
+                        metadata_input_image.upload(trigger_metadata_preview,
+                            inputs=metadata_input_image,
+                            outputs=[metadata_json, metadata_import_button],
+                            queue=False, show_progress=True)
 
             with gr.Tab(label='Styles', elem_classes=['style_selections_tab']):
                 style_sorter.try_load_sorted_styles(
                     style_names=legal_style_names,
                     default_selected=config.default_styles)
 
+                # initialize for use by the Styles row:
+                black_out_nsfw = config.default_black_out_nsfw
+
+                with gr.Row(visible=not black_out_nsfw and not config.default_black_out_nsfw) as styles_row:
+                    gr.HTML('<a href="https://docs.google.com/spreadsheets/d/10UXU59fBA5wZrcEEvgv1MTf1MSNTCB5PT4fNxsAst8E/edit?gid=2125777153#gid=2125777153" target="_blank">\U0001F4DA Documentation</a><br>* Warning: this link displays some artistic nudity')
+
                 style_search_bar = gr.Textbox(show_label=False, container=False,
-                                        placeholder="\U0001F50E Type here to search styles...",
-                                        value="",
-                                        label='Search Styles')
+                    placeholder="\U0001F50E Type here to search styles...",
+                    value="",
+                    label='Search Styles')
                 style_selections = gr.CheckboxGroup(show_label=False, container=False,
-                                        choices=copy.deepcopy(style_sorter.all_styles),
-                                        value=copy.deepcopy(config.default_styles),
-                                        label='Selected Styles',
-                                        elem_classes=['style_selections'])
+                    choices=copy.deepcopy(style_sorter.all_styles),
+                    value=copy.deepcopy(config.default_styles),
+                    label='Selected Styles',
+                    elem_classes=['style_selections'])
                 gradio_receiver_style_selections = gr.Textbox(elem_id='gradio_receiver_style_selections', visible=False)
 
+
                 common.GRADIO_ROOT.load(lambda: gr.update(choices=copy.deepcopy(style_sorter.all_styles)),
-                                        outputs=style_selections)
+                    outputs=style_selections)
 
                 style_search_bar.change(style_sorter.search_styles,
-                                        inputs=[style_selections, style_search_bar],
-                                        outputs=style_selections,
-                                        queue=False,
-                                        show_progress=False).then(
+                    inputs=[style_selections, style_search_bar],
+                    outputs=style_selections,
+                    queue=False,
+                    show_progress=False).then(
                     lambda: None, _js='()=>{refresh_style_localization();}')
 
                 gradio_receiver_style_selections.input(style_sorter.sort_styles,
-                                       inputs=style_selections,
-                                       outputs=style_selections,
-                                       queue=False,
-                                       show_progress=False).then(
+                   inputs=style_selections,
+                   outputs=style_selections,
+                   queue=False,
+                   show_progress=False).then(
                     lambda: None, _js='()=>{refresh_style_localization();}')
                 prompt.change(lambda x,y: calculateTokenCounter(x,y), inputs=[prompt, style_selections], outputs=prompt_token_counter)
 
@@ -1084,12 +1145,13 @@ with common.GRADIO_ROOT:
 
                         sampler_selector = gr.Dropdown(label='Sampler',
                             choices=flags.sampler_list,
-                            value=common.sampler_name, interactive=True,
-                            visible=True, allow_custom_value=True)
+                            value=common.sampler_name,
+                            interactive=True, visible=True)
+
                         scheduler_selector = gr.Dropdown(label='Scheduler',
                             choices=flags.scheduler_list,
-                            value=common.scheduler_name, interactive=True,
-                            visible=True, allow_custom_value=True)
+                            value=common.scheduler_name,
+                            interactive=True, visible=True)
 
                         def set_sampler_selector(arg_sampler_name):
                             common.sampler_name = arg_sampler_name
@@ -1140,9 +1202,11 @@ with common.GRADIO_ROOT:
                             info='(Experimental) This may cause performance problems on some computers and certain internet conditions',
                             value=False)
 
-                        disable_preview = gr.Checkbox(label='Disable Preview', value=config.default_black_out_nsfw,
+                        disable_preview = gr.Checkbox(label='Disable Preview',
+                            value=config.default_black_out_nsfw,
                             interactive=not config.default_black_out_nsfw,
                             info='Disable preview during generation')
+
                         disable_intermediate_results = gr.Checkbox(label='Disable Intermediate Results',
                             value=flags.Performance.has_restricted_features(config.default_performance),
                             info='Disable intermediate results during generation, only show the final gallery')
@@ -1151,13 +1215,18 @@ with common.GRADIO_ROOT:
                             interactive=not config.default_black_out_nsfw,
                             info='Use black image if NSFW is detected')
 
-                        black_out_nsfw.change(lambda x: gr.update(value=x, interactive=not x),
-                            inputs=black_out_nsfw, outputs=disable_preview, queue=False,
-                            show_progress=False)
+                        def set_nsfw_change(x):
+                            return gr.update(value=x, interactive=not x),\
+                                gr.update(visible=not x)
+
+                        black_out_nsfw.change(set_nsfw_change,
+                            inputs=black_out_nsfw,
+                            outputs=[disable_preview, styles_row],
+                            queue=False, show_progress=False)
 
                         if not args.args.disable_image_log:
                             save_final_enhanced_image_only = gr.Checkbox(label='Save Only the Final Enhanced Image',
-                                value=config.default_save_only_final_enhanced_image)
+                            value=config.default_save_only_final_enhanced_image)
 
                     with gr.Tab(label='Control'):
                         debugging_cn_preprocessor = gr.Checkbox(label='Debug Preprocessors', value=False,
@@ -1186,11 +1255,6 @@ with common.GRADIO_ROOT:
                             value=config.default_inpaint_engine_version,
                             choices=flags.inpaint_engine_versions,
                             info='Version of Fooocus Inpaint model. If set, use performance Quality or Speed (no performance LoRAs) for best results')
-                        inpaint_erode_or_dilate = gr.Slider(label='Mask Erode or Dilate',
-                            minimum=-64, maximum=64, step=1, value=0,
-                            info='Positive value will make white area in the mask larger, '
-                            'negative value will make white area smaller. '
-                            '(Default is 0, always processed before any mask invert)')
                         dino_erode_or_dilate = gr.Slider(label='GroundingDINO Box Erode or Dilate',
                             minimum=-64, maximum=64, step=1, value=0,
                             info='Positive value will make white area in the mask larger, '
@@ -1201,9 +1265,9 @@ with common.GRADIO_ROOT:
                             inpaint_strength, inpaint_respective_field,
                             inpaint_advanced_masking_checkbox, invert_mask_checkbox, inpaint_erode_or_dilate]
 
-                        inpaint_advanced_masking_checkbox.change(lambda x: [gr.update(visible=x)] * 2,
+                        inpaint_advanced_masking_checkbox.change(lambda x: [gr.update(visible=x)] * 3,
                             inputs=inpaint_advanced_masking_checkbox,
-                            outputs=[inpaint_mask_image, inpaint_mask_generation_col],
+                            outputs=[inpaint_mask_image, inpaint_mask_generation_col, inpaint_erode_or_dilate],
                             queue=False, show_progress=False)
 
                         inpaint_mask_color.change(lambda x: gr.update(brush_color=x), inputs=inpaint_mask_color,
@@ -1226,13 +1290,15 @@ with common.GRADIO_ROOT:
 
                 def refresh_files_clicked(state_params):
                     print()
-                    print('Refreshing all files...')
+                    interpret('Refreshing all files...')
                     US.create_user_structure(args.args.user_dir)
                     US.create_model_structure(config.paths_checkpoints, config.paths_loras)
+                    wildcards.get_wildcards_samples()
                     engine = state_params.get('engine', 'Fooocus')
                     task_method = state_params.get('task_method', None)
                     model_filenames, lora_filenames, vae_filenames = config.update_files(engine, task_method)
-                    results = [gr.update(choices=model_filenames)]
+                    results = [gr.Dataset.update(samples=wildcards.get_wildcards_samples())]
+                    results += [gr.update(choices=model_filenames)]
                     results += [gr.update(choices=['None'] + model_filenames)]
                     results += [gr.update(choices=[flags.default_vae] + vae_filenames)]
                     if not args.args.disable_preset_selection:
@@ -1240,11 +1306,11 @@ with common.GRADIO_ROOT:
                     for i in range(config.default_max_lora_number):
                         results += [gr.update(interactive=True),
                                     gr.update(choices=['None'] + lora_filenames), gr.update()]
-                    print('Refresh complete!')
+                    interpret('Refresh complete!')
                     print()
                     return results
 
-                refresh_files_output = [base_model, refiner_model, vae_name]
+                refresh_files_output = [wildcards_list, base_model, refiner_model, vae_name]
                 if not args.args.disable_preset_selection:
                     refresh_files_output += [preset_selection]
                 refresh_files.click(refresh_files_clicked, [state_topbar],
@@ -1253,38 +1319,41 @@ with common.GRADIO_ROOT:
 
             with gr.Tab(label='Extras', elem_id="scrollable-box"):
                 with gr.Row():
-                    language_ui=args.args.language
-                    # the language_ui Radio button was removed as being redundant. It was strange that
-                    # you could switch to Chinese but you could not switch to English. Language support
-                    # is currently determined by the --language command line argument. If language
-                    # selection is later restored to the UI it needs to be more universal.
-                    language_ui = gr.Radio(visible=False, label='Language of UI', choices=['En', '中文'],\
-                        value=modules.flags.language_radio(args.args.language), interactive=False)
-                    background_theme = gr.Radio(label='Background Theme', choices=['light', 'dark'],\
+                    language_ui = gr.Radio(visible=False, label='Language of UI',
+                        choices=[''], value='', interactive=False)
+                    background_theme = gr.Radio(label='Background Theme',
+                        choices=['light', 'dark'],
                         value=args.args.theme, interactive=True)
                     prompt_preset_button = gr.Button(value='Make New Preset')
                     gr.Markdown(value='All current parameters will be saved. Clear the positive and negative prompts unless you want them to be part of the preset.')
-                with gr.Group():
-                    comfyd_active_checkbox = gr.Checkbox(label='Enable Comfyd Always Active', value=not args.args.disable_comfyd,\
-                        info='Enabling will improve execution speed but occupy some memory')
-                    image_tools_checkbox = gr.Checkbox(label='Enable Catalog Toolbox', value=True,\
-                        info='Located on the main canvas, use the Toolbox to View Info, Regenerate or Delete an image from the catalog')
-                    backfill_prompt = gr.Checkbox(label='Copy Prompts While Switching Images', value=config.default_backfill_prompt,\
-                        interactive=True, info='Fill the positive and negative prompts from the catalog images')
-                    if (args.args.language=='cn'):
-                        translation_methods = gr.Radio(visible=True, label='',\
-                            choices=modules.flags.translation_methods, value=config.default_translation_methods)
-                    else:
-                        translation_methods = gr.Radio(visible=False, label='',\
-                            choices=modules.flags.translation_methods, value=config.default_translation_methods)
-                    mobile_url = gr.Checkbox(label=f'http://{args.args.listen}:{args.args.port}{args.args.webroot}/',
-                        value=True, interactive=False, visible=False)
 
-                    def sync_params_backend(key, v, params):
-                        params.update({key:v})
-                        return params
-                    translation_methods.change(lambda x,y: sync_params_backend('translation_methods',x,y),\
-                        inputs=[translation_methods, params_backend], outputs=params_backend)
+                with gr.Group():
+                    comfyd_active_checkbox = gr.Checkbox(label='Enable Comfyd Always Active',
+                        value=not args.args.disable_comfyd,
+                        info='Enabling will improve execution speed but occupy some memory')
+                    image_tools_checkbox = gr.Checkbox(label='Enable Catalog Toolbox',
+                        value=True,
+                        info='Located on the main canvas, use the Toolbox to View Info, Regenerate or Delete an image from the catalog')
+                    backfill_prompt = gr.Checkbox(label='Copy Prompts While Switching Images',
+                        value=config.default_backfill_prompt,
+                        info='Fill the positive and negative prompts from the catalog images')
+
+                    prompt_translator_checkbox = gr.Checkbox(label='Enable Prompt Translator',
+                        value=config.default_prompt_translator_enable,
+                        info='If disabled, all prompts must be entered in English',
+                        visible = args.args.language != 'en' and args.args.language != 'en_uk')
+
+                    wildcard_line_slider = gr.Slider(label='Wildcard Lines to Interpret',
+                        minimum=0, maximum=380, step=5,
+                        value=config.wildcard_lines_to_interpret,
+                        info='Set to 0 to disable. Large numbers can cause long delays',
+                        visible = args.args.language != 'en' and args.args.language != 'en_uk')
+
+                    translation_methods = gr.Radio(label='', choices='',
+                        value='', interactive=False, visible = False)
+                    mobile_url = gr.Checkbox(label='',
+                        value=False, interactive=False, visible=False)
+
 
                 # custom plugin "OneButtonPrompt"
                 import custom.OneButtonPrompt.ui_onebutton as ui_onebutton
@@ -1360,25 +1429,41 @@ with common.GRADIO_ROOT:
               else:
                 bool_string = 'Disabled'
               print()
-              print(f'Auto-Describe {bool_string}')
+              interpret(f'Auto-Describe {bool_string}')
               return
             auto_describe_checkbox.change(lambda x: toggle_auto_describe(), inputs=auto_describe_checkbox)
 
-            prompt_panel_checkbox.change(lambda x: gr.update(visible=x, open=x if x else True),\
-                inputs=prompt_panel_checkbox, outputs=prompt_wildcards, queue=False, show_progress=False,\
-                _js=switch_js).then(lambda x,y: wildcards_array_show(y['wildcard_in_wildcards'])\
-                if x else wildcards_array_hidden, inputs=[prompt_panel_checkbox, state_topbar],\
-                outputs=wildcards_array, queue=False, show_progress=False)
+
+            comfyd_active_checkbox.change(lambda x: comfyd.active(x), inputs=comfyd_active_checkbox,\
+                queue=False, show_progress=False)
             image_tools_checkbox.change(lambda x,y: gr.update(visible=x)\
                 if "gallery_state" in y and y["gallery_state"] == 'finished_index'\
                 else gr.update(visible=False), inputs=[image_tools_checkbox,state_topbar],\
                 outputs=image_toolbox, queue=False, show_progress=False)
-            comfyd_active_checkbox.change(lambda x: comfyd.active(x), inputs=comfyd_active_checkbox,\
+
+            def translator_control(enable_translator):
+                config.default_prompt_translator_enable = enable_translator
+                common.prompt_translator = enable_translator
+                return gr.update(visible=config.default_prompt_translator_enable)
+
+            prompt_translator_checkbox.change(translator_control,
+                inputs=prompt_translator_checkbox, outputs=translator_button,
                 queue=False, show_progress=False)
+
+            def wildcard_line_control(wildcard_line_slider):
+                config.wildcard_lines_to_interpret = wildcard_line_slider
+                common.wildcard_lines_to_interpret = wildcard_line_slider
+                return wildcard_line_slider
+
+            wildcard_line_slider.change(wildcard_line_control,
+                inputs=wildcard_line_slider,
+                outputs=wildcard_line_slider,
+                queue=False, show_progress=False)
+
             import enhanced.superprompter
-            super_prompter.click(lambda x, y, z: enhanced.superprompter.answer(input_text=translator.convert(f'{y}{x}', z),\
-                seed=image_seed), inputs=[prompt, super_prompter_prompt, translation_methods], outputs=prompt,\
-                queue=False, show_progress=True)
+            super_prompter.click(lambda x, y, z: enhanced.superprompter.answer(input_text=translator.translate(f'{y}{x}', True),
+                seed=image_seed), inputs=[prompt, super_prompter_prompt, translation_methods],
+                outputs=prompt, queue=False, show_progress=True)
             ehps = [backfill_prompt, translation_methods, comfyd_active_checkbox]
 
             def update_state_topbar(name, value, state):
@@ -1412,30 +1497,6 @@ with common.GRADIO_ROOT:
             image_seed, inpaint_engine, inpaint_engine_state, inpaint_mode] + \
             enhance_inpaint_mode_ctrls + [generate_button,
             load_parameter_button] + freeu_ctrls + lora_ctrls
-
-        if not args.args.disable_preset_selection:
-            def _change(preset, is_generating, inpaint_mode):
-                print('[UI] TERRA INCOGNITA - Here be Dragons')
-                print()
-                preset_content = PR.get_preset_content(preset, quiet=False) if preset != 'initial' else {}
-                preset_prepared = modules.meta_parser.parse_meta_from_preset(preset_content)
-
-                default_model = preset_prepared.get('base_model')
-                previous_default_models = preset_prepared.get('previous_default_models', [])
-                checkpoint_downloads = preset_prepared.get('checkpoint_downloads', {})
-                embeddings_downloads = preset_prepared.get('embeddings_downloads', {})
-                lora_downloads = preset_prepared.get('lora_downloads', {})
-                vae_downloads = preset_prepared.get('vae_downloads', {})
-
-                preset_prepared['base_model'], preset_prepared['checkpoint_downloads'] = UIS.download_models(
-                    default_model, previous_default_models, checkpoint_downloads, embeddings_downloads, lora_downloads,
-                    vae_downloads)
-
-                if 'prompt' in preset_prepared and preset_prepared.get('prompt') == '':
-                    del preset_prepared['prompt']
-
-                return modules.meta_parser.load_parameter_button_click(json.dumps(preset_prepared), is_generating, inpaint_mode)
-
 
         def inpaint_engine_state_change(inpaint_engine_version, *args):
             if inpaint_engine_version == 'empty' or inpaint_engine_version == None or not inpaint_engine_version:
@@ -1567,19 +1628,21 @@ with common.GRADIO_ROOT:
 
             return [json.dumps(loaded_json), gr.update(visible=False), gr.update(visible=True), gr.update()]
 
-        prompt.input(parse_meta, inputs=[prompt, state_is_generating, state_topbar, prompt_panel_checkbox],\
-            outputs=[prompt, generate_button, load_parameter_button, prompt_panel_checkbox], queue=False, show_progress=False)
+        prompt.input(parse_meta, inputs=[prompt, state_is_generating, state_topbar, prompt_panel_checkbox],
+            outputs=[prompt, generate_button, load_parameter_button, prompt_panel_checkbox],
+            queue=False, show_progress=False)
 
-        translator_button.click(lambda x, y: translator.convert(x, y), inputs=[prompt, translation_methods],\
+        translator_button.click(enhanced.translator.translate, inputs=prompt,
             outputs=prompt, queue=False, show_progress=True)
 
-        load_parameter_button.click(modules.meta_parser.load_parameter_button_click,\
-            inputs=[prompt, state_is_generating, inpaint_mode], outputs=load_data_outputs, queue=False, show_progress=False)
+        load_parameter_button.click(modules.meta_parser.load_parameter_button_click,
+            inputs=[prompt, state_is_generating, inpaint_mode],
+            outputs=load_data_outputs, queue=False, show_progress=False)
 
         def trigger_metadata_import(file, state_is_generating, state_params):
             parameters, metadata_scheme = modules.meta_parser.read_info_from_image(file)
             if parameters is None:
-                print('Could not find metadata in the image!')
+                interpret('Could not find metadata in the image!')
             return toolbox.reset_params_by_image_meta(parameters, state_params, state_is_generating, inpaint_mode)
 
         reset_preset_layout = [params_backend, performance_selection,
@@ -1604,7 +1667,7 @@ with common.GRADIO_ROOT:
                 skip_button, generate_button, gallery,
                 state_is_generating, index_radio,
                 image_toolbox, prompt_info_box] +
-                protections + [params_backend],             show_progress=False) \
+                protections + [params_backend], show_progress=False) \
             .then(fn=refresh_seed, inputs=[seed_random, image_seed],
                 outputs=image_seed) \
             .then(fn=get_task, inputs=ctrls, outputs=currentTask) \
@@ -1756,7 +1819,7 @@ with common.GRADIO_ROOT:
 
 
     common.GRADIO_ROOT.load(fn=lambda x: x, inputs=system_params, outputs=state_topbar, _js=UIS.get_system_params_js, queue=False, show_progress=False) \
-              .then(UIS.init_nav_bars, inputs=state_topbar, outputs=nav_bars + [progress_window, language_ui, background_theme, gallery_index, index_radio, inpaint_advanced_masking_checkbox, preset_instruction], show_progress=False) \
+              .then(UIS.init_nav_bars, inputs=state_topbar, outputs=nav_bars + [progress_window, background_theme, gallery_index, index_radio, inpaint_advanced_masking_checkbox, preset_instruction], show_progress=False) \
               .then(UIS.reset_layout_params, inputs=reset_preset_inputs, outputs=reset_layout_params, show_progress=False) \
               .then(fn=lambda x: x, inputs=state_topbar, outputs=system_params, show_progress=False) \
               .then(fn=lambda x: {}, inputs=system_params, outputs=system_params, _js=UIS.refresh_topbar_status_js) \

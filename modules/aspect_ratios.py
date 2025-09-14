@@ -4,6 +4,7 @@ import args_manager as args
 import common
 import modules.config as config
 import modules.constants as constants
+from enhanced.translator import interpret
 
 
 # Initialize the the current aspect ratio template
@@ -53,7 +54,7 @@ def find_the_height(arg_width):
     arg_width = arg_width.strip("(,")
     height = ''
     print()
-    print(f'Checking for a match to the {arg_width} pixel width')
+    interpret('Checking for a match to the pixel width:', arg_width)
     for AR_value in AR_template_values:
         split_value = AR_value.split('*')
         if arg_width == split_value[0]:
@@ -64,7 +65,7 @@ def find_the_height(arg_width):
             AR_pair = '1152*864'    # 4:3
         elif AR_pair == '1344*768': # 7:4
             AR_pair = '1344*756'    # 16:9
-        print(f'Restoring the {AR_pair} aspect ratio')
+        interpret('Restoring the aspect ratio:', AR_pair)
         common.current_AR = AR_pair
         split_value = AR_pair.split('*')
         width = split_value[0]
@@ -98,10 +99,10 @@ def AR_split(x):
             common.current_AR = assign_default_by_template(AR_template)
             width, height = do_the_split(common.current_AR)
             print()
-            print(f'Reverting to the default aspect ratio: {common.current_AR}')
+            print('Reverting to the default aspect ratio:', common.current_AR)
         else:
             print()
-            print(f'Adjusting the aspect ratio value to {common.current_AR}')
+            print('Adjusting the aspect ratio value to:', common.current_AR)
     return width, height
 
 def add_ratio(x):
@@ -146,7 +147,7 @@ def save_current_aspect(x):
     if x != '':
         common.current_AR = f'{x.split(",")[0]}'
         x = common.current_AR
-    print(f'{AR_template} Aspect Ratio: {common.current_AR}')
+    interpret('Aspect Ratio:', AR_template + ' / ' + common.current_AR)
     aspect_info_info = get_aspect_info_info()
     aspect_info_value = f'{AR_template} Template'
     return gr.update(), gr.update(value=aspect_info_value),\
@@ -182,7 +183,7 @@ def reset_aspect_ratios(arg_AR):
         results = [gr.update(visible=False)] * 3 + [gr.update(value=aspect_ratios, visible=True)]
     else:        # Standard template
         results = [gr.update(value=aspect_ratios, visible=True)] + [gr.update(visible=False)] * 3
-    print(f'Using the {AR_template} template with the Aspect Ratio: {common.current_AR}')
+    interpret('Using the template with the Aspect Ratio:', AR_template + ' / ' + common.current_AR)
     return results
 
 # a preset change is required to enable a reliable switch between Standard & Shortlist templates
@@ -216,7 +217,7 @@ def validate_AR(arg_AR, arg_template): # when switching between template
     AR_labels = common.full_AR_labels[arg_template]
     # test for a perfect match:
     if arg_AR in AR_labels:
-        print(f'Found the same {arg_AR} values in {arg_template}')
+        interpret(f'Found the same {arg_AR} values in:', arg_template)
     else: # test for a match by AR only, not by actual dimensions:
         substrings = []
         split_AR = arg_AR.split('| ')
@@ -224,12 +225,12 @@ def validate_AR(arg_AR, arg_template): # when switching between template
             substrings = get_substrings(AR_labels, split_AR[1])
         if substrings:
             arg_AR = substrings[0]
-            print(f'Found the same {split_AR[1]} aspect ratio in {arg_template}')
+            interpret(f'Found the same {split_AR[1]} aspect ratio in:', arg_template)
         else: # default to the default AR for that template:
             arg_AR = assign_default_by_template(arg_template)
             if len(split_AR) == 2:
-                print(f'Could not find the same {split_AR[1]} aspect ratio in {arg_template}.')
-                print(f'Using the default {arg_AR} aspect ratio instead.')
+                interpret(f'Could not find the same {split_AR[1]} aspect ratio in:', arg_template)
+                print('Using the default aspect ratio instead:', arg_AR)
     return arg_AR
 
 def toggle_shortlist(arg_shortlist):
@@ -241,14 +242,14 @@ def toggle_shortlist(arg_shortlist):
         # this ensures that Shortlist does not start with an invalid value:
         common.current_AR = validate_AR(common.current_AR, AR_template)
         print()
-        print('Switching to the Shortlist template requires a preset change:')
+        interpret('Switching to the Shortlist template requires a preset change:')
         working_preset = reset_preset()
     elif AR_template == 'Shortlist' and not config.enable_shortlist_aspect_ratios:
         AR_template = 'Standard'
         # potentially a user could add a value to Shortlist that Standard does not have:
         common.current_AR = validate_AR(common.current_AR, AR_template)
         print()
-        print('Switching to the Standard template requires a preset change:')
+        interpret('Switching to the Standard template requires a preset change:')
         working_preset = reset_preset()
     aspect_info_info = get_aspect_info_info()
     return gr.update(), gr.update(value=f'{AR_template} Template'),\
