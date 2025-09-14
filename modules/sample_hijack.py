@@ -1,6 +1,7 @@
 import torch
 import ldm_patched.modules.samplers
 import ldm_patched.modules.model_management
+import common
 
 from collections import namedtuple
 from ldm_patched.contrib.external_align_your_steps import AlignYourStepsScheduler
@@ -181,6 +182,9 @@ def calculate_sigmas_scheduler_hacked(model, arg_scheduler, steps):
     elif scheduler_name == "lcm" or scheduler_name == "tcd" or scheduler_name == "edm_playground_v2.5":
         pass
     else:
+        if scheduler_name != "karras":
+            print(f'Unsupported scheduler "{scheduler_name}" replaced by "karras"')
+            common.scheduler_name = 'karras'
         scheduler_name = "karras"
         sigmas = k_diffusion_sampling.get_sigmas_karras(n=steps, sigma_min=float(model.model_sampling.sigma_min), sigma_max=float(model.model_sampling.sigma_max))
     return sigmas
