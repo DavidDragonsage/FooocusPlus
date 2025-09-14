@@ -163,9 +163,7 @@ def sample_hacked(model, noise, positive, negative, cfg, device, sampler, sigmas
 @torch.inference_mode()
 def calculate_sigmas_scheduler_hacked(model, arg_scheduler, steps):
     scheduler_name = verify_scheduler(arg_scheduler)
-    if scheduler_name == "karras":
-        sigmas = k_diffusion_sampling.get_sigmas_karras(n=steps, sigma_min=float(model.model_sampling.sigma_min), sigma_max=float(model.model_sampling.sigma_max))
-    elif scheduler_name == "exponential":
+    if scheduler_name == "exponential":
         sigmas = k_diffusion_sampling.get_sigmas_exponential(n=steps, sigma_min=float(model.model_sampling.sigma_min), sigma_max=float(model.model_sampling.sigma_max))
     elif scheduler_name == "normal":
         sigmas = normal_scheduler(model, steps)
@@ -180,8 +178,11 @@ def calculate_sigmas_scheduler_hacked(model, arg_scheduler, steps):
     elif scheduler_name == "align_your_steps":
         model_type = 'SDXL' if isinstance(model.latent_format, ldm_patched.modules.latent_formats.SDXL) else 'SD1'
         sigmas = AlignYourStepsScheduler().get_sigmas(model_type=model_type, steps=steps, denoise=1.0)[0]
+    elif scheduler_name == "lcm" or scheduler_name == "tcd" or scheduler_name == "edm_playground_v2.5":
+        pass
     else:
-        raise TypeError("error invalid scheduler")
+        scheduler_name = "karras"
+        sigmas = k_diffusion_sampling.get_sigmas_karras(n=steps, sigma_min=float(model.model_sampling.sigma_min), sigma_max=float(model.model_sampling.sigma_max))
     return sigmas
 
 

@@ -82,9 +82,14 @@ import torchruntime
 import platform
 from modules.user_structure import cleanup_structure
 
-cleanup_structure(args.directml, args.user_dir,
-    python_embedded_path, win32_root)
 
+try:
+    cleanup_structure(args.directml, args.user_dir,
+        python_embedded_path, win32_root)
+except:
+    print('Please restart FooocusPlus to finish updating')
+    print()
+    quit()
 
 def prepare_environment():
     global torch_ver, fooocusplus_ver, hotfix

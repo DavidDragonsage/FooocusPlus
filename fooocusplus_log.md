@@ -18,7 +18,8 @@
 * "Mask Erode or Dilate" is available only if "Enable Advanced Masking" is checked
 * removed the "allow_custom_value" option from the Sampler and Scheduler controls
 * "zh" is now the language detector for Simplified Chinese but "cn" is accepted
-* Hotfix0: None
+* Hotfix1: added console message to restart to finish updating
+  * in sample_hijack.py, falls back to "Karras" if scheduler error
 
 
 # 1.0.7 Flux1 Krea & Enhancements

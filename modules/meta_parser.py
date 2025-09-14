@@ -33,7 +33,7 @@ get_layout_empty_visible_inter = lambda x,y,z: gr.update(visible=x not in y, int
 def verify_sampler(arg_sampler):
     if arg_sampler in sampler_list:
         common.sampler_name = arg_sampler
-    elif common.scheduler_name in scheduler_list:
+    elif common.scheduler_name in sampler_list:
         return common.sampler_name
     else:
         common.sampler_name = config.default_sampler
