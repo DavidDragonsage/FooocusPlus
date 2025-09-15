@@ -335,6 +335,7 @@ class LoraMetadataExtractor:
         return metadata_list
 
 def main():
+    return
     """Example usage of LoraMetadataExtractor."""
     print(f'Processing LoRAs from {config.paths_loras[0]}')
     lora_dir = Path(config.paths_loras[0])
@@ -348,16 +349,20 @@ def main():
 #    output_dir = "UserDir/triggerwords"  # FooocusPlus's triggerword directory
     extractor = LoraMetadataExtractor(lora_dir, output_dir, debug=False)
     metadata = extractor.extract_metadata()
+    print()
     print(f"Extracted metadata for {len(metadata)} LoRA models:")
     for item in metadata:
         triggers = ', '.join(item['trigger_words'])
         print(f"- {item['file_name']}: {item['base_model']}, Triggers: {triggers}")
         if item.get('civitai_info'):
-            print(f"  Civitai ID: {item['civitai_info'].get('civitai_model_id')}, Name: {item['civitai_info'].get('civitai_description')[:50]}...")
+            print(f"  Civitai ID: {item['civitai_info'].get('civitai_model_id')}")
+            print(f"Name: {item['civitai_info'].get('civitai_description')[:50]}...")
+#            print(f"  Civitai ID: {item['civitai_info'].get('civitai_model_id')}, Name: {item['civitai_info'].get('civitai_description')[:50]}...")
             if item['civitai_info'].get('civitai_images'):
                 print(f"  Thumbnail: {item['thumbnail_filename']}")
         if item.get('metadata_filename'):
             print(f"  Metadata File: {item['metadata_filename']}")
+        return
 
 if __name__ == "__main__":
     main()

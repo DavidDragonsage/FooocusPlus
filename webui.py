@@ -44,12 +44,10 @@ import enhanced.comfy_task as comfy_task
 from enhanced.backend import comfyd
 from backend_base.__init__ import get_torch_xformers_cuda_version as torch_info
 
-print()
 translator.interpret('[UI] Initializing the user interface...')
 print()
-#import modules.lme4fp_civitai
-#modules.lme4fp_civitai.main()
-#print()
+import modules.lme4fp_civitai
+modules.lme4fp_civitai.main()
 
 image_seed = '0'        # initialize working seed
 saved_seed = '0'        # initialize seed saver
