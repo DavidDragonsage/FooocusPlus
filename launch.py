@@ -14,10 +14,10 @@ fooocusplus_ver, hotfix, hotfix_title = version.get_fooocusplus_ver()
 
 if not version.get_required_library():
     print()
-    print('The installed Python library does not support')
-    print(f'FooocusPlus {fooocusplus_ver}')
+    print(f'Python Library {version.get_library_ver()} does not support FooocusPlus {fooocusplus_ver}')
     print('Please install the new python_embedded archive from')
-    print('https://huggingface.co/DavidDragonsage/FooocusPlus/')
+    print('https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/python_embedded.7z')
+    print('The library needs to be extracted to the FooocusPlus directory')
     print()
     quit()
 

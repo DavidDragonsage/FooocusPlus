@@ -83,7 +83,7 @@ Language and other optional startup files are available in the FooocusPlus\UserD
 - French: run_FooocusPlus_française.bat
 - Spanish: run_FooocusPlus_español.bat
 
-A total of 40 languages are supported by FooocusPlus, but the majority only provide Prompt Translator, dynamic status reports and console window translation in the selected language. There are several limited support language files in the batch_startups folder, and details on how to setup other languages in the Wiki. Please start with [Language An Introduction](https://github.com/DavidDragonsage/FooocusPlus/wiki/Language-An-Introduction).
+A total of 40 languages are supported by FooocusPlus, but the majority only provide Prompt Translator, dynamic status reports, Wildcard and console window translation in the selected language. There are several limited support language files in the batch_startups folder, and details on how to setup other languages in the Wiki. Please start with [Language An Introduction](https://github.com/DavidDragonsage/FooocusPlus/wiki/Language-An-Introduction).
 
 ## Getting Help
 

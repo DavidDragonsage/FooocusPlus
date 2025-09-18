@@ -201,7 +201,6 @@ title = f'FooocusPlus {fooocusplus_ver}.{hotfix_title}'
 common.GRADIO_ROOT = gr.Blocks(
     title=title, css=toolbox.css).queue()
 
-
 with common.GRADIO_ROOT:
     state_topbar = gr.State({})
     # obsolete parameter
@@ -997,11 +996,7 @@ with common.GRADIO_ROOT:
                     style_names=legal_style_names,
                     default_selected=config.default_styles)
 
-                # initialize for use by the Styles row:
-                black_out_nsfw = config.default_black_out_nsfw
-
-                with gr.Row(visible=not black_out_nsfw and not config.default_black_out_nsfw) as styles_row:
-                    gr.HTML('<a href="https://docs.google.com/spreadsheets/d/10UXU59fBA5wZrcEEvgv1MTf1MSNTCB5PT4fNxsAst8E/edit?gid=2125777153#gid=2125777153" target="_blank">\U0001F4DA Documentation</a><br>* Warning: this link displays some artistic nudity')
+                gr.HTML('<a href="https://daviddragonsage-fooocusplus.static.hf.space/index.html" target="_blank">\U0001F4DA Documentation</a>')
 
                 style_search_bar = gr.Textbox(show_label=False, container=False,
                     placeholder="\U0001F50E Type here to search styles...",
@@ -1214,12 +1209,11 @@ with common.GRADIO_ROOT:
                             info='Use black image if NSFW is detected')
 
                         def set_nsfw_change(x):
-                            return gr.update(value=x, interactive=not x),\
-                                gr.update(visible=not x)
+                            return gr.update(value=x, interactive=not x)
 
                         black_out_nsfw.change(set_nsfw_change,
                             inputs=black_out_nsfw,
-                            outputs=[disable_preview, styles_row],
+                            outputs=disable_preview,
                             queue=False, show_progress=False)
 
                         if not args.args.disable_image_log:

@@ -8,6 +8,5 @@ progress_html = '''
 </div>
 '''
 
-
-def make_progress_html(number, text):
+def make_progress_html(number, text): # display the progress bar
     return progress_html.replace('*number*', str(number)).replace('*text*', text)

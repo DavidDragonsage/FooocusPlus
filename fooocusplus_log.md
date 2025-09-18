@@ -18,11 +18,14 @@
 * "Mask Erode or Dilate" is available only if "Enable Advanced Masking" is checked
 * removed the "allow_custom_value" option from the Sampler and Scheduler controls
 * "zh" is now the language detector for Simplified Chinese but "cn" is accepted
+* Hotfix4: the Stylesheet is reformatted and supports all FooocusPlus styles
+  * replaced the six nude images and removed the nudity warning
+  * also improved the messaging for using an obsolete Python library
 * Hotfix3: restored the proper detection of Windows and python_embedded
   * this change enable the python_embedded version to be reported correctly
   * updated language information in the FooocusPlus readme file
 * Hotfix2: removed unnecessary console message to restart to finish updating
-  * added console message if fallback to "karras" occurs and updated common
+  * added console message if fallback to "karras" occurs and updates common
 * Hotfix1: added console message to restart to finish updating
   * in sample_hijack.py, falls back to "karras" if scheduler error
 
