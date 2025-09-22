@@ -418,7 +418,7 @@ def save_preset(*args):
     load_parameter_button = args.pop()
          # note, freeu_ctrls are not actually saved to a preset
     try: # error control from FooocusPlus 1.0.8.5, user reported float error
-        freeu_ctrls = [(args.pop()), (args.pop()), (args.pop()), (args.pop()), (args.pop())]
+        freeu_ctrls = [(args.pop()), (args.pop()), (args.pop()), (args.pop()), (args.pop())] # removed forced type control on args.pop()
     except:
         freeu_ctrls = config.default_freeu
     loras = [(bool(args.pop()), str(args.pop()), float(args.pop())) for _ in range(config.default_max_lora_number)]
