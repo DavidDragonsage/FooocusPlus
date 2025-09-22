@@ -888,7 +888,8 @@ default_mixing_image_prompt_and_inpaint = get_config_item_or_set_default(
     validator=lambda x: isinstance(x, bool)
 )
 
-default_freeu = ads.default['freeu']
+default_freeu = [1.01, 1.02, 0.99, 0.95]
+
 default_adm_guidance = [ads.default['adm_scaler_positive'], ads.default['adm_scaler_negative'], ads.default['adm_scaler_end']]
 styles_definition = {}
 instruction = ''

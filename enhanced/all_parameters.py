@@ -73,7 +73,6 @@ default = {
     'canny_low_threshold': 64,
     'canny_high_threshold': 128,
     'refiner_swap_method': 'joint',
-    'freeu': [1.01, 1.02, 0.99, 0.95],
     'debugging_inpaint_preprocessor': False,
     'inpaint_disable_initial_latent': False,
     'inpaint_engine': 'v2.6',

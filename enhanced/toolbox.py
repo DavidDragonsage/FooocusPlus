@@ -416,7 +416,11 @@ def save_preset(*args):
     enhance_inpaint_mode_ctrls = [args.pop() for _ in range(config.default_enhance_tabs)]
     generate_button = args.pop()
     load_parameter_button = args.pop()
-    freeu_ctrls = [bool(args.pop()), float(args.pop()), float(args.pop()), float(args.pop()), float(args.pop())]
+         # note, freeu_ctrls are not actually saved to a preset
+    try: # error control from FooocusPlus 1.0.8.5, user reported float error
+        freeu_ctrls = [bool(args.pop()), float(args.pop()), float(args.pop()), float(args.pop()), float(args.pop())]
+    except:
+        freeu_ctrls = config.default_freeu
     loras = [(bool(args.pop()), str(args.pop()), float(args.pop())) for _ in range(config.default_max_lora_number)]
 
     if save_name:
