@@ -1,8 +1,9 @@
 import os
+import gradio as gr
 import logging
 from pathlib import Path
 from modules.launch_util import verify_installed_version
-import args_manager as args
+from args_manager import args
 import common
 import modules.user_structure as US
 
@@ -17,25 +18,34 @@ language_name = ''
 def interpret(txt_translate, txt_no_translate = '', silent = False):
     # for console messages only, not for the UI
     # always translates from English to the selected language
-    if not args.args.language.startswith('en') and txt_translate:
+    if not args.language.startswith('en') and txt_translate:
         import argostranslate.translate
         txt_translate = txt_translate.replace('_',' ')
         logging.getLogger("stanza").disabled = True
         try:    # workaround for occasional "Access is denied" errors
-            txt_translate = argostranslate.translate.translate(txt_translate, "en", args.args.language)
+            txt_translate = argostranslate.translate.translate(txt_translate, "en", args.language)
         except:
             pass
-    txt_translate = (txt_translate + " " + str(txt_no_translate)).strip()
+    txt_translated = (txt_translate + " " + str(txt_no_translate)).strip()
     if not silent:
-        print(txt_translate)
-    return txt_translate
+        print(txt_translated)
+    return txt_translated
 
+def interpret_info(txt_translate, txt_no_translate = '', silent = False):
+    txt_translated = interpret(txt_translate, txt_no_translate, silent)
+    gr.Info(txt_translated)
+    return
+
+def interpret_warn(txt_translate, txt_no_translate = '', silent = False):
+    txt_translated = interpret(txt_translate, txt_no_translate, silent)
+    gr.Warning(txt_translated)
+    return
 
 def translate(txt_translate, auto=False):
     # auto = txt_translate entered by code, not from UI Translate button
     # do not translate English or pre-translated text that starts with a space)
     global english_from_language, english_to_language, language_from_english, language_to_english
-    if not args.args.language.startswith('en') and txt_translate and common.prompt_translator:
+    if not args.language.startswith('en') and txt_translate and common.prompt_translator:
         if txt_translate.startswith(' ') and auto:
             return txt_translate
         import argostranslate.translate
@@ -43,12 +53,12 @@ def translate(txt_translate, auto=False):
         logging.getLogger("stanza").disabled = True
         if txt_translate.startswith(' '):
             print(f'{language_from_english}: "{txt_translate}"')
-            txt_translate = argostranslate.translate.translate(txt_translate, "en", args.args.language)
+            txt_translate = argostranslate.translate.translate(txt_translate, "en", args.language)
             print()
             print(f'{english_to_language}: "{txt_translate}"')
         else:
             print(f'{english_from_language}: "{txt_translate}"')
-            txt_translate = argostranslate.translate.translate(txt_translate, args.args.language, "en")
+            txt_translate = argostranslate.translate.translate(txt_translate, args.language, "en")
             if auto == False:
                txt_translate = ' ' + txt_translate # space indicates text that is already translated
             print()
@@ -150,7 +160,7 @@ def load_translator_pack(from_code, to_code):
             translated_msg = argostranslate.translate.translate(install_msg, to_code, from_code)
         print(translated_msg)
     else:
-        args.args.language = 'en' # revert to English for non-supported languages
+        args.language = 'en' # revert to English for non-supported languages
         print(f"No package found for translating from '{from_code}' to '{to_code}'")
     return
 
@@ -168,9 +178,9 @@ def load_translator():
         logging.getLogger("stanza").disabled = True
 
         # Download and install an Argos Translate language package
-        if args.args.language == 'cn':
-            args.args.language = 'zh' # use language code instead of country code
-        load_translator_pack("en", args.args.language)
-        load_translator_pack(args.args.language, "en")
-        check_localization(args.args.language)
+        if args.language == 'cn':
+            args.language = 'zh' # use language code instead of country code
+        load_translator_pack("en", args.language)
+        load_translator_pack(args.language, "en")
+        check_localization(args.language)
     return
