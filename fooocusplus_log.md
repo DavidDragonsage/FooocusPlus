@@ -18,6 +18,8 @@
 * "Mask Erode or Dilate" is available only if "Enable Advanced Masking" is checked
 * removed the "allow_custom_value" option from the Sampler and Scheduler controls
 * "zh" is now the language detector for Simplified Chinese but "cn" is accepted
+* Hotfix6: Gradio information moved from footer to System Information
+  * prepared enhanced.version module for FooocusPlus 1.0.9
 * Hotfix5: introduced error control on FreeU values during Save Preset
 * Hotfix4: the Stylesheet is reformatted and supports all FooocusPlus styles
   * replaced the nude and questionable images; removed the nudity warning

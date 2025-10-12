@@ -59,6 +59,10 @@ progress::after {
 
 /* Style other texts */
 
+footer {
+    display: none !important;
+}
+
 .centre{
   text-align: center;
 }
@@ -426,6 +430,13 @@ div:has(> #positive_prompt) {
 }
 #inpaint_brush_color input[type=color]{
   background: none;
+}
+
+#recover_info {
+    font-size: 12px !important;
+    font-weight: normal !important;
+    margin-top: 5px !important;
+    margin-bottom: -10px !important;
 }
 
 .systemMsg {

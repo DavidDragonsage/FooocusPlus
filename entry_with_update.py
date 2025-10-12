@@ -6,15 +6,15 @@ ROOT = Path(__file__).parent
 sys.path.append(str(ROOT))
 os.chdir(ROOT)
 
-
-try:
-    import enhanced.version as version
-    old_version, old_hotfix, old_hotfix_title = version.get_fooocusplus_ver()
-    print(f'Welcome to FooocusPlus {old_version}.{old_hotfix_title}: checking for updates...')
-except:
-    print('Please restart FooocusPlus to finish the update')
-    print()
-    quit()
+import common
+#try:
+import enhanced.version as version
+old_version, old_hotfix, old_hotfix_title = version.get_fooocusplus_ver()
+print(f'Welcome to FooocusPlus {old_version}.{old_hotfix_title}: checking for updates...')
+#except:
+#    print('Please restart FooocusPlus to finish the update')
+#    print()
+#    quit()
 
 # transition between the two possible locations
 # for verify_installed_version
@@ -85,10 +85,15 @@ except Exception as e:
     print(str(e))
 
 new_version, new_hotfix, new_hotfix_title = version.get_fooocusplus_ver()
-if new_version != old_version:
-    print(f'Updated FooocusPlus from {old_version} to {new_version}')
-elif new_hotfix != old_hotfix:
-    print(f'Updated FooocusPlus to Hotfix {new_hotfix}')
+try:
+    if new_version != old_version:
+        print(f'Updated FooocusPlus from {old_version} to {new_version}')
+        common.version_update = 2
+    elif new_hotfix != old_hotfix:
+        print(f'Updated FooocusPlus to Hotfix {new_hotfix}')
+        common.version_update = 1
+except:
+    pass
 print()
 
 from launch import *

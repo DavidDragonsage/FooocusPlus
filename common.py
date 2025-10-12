@@ -5,6 +5,12 @@ from pathlib import Path
 GRADIO_ROOT = None
 MODELS_INFO = None
 
+# tracks update events
+# set by entry_with_update, checked by webui
+# and processed by enhanced.version.announce_version()
+# 0 = no change, 1 = hotfix, 2 = new version
+version_update = 0
+
 # Store the current prompts and image quantity
 # used to restore prompts after a preset change clears them
 # Both prompts are initialized by config.txt via modules.config
@@ -55,3 +61,8 @@ preset_file_path = 'presets\Favorite\Default.json'
 
 # set by modules.preset_resource (PR) get_preset_content(preset)
 preset_content = []
+
+# set by launch.py if using a specific (non-default) preset startup
+# read by async_worker __init__() for specif preset startups
+# cleared by PR.set_preset_selection() if UI changes the preset
+default_engine = {}

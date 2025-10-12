@@ -8,7 +8,9 @@ from modules.launch_util import is_win32_standalone_build, \
 
 
 fooocusplus_ver = ''
+fooocusplus_line = ''
 hotfix = ''
+hotfix_line = ''
 hotfix_title = ''
 
 required_path = Path('required_library.py')
@@ -40,15 +42,18 @@ def get_required_library():
     else:
         return False
 
+
 def get_fooocusplus_ver():
-    global fooocusplus_ver, hotfix, hotfix_title
+    global fooocusplus_ver, hotfix, hotfix_title, fooocusplus_line, hotfix_line
     current_dir = Path.cwd().resolve()
     log_txt = US.load_textfile(Path(current_dir/'fooocusplus_log.md'))
     if log_txt == False:
         return '0.9.0', '0', '0'    # fooocusplus_ver fallback
     else:
-        fooocusplus_ver = US.locate_value(log_txt, "# ", terminator=' ')
-        hotfix = US.locate_value(log_txt, "* Hotfix", terminator=':')
+        fooocusplus_ver = US.locate_value(log_txt, '# ', terminator=' ')
+        fooocusplus_line = US.locate_value(log_txt, (f'# {fooocusplus_ver} '), terminator='')
+        hotfix = US.locate_value(log_txt, '* Hotfix', terminator=':')
+        hotfix_line = US.locate_value(log_txt, f'* Hotfix{hotfix}:', terminator='')
         if fooocusplus_ver == '':
             return '0.9.9', '0', '0' # secondary fallback
     if hotfix == '':
@@ -58,3 +63,34 @@ def get_fooocusplus_ver():
     else:
         hotfix_title = hotfix
     return fooocusplus_ver, hotfix, hotfix_title
+
+
+def announce_version():
+    # 1 = hotfix, 2 = new version
+    import common
+    import gradio as gr
+    from args_manager import args
+    from enhanced.translator import interpret
+    global fooocusplus_ver, fooocusplus_line, hotfix, hotfix_line
+    if common.version_update == 2 and fooocusplus_ver[0] != '0':
+        interpret('Welcome to', f'FooocusPlus {fooocusplus_ver}:')
+        temp_str1 = interpret('Welcome to', '', True)
+        if args.language.startswith('en') or args.language == 'es' \
+            or args.language == 'fr' or args.language == 'pt':
+            temp_str2 = f' FooocusPlus {fooocusplus_ver}:      ' + '\n'
+        else:
+            temp_str2 = f' FooocusPlus {fooocusplus_ver}: ' + '\n'
+        temp_str3 = interpret(fooocusplus_line)
+        gr.Info(temp_str1 + temp_str2 + temp_str3)
+        if int(hotfix) > 0:
+            common.version_update = 1
+    if common.version_update == 1:
+        interpret('Updated to', f'FooocusPlus Hotfix {hotfix}:')
+        temp_str1 = interpret('Updated to', '', True)
+        if args.language.startswith('en'):
+            temp_str2 = f' FooocusPlus Hotfix {hotfix}:     ' + '\n'
+        else:
+            temp_str2 = f' FooocusPlus Hotfix {hotfix}: ' + '\n'
+        temp_str3 = interpret(hotfix_line)
+        gr.Info(temp_str1 + temp_str2 + temp_str3)
+    return

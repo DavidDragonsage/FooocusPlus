@@ -1372,7 +1372,7 @@ with common.GRADIO_ROOT:
                     Video System: {video_system}<br>\
                     Python {platform.python_version()}, Library {version.get_library_ver()}, \
                     Comfy {comfy.comfy_version.version}<br>\
-                    Torch {torch_ver}{cuda_ver}, Xformers {xformers_ver}<br>\
+                    Gradio {gr.__version__}, Torch {torch_ver}{cuda_ver}, Xformers {xformers_ver}<br>\
                     FooocusPlus {fooocusplus_ver}, Hotfix {hotfix}')
 
                 with gr.Row():
