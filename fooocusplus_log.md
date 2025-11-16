@@ -1,11 +1,11 @@
 # 1.0.8 Prompt Translation
 
 * installs any of 40 language packs available from Argos Translate
-* prompt translation is either automatic or may be manually selected from the UI
-* most messages in the console window are interpreted into the selected language
-* most dynamic status messages shown in the user interface are also interpreted
+* prompt translation is automatic or may be manually selected from the UI
+* most messages in the console window are interpreted in the selected language
+* most dynamic status messages shown in the UI are also interpreted
 * Wildcard names and a controlled amount of Wildcard Contents are interpreted
-* the number of interpreted lines is set by a control in Extras and in config.txt
+* the number of interpreted lines is set in Extras and in config.txt
 * in the UI, the number of Wildcards per page is increased from 28 to 35
 * the "Refresh All Files" button now adds new Wildcards to the display
 * the Translate feature may be disabled from an Extras option or in config.txt
@@ -14,10 +14,10 @@
 * samples of all available styles are shown in the Styles Documentation link
 * this link has a nudity warning, due to 6 NSFW images out of a total of 1104
 * due to the NSFW content, this link is removed if "black_out_nsfw" is enabled
-* moved the "Mask Erode or Dilate" control from Expert Mode to Inpaint or Outpaint
+* moved the "Mask Erode or Dilate" control from Expert Mode to Inpaint/Outpaint
 * "Mask Erode or Dilate" is available only if "Enable Advanced Masking" is checked
 * removed the "allow_custom_value" option from the Sampler and Scheduler controls
-* "zh" is now the language detector for Simplified Chinese but "cn" is accepted
+* "zh" is the language detector for Simplified Chinese but "cn" is accepted<br/>
 * Hotfix6: Gradio information moved from footer to System Information
   * prepared enhanced.version module for FooocusPlus 1.0.9
 * Hotfix5: introduced error control on FreeU values during Save Preset
@@ -30,7 +30,7 @@
 * Hotfix2: removed unnecessary console message to restart to finish updating
   * added console message if fallback to "karras" occurs and updates common
 * Hotfix1: added console message to restart to finish updating
-  * in sample_hijack.py, falls back to "karras" if scheduler error
+  * in sample_hijack.py, falls back to "karras" if scheduler error<br/><br/>
 
 
 # 1.0.7 Flux1 Krea & Enhancements
