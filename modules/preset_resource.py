@@ -232,10 +232,14 @@ def select_data_from_preset(preset_content):
 
 
 def get_preset_content(preset, quiet=True):
-    if common.metadata_loading and common.log_metadata:
-        preset_content = US.verify_dictionary(common.log_metadata)
-        common.preset_content = preset_content
-        return preset_content
+    try:
+        if common.metadata_loading and common.log_metadata:
+            preset_content = US.verify_dictionary(common.log_metadata)
+            common.preset_content = preset_content
+            return preset_content
+    except:
+        common.metadata_loading = False
+        common.log_metadata = []
     preset_file = find_preset_file(preset)
     if preset_file:
         try:
