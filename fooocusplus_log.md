@@ -1,4 +1,4 @@
-# 1.0.9 Add/Remove to/from Favourites, Batch Generation, Image Grid, Image Grids, Image Recovery, New Styles & UI Popup Messages
+# 1.0.9 Add/Remove to/from Favourites, Batch Generation, Image Editor, Image Grids, Image Recovery, New Styles & UI Popup Messages
 
 * introduced Add/Remove Current Preset to/from Favorites
   * for new users, the Favorites are: Default, Cheyenne18,
