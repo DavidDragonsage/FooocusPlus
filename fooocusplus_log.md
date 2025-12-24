@@ -49,7 +49,9 @@
   * Recover Images, Image Format, Save Metadata to Images, Metadata Scheme,
   * Disable Image Log, Show Newest Images First, Disable Preview,
   * Black Out NSFW & Save Only the Final Enhanced Image
-* Apply Metadata and Load Parameters now work correctly with Flux models
+* regenerating images from the log, image metadata or gallery work correctly
+  * the Current Preset field is updated correctly
+  * Apply Metadata and Load Parameters now work correctly with Flux models
 * moved all args_parser command line argument coding to args_manager
   * deleted args_parser.py, options.py and latent_visualization.py
 * corrected args.directml coding so that it properly sets the device ID
@@ -71,8 +73,6 @@
 * startup preset batch files now set all parameters correctly
   * introduced the Flux1Krea8 and SD1.5_RealVis startup batch files
   * replaced the Juggernaut & HyperFlux presets with Juggernaut8 & HyperFlux5
-* regenerating images from the log, image metadata or gallery work correctly
-  * the Current Preset field is updated correctly
 * the Custom startup batch file and the Custom preset have been removed
 * added the Rossetti Steampunk, Science Fiction and World styles
 * added 36 new TaffyCarl (Carl Bratcher) styles(!) and updated the Stylesheet
