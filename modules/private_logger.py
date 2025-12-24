@@ -1,9 +1,7 @@
 import os
-import args_manager
-import modules.config
+import modules.config as config
 import json
 import urllib.parse
-import enhanced.all_parameters as ads
 import enhanced.enhanced_parameters as ehs
 
 from PIL import Image
@@ -16,16 +14,16 @@ from modules.util import generate_temp_filename
 log_cache = {}
 
 def get_current_html_path(output_format=None):
-    output_format = output_format if output_format else modules.config.default_output_format
-    date_string, local_temp_filename, only_name = generate_temp_filename(folder=modules.config.path_outputs,
-                                                                         extension=output_format)
+    output_format = output_format if output_format else config.default_output_format
+    date_string, local_temp_filename, only_name = generate_temp_filename(folder=config.path_outputs,
+        extension=output_format)
     html_name = os.path.join(os.path.dirname(local_temp_filename), 'log.html')
     return html_name
 
 
 def log(img, metadata, metadata_parser: MetadataParser | None = None, output_format=None, task=None, persist_image=True) -> str:
-    path_outputs = modules.config.temp_path if args_manager.args.disable_image_log or not persist_image else modules.config.path_outputs
-    output_format = output_format if output_format else modules.config.default_output_format
+    path_outputs = config.temp_path if config.disable_image_log or not persist_image else config.path_outputs
+    output_format = output_format if output_format else config.default_output_format
     date_string, local_temp_filename, only_name = generate_temp_filename(folder=path_outputs, extension=output_format)
     os.makedirs(os.path.dirname(local_temp_filename), exist_ok=True)
 
@@ -54,7 +52,7 @@ def log(img, metadata, metadata_parser: MetadataParser | None = None, output_for
     else:
         image.save(local_temp_filename)
 
-    if args_manager.args.disable_image_log:
+    if config.disable_image_log:
         return local_temp_filename
 
 
@@ -136,7 +134,7 @@ def log(img, metadata, metadata_parser: MetadataParser | None = None, output_for
     item += "</td>"
     item += "</tr></table></div>\n\n"
 
-    if modules.config.show_newest_images_first: # thanks to iwr-redmond
+    if config.show_newest_images_first: # thanks to iwr-redmond
         middle_part = item + middle_part
     else:
         middle_part = middle_part + item
@@ -145,7 +143,7 @@ def log(img, metadata, metadata_parser: MetadataParser | None = None, output_for
         f.write(begin_part + middle_part + end_part)
 
     interpret('[Log] Image saved to the log file:', html_name)
-    if modules.config.show_newest_images_first:
+    if config.show_newest_images_first:
         interpret('The image log shows the newest images first')
     else:
         interpret('The image log shows the newest images last')

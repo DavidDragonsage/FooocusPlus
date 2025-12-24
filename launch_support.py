@@ -3,7 +3,7 @@ import glob
 import platform
 import shutil
 import sys
-import args_manager
+from args_manager import args
 import modules.user_structure as US
 from pathlib import Path
 
@@ -13,9 +13,9 @@ from modules.launch_util import is_win32_standalone_build, \
 # moved from args_parser, but uses is_win32_standalone_build
 # instead of the obsolete args.is_windows_embedded_python
 if is_win32_standalone_build:
-    args_manager.args.in_browser = True
-if args_manager.args.disable_in_browser:
-    args_manager.args.in_browser = False
+    args.in_browser = True
+if args.disable_in_browser:
+    args.in_browser = False
 
 torch_base_ver = ''
 
@@ -59,26 +59,28 @@ def dependency_resolver():
     # suggests "directml" should be used for Intel
     #
     if platform.machine == "amd64" or torchruntime_platform == "xpu" \
-        or args_manager.args.gpu_type == 'directml' \
-        or args_manager.args.gpu_type == 'amd64':
-        args_manager.args.directml = True # switch on AMD/Intel support
+        or args.gpu_type == 'directml' \
+        or args.gpu_type == 'amd64':
+        if not args.directml:
+            args.directml = -1 # trigger an GPU ID auto-detect
         torch_ver = "2.3.1"
 
     # --gpu-type command line overrides: in this case Torchruntime is ignored
     # but if "gpu_type == auto" (the default) then Torchruntime is active
-    if args_manager.args.gpu_type == "amd64" or args_manager.args.gpu_type == "directml":
-        torch_ver = "2.4.1"
+    if args.gpu_type == "amd64" or args.gpu_type == "directml":
         torchruntime_platform = "directml"
-    elif args_manager.args.gpu_type == "cu124":
+        if args.gpu_type == "directml":
+            torch_ver = "2.4.1"
+    elif args.gpu_type == "cu124":
         torch_ver = "2.4.1"
         torchruntime_platform = "cu124"
-    elif args_manager.args.gpu_type == "cu128":
+    elif args.gpu_type == "cu128":
         torch_ver = "2.7.1"
         torchruntime_platform = "cu128"
-    elif args_manager.args.gpu_type == "rocm5.2":
+    elif args.gpu_type == "rocm5.2":
         torch_ver = "1.13.1"
         torchruntime_platform = "rocm5.2"
-    elif args_manager.args.gpu_type == "rocm5.7":
+    elif args.gpu_type == "rocm5.7":
         torch_ver = "2.3.1"
         torchruntime_platform = "rocm5.7"
 
@@ -197,15 +199,15 @@ def delete_torch_dependencies():
 
 
 # IMPORTANT! The config.txt user_dir setting has been removed
-# if for some reason the args_manager.args.user_dir setting is not valid
+# if for some reason the args.user_dir setting is not valid
 # it is set to the default value in this function
 def get_torch_base_path():
     global win32_root
     try:
-        user_dir_path = Path(args_manager.args.user_dir)
+        user_dir_path = Path(args.user_dir)
     except:
         user_dir_path = Path(win32_root/'UserDir')
-        args_manager.args.user_dir = user_dir_path
+        args.user_dir = user_dir_path
     torch_base_path = Path(user_dir_path/'torch_base.txt')
     return torch_base_path
 

@@ -174,7 +174,7 @@ document.addEventListener('keydown', function(e) {
             return;
         }
 
-        const stopButton = gradioApp().querySelector('button:not(.hidden)[id=stop_button]')
+        const stopButton = gradioApp().querySelector('button:not(.hidden)[id=stop_button]');
         if(stopButton) {
             stopButton.click();
             e.preventDefault();
@@ -182,6 +182,88 @@ document.addEventListener('keydown', function(e) {
         }
     }
 });
+
+
+function playNotification()
+{
+    gradioApp().querySelector('#audio_notification audio')?.play();
+    return;
+}
+
+// create a delay,
+// typically to wait for the UI and the generative process
+function delay(ms)
+{
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function init_batchCounter()
+// this function triggers modules.ui_util.init_batch_counter()
+// which sets batch_counter to 1: flagging that Batch Generate is active
+// when the batch series is finished, the batch_counter is reset to 0
+{
+    const counterButton = document.querySelector("#batch_counter_button");
+    if (counterButton)
+    {
+        counterButton.click();
+    }
+    return;
+}
+
+function clickGenerate()
+{
+    let isVisible = false
+    // check if the generate button is available:
+    const genButton = document.querySelector("#generate_button");
+    if (genButton)
+    {
+        // check the generate button's visibility
+        // if invisible then image generation is occurring
+        isVisible = genButton.checkVisibility
+        ({
+            checkOpacity: true,
+            checkVisibilityCSS: true
+        });
+        if (isVisible)
+        {
+            genButton.click();
+        }
+    } else
+    {
+        alert("Could not find the Generate button");
+    }
+    return isVisible
+}
+
+async function generateBatch(batch_count, grid_enabled)
+{
+    // set by Stop button via contextMenus.cancelGenerateForever:
+    globalStop = false;
+    init_batchCounter()
+    while (batch_count > 0)
+    {
+        if (globalStop == true)
+        {
+            globalStop = false
+            break; // Exit the Batch loop
+        }
+        const genTrue = clickGenerate();
+        if (genTrue === true)
+        {
+            batch_count--;
+        }
+        if (grid_enabled === true)
+        {
+            // delay loop for 6 seconds
+            await delay(6000);
+        } else
+        {
+            // delay loop for 4 seconds
+            await delay(4000);
+        }
+    }
+}
+
 
 function initStylePreviewOverlay() {
     let overlayVisible = false;
@@ -242,12 +324,7 @@ function uiElementInSight(el) {
     const clRect = el.getBoundingClientRect();
     const windowHeight = window.innerHeight;
     const isOnScreen = clRect.bottom > 0 && clRect.top < windowHeight;
-
     return isOnScreen;
-}
-
-function playNotification() {
-    gradioApp().querySelector('#audio_notification audio')?.play();
 }
 
 function set_theme(theme) {

@@ -1,4 +1,4 @@
-# https://github.com/comfyanonymous/ComfyUI/blob/master/nodes.py 
+# https://github.com/comfyanonymous/ComfyUI/blob/master/nodes.py
 
 import torch
 
@@ -18,6 +18,7 @@ import safetensors.torch
 
 pass  # sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "ldm_patched"))
 
+import importlib
 
 import ldm_patched.modules.diffusers_load
 import ldm_patched.modules.samplers
@@ -25,16 +26,12 @@ import ldm_patched.modules.sample
 import ldm_patched.modules.sd
 import ldm_patched.modules.utils
 import ldm_patched.modules.controlnet
-
 import ldm_patched.modules.clip_vision
-
 import ldm_patched.modules.model_management
-from ldm_patched.modules.args_parser import args
-
-import importlib
-
 import ldm_patched.utils.path_utils
-import ldm_patched.utils.latent_visualization
+
+from args_manager import args
+
 
 def before_node_execution():
     ldm_patched.modules.model_management.throw_exception_if_processing_interrupted()
@@ -1054,7 +1051,7 @@ class LatentFromBatch:
         else:
             s["batch_index"] = samples["batch_index"][batch_index:batch_index + length]
         return (s,)
-    
+
 class RepeatLatentBatch:
     @classmethod
     def INPUT_TYPES(s):
@@ -1069,7 +1066,7 @@ class RepeatLatentBatch:
     def repeat(self, samples, amount):
         s = samples.copy()
         s_in = samples["samples"]
-        
+
         s["samples"] = s_in.repeat((amount, 1,1,1))
         if "noise_mask" in samples and samples["noise_mask"].shape[0] > 1:
             masks = samples["noise_mask"]
@@ -1310,85 +1307,6 @@ class SetLatentNoiseMask:
         s["noise_mask"] = mask.reshape((-1, 1, mask.shape[-2], mask.shape[-1]))
         return (s,)
 
-def common_ksampler(model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent, denoise=1.0, disable_noise=False, start_step=None, last_step=None, force_full_denoise=False):
-    latent_image = latent["samples"]
-    if disable_noise:
-        noise = torch.zeros(latent_image.size(), dtype=latent_image.dtype, layout=latent_image.layout, device="cpu")
-    else:
-        batch_inds = latent["batch_index"] if "batch_index" in latent else None
-        noise = ldm_patched.modules.sample.prepare_noise(latent_image, seed, batch_inds)
-
-    noise_mask = None
-    if "noise_mask" in latent:
-        noise_mask = latent["noise_mask"]
-
-    callback = ldm_patched.utils.latent_visualization.prepare_callback(model, steps)
-    disable_pbar = not ldm_patched.modules.utils.PROGRESS_BAR_ENABLED
-    samples = ldm_patched.modules.sample.sample(model, noise, steps, cfg, sampler_name, scheduler, positive, negative, latent_image,
-                                  denoise=denoise, disable_noise=disable_noise, start_step=start_step, last_step=last_step,
-                                  force_full_denoise=force_full_denoise, noise_mask=noise_mask, callback=callback, disable_pbar=disable_pbar, seed=seed)
-    out = latent.copy()
-    out["samples"] = samples
-    return (out, )
-
-class KSampler:
-    @classmethod
-    def INPUT_TYPES(s):
-        return {"required":
-                    {"model": ("MODEL",),
-                    "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-                    "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
-                    "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0, "step":0.1, "round": 0.01}),
-                    "sampler_name": (ldm_patched.modules.samplers.KSampler.SAMPLERS, ),
-                    "scheduler": (ldm_patched.modules.samplers.KSampler.SCHEDULERS, ),
-                    "positive": ("CONDITIONING", ),
-                    "negative": ("CONDITIONING", ),
-                    "latent_image": ("LATENT", ),
-                    "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                     }
-                }
-
-    RETURN_TYPES = ("LATENT",)
-    FUNCTION = "sample"
-
-    CATEGORY = "sampling"
-
-    def sample(self, model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent_image, denoise=1.0):
-        return common_ksampler(model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent_image, denoise=denoise)
-
-class KSamplerAdvanced:
-    @classmethod
-    def INPUT_TYPES(s):
-        return {"required":
-                    {"model": ("MODEL",),
-                    "add_noise": (["enable", "disable"], ),
-                    "noise_seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-                    "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
-                    "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0, "step":0.1, "round": 0.01}),
-                    "sampler_name": (ldm_patched.modules.samplers.KSampler.SAMPLERS, ),
-                    "scheduler": (ldm_patched.modules.samplers.KSampler.SCHEDULERS, ),
-                    "positive": ("CONDITIONING", ),
-                    "negative": ("CONDITIONING", ),
-                    "latent_image": ("LATENT", ),
-                    "start_at_step": ("INT", {"default": 0, "min": 0, "max": 10000}),
-                    "end_at_step": ("INT", {"default": 10000, "min": 0, "max": 10000}),
-                    "return_with_leftover_noise": (["disable", "enable"], ),
-                     }
-                }
-
-    RETURN_TYPES = ("LATENT",)
-    FUNCTION = "sample"
-
-    CATEGORY = "sampling"
-
-    def sample(self, model, add_noise, noise_seed, steps, cfg, sampler_name, scheduler, positive, negative, latent_image, start_at_step, end_at_step, return_with_leftover_noise, denoise=1.0):
-        force_full_denoise = True
-        if return_with_leftover_noise == "enable":
-            force_full_denoise = False
-        disable_noise = False
-        if add_noise == "disable":
-            disable_noise = True
-        return common_ksampler(model, noise_seed, steps, cfg, sampler_name, scheduler, positive, negative, latent_image, denoise=denoise, disable_noise=disable_noise, start_step=start_at_step, last_step=end_at_step, force_full_denoise=force_full_denoise)
 
 class SaveImage:
     def __init__(self):
@@ -1399,7 +1317,7 @@ class SaveImage:
 
     @classmethod
     def INPUT_TYPES(s):
-        return {"required": 
+        return {"required":
                     {"images": ("IMAGE", ),
                      "filename_prefix": ("STRING", {"default": "ldm_patched"})},
                 "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"},
@@ -1728,7 +1646,6 @@ class ImagePadForOutpaint:
 
 
 NODE_CLASS_MAPPINGS = {
-    "KSampler": KSampler,
     "CheckpointLoaderSimple": CheckpointLoaderSimple,
     "CLIPTextEncode": CLIPTextEncode,
     "CLIPSetLastLayer": CLIPSetLastLayer,
@@ -1757,7 +1674,6 @@ NODE_CLASS_MAPPINGS = {
     "ConditioningSetArea": ConditioningSetArea,
     "ConditioningSetAreaPercentage": ConditioningSetAreaPercentage,
     "ConditioningSetMask": ConditioningSetMask,
-    "KSamplerAdvanced": KSamplerAdvanced,
     "SetLatentNoiseMask": SetLatentNoiseMask,
     "LatentComposite": LatentComposite,
     "LatentBlend": LatentBlend,
@@ -1797,8 +1713,8 @@ NODE_CLASS_MAPPINGS = {
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     # Sampling
-    "KSampler": "KSampler",
-    "KSamplerAdvanced": "KSampler (Advanced)",
+#    "KSampler": "KSampler",
+#    "KSamplerAdvanced": "KSampler (Advanced)",
     # Loaders
     "CheckpointLoader": "Load Checkpoint With Config (DEPRECATED)",
     "CheckpointLoaderSimple": "Load Checkpoint",

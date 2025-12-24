@@ -56,11 +56,11 @@ For Windows users, this [Installation Procedure](https://github.com/DavidDragons
 If you were using a pre-release or Beta version of FooocusPlus, please be sure to delete or at least rename it first, it is not compatible with the release version. Ideally FooocusPlus should be installed in the root of a high speed internal drive such an NVMe solid state drive (SSD). However it will work fine on standard SATA hard drive, just a bit more slowly. First, download the following archives:
 
 - The _latest_ version of [7-Zip](https://7-zip.org/). The installation may fail if the version is not current.
-- The [FooocusPlus](https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/FooocusPlus.7z) program archive.
-- If you are using Windows, the [Python library](https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/python_embedded.7z) files.
-- The FooocusPlus [Support Pack](https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/SupportPack.7z) The Support Pack is optional but will save you a lot of time later
-- The FooocusPlus [Tiny Pack](https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/TinyPack.7z). The Tiny Pack is designed for those with graphics cards that have less than 6GB of video RAM (VRAM). The Tiny Pack is completely optional. If not installed now, its files will be downloaded later if needed by a preset.
-- The FooocusPlus [Schnell Pack](https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/SchnellPack.7z). Another completely optional pack, it contains four basic Flux1 Schnell models. Schnell models provide high speed - 4 sampling steps per image generation - with reasonably good quality.
+- The [FooocusPlus](https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/FooocusPlus.7z) program archive. For East Asian users, try the [FooocusPlus mirror](https://hf-mirror.com/DavidDragonsage/FooocusPlus/resolve/main/FooocusPlus.7z).
+- If you are using Windows, the [Python library](https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/python_embedded.7z) files. Or in [East Asia](https://hf-mirror.com/DavidDragonsage/FooocusPlus/resolve/main/python_embedded.7z).
+- The FooocusPlus [Support Pack](https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/SupportPack.7z). Or in [East Asia](https://hf-mirror.com/DavidDragonsage/FooocusPlus/resolve/main/SupportPack.7z). The Support Pack is optional but will save you a lot of time later.
+- The FooocusPlus [Tiny Pack](https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/TinyPack.7z). Or in [East Asia](https://hf-mirror.com/DavidDragonsage/FooocusPlus/resolve/main/TinyPack.7z). The Tiny Pack is designed for those with graphics cards that have less than 6GB of video RAM (VRAM). The Tiny Pack is completely optional. If not installed now, its files will be downloaded later if needed by a preset.
+- The FooocusPlus [Schnell Pack](https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/SchnellPack.7z). Or in [East Asia](https://hf-mirror.com/DavidDragonsage/FooocusPlus/resolve/main/SchnellPack.7z). Another completely optional pack, it contains four basic Flux1 Schnell models. Schnell models provide high speed - 4 sampling steps per image generation - with reasonably good quality.
 <br/><br/>
 1. After your downloads are complete, first install 7-Zip.
 
@@ -81,6 +81,7 @@ Language and other optional startup files are available in the FooocusPlus\UserD
 - Chinese, Simplified: 常规启动.bat and 不更新启动.bat (no update)
 - English, UK: run_FooocusPlus_UK.bat
 - French: run_FooocusPlus_française.bat
+- Portuguese: run_FooocusPlus_Português.bat
 - Spanish: run_FooocusPlus_español.bat
 
 A total of 40 languages are supported by FooocusPlus, but the majority only provide Prompt Translator, dynamic status reports, Wildcard and console window translation in the selected language. There are several limited support language files in the batch_startups folder, and details on how to setup other languages in the Wiki. Please start with [Language An Introduction](https://github.com/DavidDragonsage/FooocusPlus/wiki/Language-An-Introduction).
@@ -118,6 +119,7 @@ This software was made possible by integrating open-source technologies from pro
 - Superprompter by sammcj
 - Stable Diffusion 1.5 (SD1.5) support by Irmagon (Thomas Gaud)
 - the "All 276 Styles in Fooocus (Google table)", also by Irmagon (Thomas Gaud)
-- the members of the Pure Fooocus Facebook group for their encouragement, enthusiasm and careful Beta testing
+- pixabay for the Public Announcement Chime by VoiceBosch (edited)
+- the members of the Pure Fooocus Facebook group for their encouragement, enthusiasm, Beta testing and the Founders Project welcome images
 
 ![2025-05-23_20-21-10_1729](https://github.com/user-attachments/assets/b6217150-7f09-4641-b976-7dab9de4826c)

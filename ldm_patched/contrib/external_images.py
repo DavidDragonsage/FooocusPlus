@@ -1,8 +1,8 @@
-# https://github.com/comfyanonymous/ComfyUI/blob/master/nodes.py 
+# https://github.com/comfyanonymous/ComfyUI/blob/master/nodes.py
 
 import ldm_patched.contrib.external
 import ldm_patched.utils.path_utils
-from ldm_patched.modules.args_parser import args
+from args_manager import args
 
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo

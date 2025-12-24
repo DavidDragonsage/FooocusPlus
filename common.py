@@ -18,7 +18,7 @@ version_update = 0
 # via webui.calculateTokenCounter()
 # The negative prompt is set by webui.set_negative_prompt()
 # UIS.reset_layout_params() preserves both values
-# PR.parse_prompts_from_preset() and meta_parser.parse_meta_from_preset()
+# PR.parse_prompts_from_preset() and preset_support.parse_meta_from_preset()
 # updates the prompts with preset values, if any
 # and PR.set_preset_selection() updates the UI with the preset values
 positive = ''
@@ -33,7 +33,7 @@ ROOT = str(Path.cwd())
 # Additional parameters recovered from errors in the system dictionary
 # likely caused by malfunctioning Gradio functions, especially "state"
 # Set by modules.config
-# Updated by modules.meta_parser.parse_meta_from_preset(preset_content)
+# Updated by preset_support.parse_meta_from_preset(preset_content)
 # and also by preset_resource, webui set_slider_switch(x) and dropdowns
 # Used by modules.async_worker and enhanced.toolbox
 sampler_name = 'dpmpp_2m_sde_gpu'
@@ -46,8 +46,14 @@ wildcard_lines_to_interpret = 50
 
 # Aspect Ratio support in neutral (common) ground
 # set by modules.aspect_ratios
-current_AR = 1024*1024
+current_AR = '0*0'
 full_AR_labels = []
+
+# Used with webui "Make New Preset"
+# determines whether the current AR will be saved
+# set by save_AR_checkbox
+# used by enhanced.toolbox.save_preset()
+AR_preset_save = False
 
 # Preset support in neutral (common) ground
 # set by modules.config
@@ -62,7 +68,25 @@ preset_file_path = 'presets\Favorite\Default.json'
 # set by modules.preset_resource (PR) get_preset_content(preset)
 preset_content = []
 
-# set by launch.py if using a specific (non-default) preset startup
-# read by async_worker __init__() for specif preset startups
+# set by preset_support.py
+# read by async_worker __init__() for specific preset startups
 # cleared by PR.set_preset_selection() if UI changes the preset
 default_engine = {}
+# used by AR.AR_template_init()
+task_method = ''
+
+# indicates metadata loading is in progress
+# this prevents PR.set_preset_selection from
+# overwriting key metadata values
+# set by webui.update_preset_info()
+# cleared by webui.normalize_preset_loading()
+metadata_loading = False
+log_metadata = []
+
+# input & base metadata used by the Image Editor
+input_meta = ''
+base_meta = ''
+
+# batch_count is set by webui.set_batch_count() to determine
+# how many times to run the generative cycle
+batch_count = 1

@@ -1,22 +1,217 @@
 [
-  {
-    "name": "Pony Real",
-    "prompt": "score_9, score_8_up, score_7_up, rating_safe, realistic, {prompt}",
-    "negative_prompt": "score_6, score_5, score_4, ugly, deformed"
+    {
+        "name": "Leo Dragonyear",
+        "prompt": "Chinese New Year of the Dragon {prompt} . Festival, traditional, lively, lantern-lit, cultural, celebratory, family-oriented, rich colors, auspicious, joyous, graceful, Dragon Year, abstract, surreal, papercut, couplets",
+        "negative_prompt": "dark, gloomy, futuristic, chaotic, industrial, desolate, monochromatic, eerie, apocalyptic, unsettling, anime, cartoon, graphic, text, painting, crayon, deformed, mutated, ugly, disfigured"
     },
-  {
-    "name": "Rossetti Drawing",
-    "prompt": "Dante Gabriel Rossetti chalk drawing: {prompt}, sensual romantic beauty, soft delicate lines, warm colours, dreamy, gentle, intricate detail, idealized, ethereal, spiritual longing, symbolism, medieval themes, expressive eyes, Pre-Raphaelite style",
-    "negative_prompt": "cartoon, avant-garde abstract modernism, cubism, impressionism, industrial technology, pointillism, electronic, neon, intense colour, cyber-punk, science-fiction, photorealism, mundane, ugly"
-  },
-  {
-    "name": "Rossetti Painting",
-    "prompt": "Dante Gabriel Rossetti oil painting: {prompt}, sensual romantic beauty, intricate detail, vivid colours, realistic fantasy, idealized, ethereal, spiritual longing, symbolism, medieval themes, expressive eyes, Pre-Raphaelite style",
-    "negative_prompt": "monochrome, cartoon, avant-garde abstract modernism, cubism, impressionism, industrial technology, pointillism, electronic, neon, cyber-punk, science-fiction, photorealism, mundane, ugly"
-  },
-  {
-    "name": "Rossetti Sketch",
-    "prompt": "Dante Gabriel Rossetti charcoal sketch: {prompt}, monochrome, sensual romantic beauty, intricate detail, expressive eyes, flowing drapery, muted backgrounds, pencil drawing, idealized, ethereal, spiritual longing, symbolism, medieval themes, Pre-Raphaelite style",
-    "negative_prompt": "colourful, cartoon, photographic, avant-garde abstract modernism, cubism, impressionism, industrial technology, pointillism, electronic, neon, cyber-punk, science-fiction, mundane, ugly"
-  }
+    {
+        "name": "Pony Real",
+        "prompt": "score_9, score_8_up, score_7_up, rating_safe, realistic, {prompt}",
+        "negative_prompt": "score_6, score_5, score_4, ugly, deformed"
+    },
+    {
+        "name": "Rossetti Drawing",
+        "prompt": "Dante Gabriel Rossetti chalk drawing: {prompt}, sensual romantic ethnic beauty, expressive eyes, warm colours, soft delicate lines, dreamy, gentle, intricate detail, ethereal spiritual medieval theme, Pre-Raphaelite style",
+        "negative_prompt": "cartoon, avant-garde abstract modernism, cubism, impressionism, industrial technology, pointillism, electronic, neon, intense colour, cyber-punk, science-fiction, photorealism, mundane, ugly"
+    },
+    {
+        "name": "Rossetti Painting",
+        "prompt": "Dante Gabriel Rossetti oil painting: {prompt}, sensual romantic ethnic beauty, expressive eyes, intricate detail, vivid colour, realistic fantasy, ethereal spiritual medieval theme, Pre-Raphaelite style",
+        "negative_prompt": "monochrome, cartoon, avant-garde abstract modernism, cubism, impressionism, industrial technology, pointillism, electronic, neon, cyber-punk, science-fiction, photorealism, mundane, ugly"
+    },
+    {
+        "name": "Rossetti Science Fiction",
+        "prompt": "Dante Gabriel Rossetti Science-Fiction oil painting: {prompt}, ethnic beauty, vivid intricate futuristic, sci-fi neon electronic technology background, Pre-Raphaelite style",
+        "negative_prompt": "monochrome, cartoon, abstract modernism, cubism, impressionism, pointillism, historical, medieval, Victorian, photorealism, mundane, ugly"
+    },
+    {
+        "name": "Rossetti Sketch",
+        "prompt": "Dante Gabriel Rossetti charcoal sketch: {prompt}, monochrome, sensual romantic ethnic beauty, expressive eyes, intricate detail, flowing drapery, muted backgrounds, pencil drawing, ethereal spiritual medieval theme, Pre-Raphaelite style",
+        "negative_prompt": "colourful, cartoon, photographic, avant-garde abstract modernism, cubism, impressionism, industrial technology, pointillism, electronic, neon, cyber-punk, science-fiction, mundane, ugly"
+    },
+    {
+        "name": "Rossetti Steampunk",
+        "prompt": "Dante Gabriel Rossetti Steampunk oil painting: {prompt}, ethnic beauty, steampunk industrial background, intricate detail, vivid colours, steam powered retro-science fantasy, neo-Victorian symbolism, Pre-Raphaelite style",
+        "negative_prompt": "monochrome, cartoon, avant-garde abstract modernism, cubism, impressionism, pointillism, electronic, neon, photorealism, mundane, ugly"
+    },
+    {
+        "name": "Rossetti World",
+        "prompt": "Dante Gabriel Rossetti Ethnic oil painting: {prompt}, beautiful ethnicity, intricate detail, vivid colours, multicultural world themes, Pre-Raphaelite style",
+        "negative_prompt": "monochrome, cartoon, avant-garde abstract modernism, cubism, impressionism, pointillism, photorealism, mundane, ugly"
+    },
+    {
+		"name": "TC Airbrush Dark",
+		"prompt": "{prompt}, in an airbrush acrylic paint horror style, smooth seamless gradients with ominous depth and precise macabre detailing, muted desaturated colors with subtle glossy menace, hyper-realistic grotesque forms and chilling ethereal fogs, fine misted layers evoking creeping dread, flawless transitions concealing hidden horrors, dim highlights piercing deep shadows, contemporary illustrative unease, high-fidelity rendering on primed surface with gothic undertones",
+		"negative_prompt": "nsfw, bright, vibrant, futuristic, cheerful, industrial, lively, colorful, welcoming, anime, cartoon, graphic, text, deformed, mutated, ugly, disfigured, blurry, low resolution, overexposed, underexposed, pixelated, digital artifacts, rough brushstrokes, textured impasto, abstract, impressionist, surreal, warm tones, luminous lighting"
+    },
+    {
+		"name": "TC Airbrush Light",
+		"prompt": "{prompt}, in a soft airbrush acrylic paint style with feathered gradients and diffused precision, vibrant saturated colours with gentle glossy sheen, hyper-realistic forms enveloped in ethereal soft glows, fine misted layers for subtle depth, flawless velvety transitions without visible strokes, luminous soft highlights and delicate shadows, contemporary illustrative vibrancy with hazy smoothness, high-fidelity rendering on primed surface with diffused edges",
+		"negative_prompt": "nsfw, dark, gloomy, futuristic, chaotic, industrial, desolate, monochromatic, eerie, apocalyptic, unsettling, anime, cartoon, graphic, text, deformed, mutated, ugly, disfigured, blurry, low resolution, overexposed, underexposed, pixelated, digital artefacts, rough brushstrokes, textured impasto, abstract, impressionist, surreal, cold tones, harsh flat lighting, sharp hard edges, over-detailed crispness, stark contrasts, defined outlines, aggressive highlights"
+    },
+    {
+		"name": "TC Airbrush Grotesque",
+		"prompt": "{prompt}, in surreal horror airbrush acrylic style, seamless gradients convulsing into ultra-extreme nightmarish distortions with hyper-grotesque mutations—flesh erupting in suppurating tumors, bones splintering into barbed protrusions, skin sloughing into writhing tendrils—desaturated muted tones ravaged by festering iridescent pus, hyper-realistic liquefying elongated forms and biomechanical abominations convulsing from putrid ethereal voids, misted layers spawning impossible contorted architectures and flailing phantom appendages riddled with parasitic infestations, flawless transitions dissolving reality into cataclysmic subconscious terror, spasmodic highlights clawing through abyssal churning shadows of decaying viscera, illustrative dread infused with Dali-esque fluidity, Beksiński dystopias, and Lovecraftian insanity amplified by visceral body horror, high-fidelity rendering on primed surface amplifying catatonic existential horror and hallucinatory fragmentation",
+		"negative_prompt": "nsfw, bright, vibrant, cheerful, futuristic, lively, industrial, colorful, welcoming, anime, cartoon, graphic, text, deformed, mutated, ugly, disfigured, blurry, low resolution, overexposed, underexposed, pixelated, digital artifacts, rough brushstrokes, textured impasto, abstract, impressionist, warm tones, luminous lighting, realistic, photographic, mundane, static, harmonious, symmetrical, balanced, coherent, subtle, mild distortions"
+    },
+    {
+		"name": "TC Airbrush Horror",
+		"prompt": "{prompt}, in a surreal horror airbrush acrylic paint style, seamless gradients twisting into nightmarish distortions with precise grotesque detailing, desaturated muted tones laced with eerie iridescent gleams, hyper-realistic melting forms and biomechanical abominations emerging from ethereal voids, misted layers conjuring impossible architectures and whispering phantoms, flawless transitions blurring reality into subconscious terror, flickering highlights amid abyssal shadows, illustrative dread with Dali-esque fluidity and Beksiński dystopias, high-fidelity rendering on primed surface evoking existential unease",
+		"negative_prompt": "nsfw, bright, vibrant, cheerful, futuristic, lively, industrial, colorful, welcoming, anime, cartoon, graphic, text, deformed, mutated, ugly, disfigured, blurry, low resolution, overexposed, underexposed, pixelated, digital artifacts, rough brushstrokes, textured impasto, abstract, impressionist, warm tones, luminous lighting, realistic, photographic, mundane, static, harmonious"
+    },
+    {
+		"name": "TC Authentic Oil Painting",
+		"prompt": "{prompt}, (in an authentic oil painting style, painted on textured linen canvas:1.5), with rich layered pigments and visible but refined brush strokes, soft impasto depth, natural pigment blending, realistic paint texture, subtle crackle varnish finish, warm and natural color palette, depth of field, atmospheric lighting, painterly realism, evokes the feel of a classical gallery painting",
+		"negative_prompt": "(realistic, photographic, photorealism, photo-realism:1.5), flat, digital, overly smooth, photo-realistic, CGI, plastic, vector, airbrush, cartoon, anime, sketch, 3d render, pixelated, watercolor, ink, pastel, crayon, overly sharp, glossy, sterile, artificial, computer generated, low resolution"
+    },
+    {
+        "name": "TC Brian Froud",
+        "prompt": "{prompt}, in the style of Brian Froud. Faerie portraiture, whimsical mysterious, intricate detailed painterly, rich color palette, enchanted realms, quirky mythical creatures, hidden magical details, dreamlike faery worlds, textured organic forms, folklore-inspired fantasy",
+        "negative_prompt": "harsh modern, urban mechanical, simplistic geometry, dark foreboding, chaotic frenzy, monochromatic stark, futuristic sci-fi, anime, cartoon, deformed, mutated, ugly, disfigured, text, crayon"
+    },
+    {
+		"name": "TC Chiaroscuro Technique",
+		"prompt": "{prompt}, in the Chiaroscuro technique. dramatic contrasts of light and shadow, tenebrism effects, volumetric depth, sculptural forms, intense illumination, profound darkness, Rembrandt and Caravaggio inspired, moody atmosphere, high dynamic range, emotional intensity, spotlight drama",
+		"negative_prompt": "(realistic, photographic, photorealism, photo-realism:1.5), flat lighting, even illumination, pastel hues, soft gradients, diffused glow, low contrast, cartoonish outlines, vibrant saturation, blurry forms, deformed proportions, ugly distortions, text, overexposed highlights"
+    },
+    {
+		"name": "TC Gustave Dore",
+		"prompt": "{prompt}, in the style of Gustave Doré. intricate wood engraving illustrations of literary epics and biblical tales, grandiose dramatic compositions with theatrical poses and fantastical elements, high contrast shadows and detailed line work, romantic gothic fantasy realms of infernal depths and medieval grandeur, swirling mists and towering architectures, emotive figures in dynamic narrative scenes, baroque intricacy and romantic satire",
+		"negative_prompt": "dark, gloomy, futuristic, chaotic, industrial, desolate, monochromatic, eerie, apocalyptic, unsettling, anime, cartoon, graphic, text, painting, crayon, deformed, mutated, ugly, disfigured, realistic, photographic, modern, urban, barren, static, mundane, abstract, impressionist, surreal, cold tones, harsh flat lighting"
+    },
+    {
+		"name": "TC Hans Memling",
+		"prompt": "{prompt}, in the style of Hans Memling. Northern Renaissance portraits and religious scenes, serene devotional figures with gentle expressions and idealized beauty, intricate detailed drapery and jewellery, symbolic still life elements, jewel-toned colours on oak panel, soft diffused light creating luminous skin and atmospheric depth, fine brushwork with precise realism, harmonious compositions evoking quiet piety and spiritual grace",
+		"negative_prompt": "(NSFW, naked, nude, nudity:1.8), dark, gloomy, futuristic, chaotic, industrial, desolate, monochromatic, eerie, apocalyptic, unsettling, anime, cartoon, graphic, text, deformed, mutated, ugly, disfigured, realistic, photographic, modern, urban, barren, static, mundane, abstract, impressionist, surreal, cold tones, harsh flat lighting"
+    },
+    {
+		"name": "TC Heavy Oil Painting",
+		"prompt": "{prompt}, in a heavy oil painting style, (thick expressive impasto strokes, bold texture, visible paint ridges, palette knife strokes:1.5), layered pigments, chiaroscuro lighting, deep shadows, classical realism, emotional brushwork, warm tones, heavily detailed canvas texture",
+		"negative_prompt": "(realistic, photographic, photorealism, photo-realism:1.5), flat, smooth, watercolor, digital, airbrush, cartoon, CGI, 3d render, low detail, low resolution"
+    },
+    {
+		"name": "TC Henry Fuseli",
+		"prompt": "{prompt}, in the style of Henry Fuseli. dramatic romantic scenes of supernatural horror and fantasy, exaggerated figures in strained violent poses, intense psychological emotion and subconscious dread, chiaroscuro lighting with deep shadows and glowing highlights, gothic atmospheres of nightmarish otherworlds, gestural extremes, imaginative creatures lurking in misty voids, painted with layered translucent oil pigments on textured linen canvas, with visible brushwork and subtle impasto depth.",
+		"negative_prompt": "(NSFW, naked, nude, nudity:1.8) dark, gloomy, futuristic, chaotic, industrial, desolate, monochromatic, eerie, apocalyptic, unsettling, anime, cartoon, graphic, text, crayon, deformed, mutated, ugly, disfigured, realistic, photographic, modern, urban, barren, static, mundane, abstract, impressionist, surreal, cold tones, harsh flat lighting"
+    },
+    {
+		"name": "TC Hieronymus Bosch",
+		"prompt": "{prompt}, in the style of Hieronymus Bosch. Surreal medieval fantasy, intricate bizarre details, hybrid mythical creatures, moral allegorical scenes, hellish infernal landscapes, lush paradisiacal gardens turning nightmarish, symbolic figures, earthy muted tones, triptych compositions, grotesque whimsical horrors, fantastical symbolism",
+		"negative_prompt": "(NSFW, naked, nude, nudity:1.8), modern contemporary, realistic photography, simplistic minimalism, bright neon colors, futuristic sci-fi, chaotic abstract, cartoonish, deformed, mutated, ugly, disfigured, text, graphic"
+    },
+    {
+		"name": "TC HR Giger",
+		"prompt": "{prompt}, in the style of H.R. Giger. Biomechanical surrealism, dark erotic horror, intricate mechanical-organic fusions, alien architectures, nightmarish dreamscapes, detailed airbrushed textures, shadowy contrasts, grotesque beauty, industrial fetishes, otherworldly anatomies",
+		"negative_prompt": "bright cheerful, whimsical fantasy, simplistic clean lines, vibrant colors, organic nature, realistic human forms, cartoonish, deformed, mutated, ugly, disfigured, text,"
+    },
+    {
+		"name": "TC Hybrid Oil Realism",
+		"prompt": "{prompt}, in a hybrid oil realism oil painting style, (combining realistic tonal control with expressive brush texture:1.5), painted on linen canvas using layered translucent oils and moderate impasto, showing visible yet controlled brushwork, soft pigment blending, and natural light diffusion, each stroke conveys depth and form with tactile realism, subtle pigment sheen, and balanced contrast, evokes a timeless fine art oil painting that feels both authentic and modern,",
+		"negative_prompt": "digital, CGI, photo, cartoon, anime, vector, watercolor, ink, pastel, sketch, airbrush, overly smooth, flat, plastic, synthetic, sterile, glossy, pixelated, low detail, low resolution"
+    },
+    {
+		"name": "TC Impressionist Realist Oil Painting",
+		"prompt": "{prompt}, in an impressionist realist oil painting style, (painted with expressive visible brushstrokes on textured canvas using thick yet harmonious oil pigments:1.5), soft edges and layered color blending capture light and motion naturally, with vibrant tonal transitions and atmospheric depth, each stroke contributes to a cohesive realism that feels alive and painterly, evoking the warmth of sunlight on oil pigment and the tactile beauty of hand-painted art,",
+		"negative_prompt": "digital, CGI, cartoon, anime, vector art, watercolor, pastel, sketch, airbrush, smooth, flat, sterile, synthetic, overexposed, glossy, plastic, pixelated, low detail, low resolution"
+    },
+    {
+		"name": "TC Julie Bell",
+		"prompt": "{prompt}, in the style of Julie Bell. sensual fantasy art, powerful female warriors in dynamic poses, gleaming armor with intricate details, mythical creatures and magical landscapes, airbrushed realism, vibrant colors, dramatic lighting, muscular yet elegant forms, erotic undertones, heroic and alluring compositions, lush backgrounds with glowing skies and shadowy forests",
+		"negative_prompt": "dark, gloomy, futuristic, chaotic, industrial, desolate, monochromatic, eerie, apocalyptic, unsettling, anime, cartoon, graphic, text, crayon, deformed, mutated, ugly, disfigured, realistic, photographic, modern, urban, barren, static, mundane, abstract, impressionist, surreal, cold tones, harsh flat lighting"
+    },
+    {
+        "name": "TC Michael Whelan",
+        "prompt": "{prompt}, in the style of Michael Whelan. Imaginative realism, sci-fi fantasy, atmospheric depth, masterful interplay of colors and light, detailed epic scenes, book cover artistry, ethereal figures in vast worlds, rich textures, dynamic compositions, breathtaking luminosity",
+        "negative_prompt": "flat uninspired, harsh shadows, simplistic outlines, chaotic randomness, industrial cold, monochromatic dull, apocalyptic grim, cartoonish, deformed, mutated, ugly, disfigured, text, graphic"
+    },
+    {
+		"name": "TC Modern Realist Oil Painting",
+		"prompt": "{prompt}, in a modern realist oil painting, (painted on smooth linen canvas with layered translucent oils and meticulous brush control:1.5), each stroke blends seamlessly yet retains subtle texture and natural pigment depth, the surface reveals gentle gloss, fine brush direction, and light scattering through thin oil layers, producing luminous realism with a painterly touch, balanced composition, controlled contrast, and realistic color harmony evoke a gallery-quality contemporary oil painting,",
+		"negative_prompt": "(realistic, photographic, photorealism, photo-realism:1.5), digital, CGI, photo, cartoon, anime, vector art, 3d render, flat, overly smooth, plastic, watercolor, airbrush, pastel, sketch, pixelated, synthetic, sterile, low detail, overexposed, glossy, hyper-saturated"
+    },
+    {
+		"name": "TC Naoto Hattori",
+		"prompt": "{prompt}, in the style of Naoto Hattori, pop surrealist dreamlike worlds, bizarre hybrid creatures blending animals plants and humans, oversized shiny reflective eyes, fluffy fantastical forms with whimsical unease, vibrant jewel tones and lively colours, intricate detailed textures, acrylic on board, Salvador Dali influences, Buddhist philosophical undertones, inner mind visions, small-scale intimate compositions",
+		"negative_prompt": "dark, gloomy, futuristic, chaotic, industrial, desolate, monochromatic, eerie, apocalyptic, unsettling, anime, cartoon, graphic, text, deformed, mutated, ugly, disfigured, realistic, photographic, modern, urban, barren, static, mundane, abstract, impressionist, cold tones, harsh flat lighting"
+    },
+    {
+        "name": "TC Patrick Woodroffe",
+        "prompt": "{prompt}, in the style of Patrick Woodroffe. Fantasy science-fiction, vivid detailed illustrations, otherworldly realms, fantastic realism, intricate mythical creatures, surreal elements inspired by Dali and Bosch, lush vibrant colors, whimsical enchanted landscapes, busy canvases full of hidden details",
+        "negative_prompt": "modern realistic, urban contemporary, simplistic minimalism, dark dystopian, chaotic abstract, monochromatic, eerie unsettling, anime, cartoon, deformed, mutated, ugly, disfigured, text, painting"
+    },
+    {
+		"name": "TC Realistic Oil Painting",
+		"prompt": "{prompt}, in a finely detailed realistic oil painting style, (painted with layered translucent oil pigments on textured linen canvas, with visible brushwork and subtle impasto depth:1.5), each stroke carries direction and light, creating tactile realism and organic imperfections, the surface shows gentle sheen and pigment variation, rich tonal blending, natural edge transitions, and balanced color harmony under soft, directional lighting, evokes a hand-painted gallery masterpiece with timeless realism, realistic pigment texture:0.7, organic imperfections:0.6, physical paint behavior:0.8",
+		"negative_prompt": "(realistic, photographic, photorealism, photo-realism:1.5), digital, CGI, photo-realistic photography, airbrushed, vector art, cartoon, anime, 3d render, smooth gradients, flat color, plastic texture, watercolor, ink, pastel, sketch, low detail, overly sharp, glossy, synthetic, sterile, low resolution"
+    },
+    {
+        "name": "TC Rembrandt",
+        "prompt": "{prompt}, in the style of Rembrandt. dramatic chiaroscuro lighting, golden highlights emerging from deep shadows, rich earthy tones, expressive textured brushstrokes, emotional depth in faces, Baroque mastery, velvety skin tones, luminous fabrics, introspective portraits, layered impasto effects, profound realism",
+        "negative_prompt": "(realistic, photographic, photorealism, photo-realism:1.5), flat illumination, vibrant modern colors, smooth digital rendering, cartoonish exaggeration, harsh outlines, low contrast, pastel softness, blurry details, deformed anatomy, ugly distortions, text, over-saturated hues"
+    },
+    {
+		"name": "TC Rene Magritte",
+		"prompt": "{prompt}, in the style of René Magritte. Surrealism, paradoxical everyday scenes, ordinary objects in impossible contexts, dreamlike wit and mystery, cloudy skies, meticulous realism with bizarre logic, thought-provoking illusions, enigmatic atmospheres, subtle humour",
+		"negative_prompt": "abstract chaotic, vibrant fantastical, dark horrific, simplistic cartoonish, futuristic sci-fi, deformed, mutated, ugly, disfigured, text, graphic"
+    },
+    {
+        "name": "TC Rodney Matthews",
+        "prompt": "{prompt}, in the style of Rodney Matthews. Fantasy science-fiction, conceptual illustration, epic landscapes dominated by blue-green tones, imaginative mythical elements, vibrant atmospheric scenes, detailed otherworldly vistas, heroic figures in enchanted worlds, bold color contrasts, surreal narrative depth",
+        "negative_prompt": "subdued earth tones, realistic portraiture, minimalist sparse, gloomy overcast, chaotic disarray, monochromatic flat, industrial urban, cartoonish, deformed, mutated, ugly, disfigured, text, painting"
+    },
+    {
+		"name": "TC Roger Dean",
+		"prompt": "{prompt}, in the style of Roger Dean. surreal fantasy landscapes, organic architecture, floating islands, intricate curvaceous forms, ethereal mist, vibrant jewel tones, lush exotic foliage, cascading waterfalls, mythical creatures, Art Nouveau influences, impossible geometries, dreamy otherworldly realms, detailed textures, harmonious colors",
+		"negative_prompt": "dark, gloomy, futuristic, chaotic, industrial, desolate, monochromatic, eerie, apocalyptic, unsettling, anime, cartoon, graphic, text, crayon, deformed, mutated, ugly, disfigured, realistic, photographic, modern, urban, barren"
+    },
+    {
+		"name": "TC Romantic Oil Painting",
+		"prompt": "{prompt}, in a romantic oil painting style, (soft brushwork, gentle light diffusion, painterly texture:1.5), luminous glazes, pastel yet natural palette, atmospheric haze, traditional realism, delicate highlights",
+		"negative_prompt": "(realistic, photographic, photorealism, photo-realism:1.5), harsh lighting, digital, CGI, overly sharp, cartoon, airbrush, pixelated, sterile"
+    },
+    {
+		"name": "TC Salvador Dali",
+		"prompt": "{prompt}, in the style of Salvador Dalí. Surrealism, dreamlike subconscious visions, melting forms and impossible architectures, melting clocks draped over items, barren desert landscapes, hyper-detailed precision, bizarre juxtapositions, Freudian symbolism, vast empty spaces, ethereal distortions, rich yet muted tones",
+		"negative_prompt": "realistic everyday, mundane ordinary, abstract chaos, simplistic minimalism, vibrant neon, dark horror, futuristic sci-fi, cartoonish, deformed, mutated, ugly, disfigured, text, graphic"
+    },
+    {
+		"name": "TC Sfumato Technique",
+		"prompt": "{prompt}, in the Sfumato technique. subtle blending of tones, soft hazy transitions, atmospheric depth, Renaissance mastery, Leonardo da Vinci inspired, ethereal mist, delicate gradations, luminous shadows, smoky veils, introspective serenity, layered subtlety",
+		"negative_prompt": "(realistic, photographic, photorealism, photo-realism:1.5), harsh outlines, stark contrasts, bold lines, flat shading, cartoonish, digital artifacts, vibrant saturation, sharp edges, modern graphics, deformed proportions, ugly distortions, text, overexposed"
+    },
+    {
+        "name": "TC Storm Thorgerson",
+        "prompt": "{prompt}, in the style of Storm Thorgerson. Surreal, dreamlike, photomontage, conceptual, bold compositions, thought-provoking imagery, ethereal worlds, influenced by Magritte, Man Ray, Picasso, intricate surreal elements, otherworldly scenes, atmospheric depth",
+        "negative_prompt": "realistic, mundane, straightforward, unmanipulated photography, chaotic clutter, industrial grit, monochromatic, eerie horror, cartoonish, deformed, mutated, ugly, disfigured, text, graphic"
+    },
+    {
+		"name": "TC Subtle Classical Oil Painting",
+		"prompt": "{prompt}, in a subtle classical oil painting style, (painted on fine-grain linen canvas using thin translucent layers of oil pigment:1.5), luminous glazes, and delicate brushwork, the strokes blend naturally to form soft edges, rich tonal transitions, and gentle color diffusion, balanced warm lighting, painterly texture, faint impasto depth, realistic pigment surface variation, and atmospheric harmony evoke timeless traditional realism,",
+		"negative_prompt": "(realistic, photographic, photorealism, photo-realism:1.5), digital, CGI, 3d render, cartoon, anime, vector art, plastic, airbrush, watercolor, pastel, ink, sketch, glossy, synthetic, sterile, flat, overly sharp, overexposed, low detail, low resolution"
+    },
+    {
+		"name": "TC Subtle Oil Painting",
+		"prompt": "{prompt}, in a subtle oil painting style, rich layered colors, (subtle visible brush strokes, textured canvas surface:1.5), luminous highlights, depth of field, classical composition, warm earthy tones, atmospheric perspective, delicate impasto details, harmonious blending",
+		"negative_prompt": "(realistic, photographic, photorealism, photo-realism:1.5), dark, gloomy, futuristic, chaotic, industrial, desolate, monochromatic, eerie, apocalyptic, unsettling, anime, cartoon, graphic, text, crayon, deformed, mutated, ugly, disfigured, overly textured, heavy impasto, blurry, low resolution, overexposed, underexposed, digital, pixelated, smooth gradients"
+    },
+    {
+		"name": "TC Tenebrism Technique",
+		"prompt": "{prompt}, in the Tenebrism technique. extreme chiaroscuro contrasts, dramatic tenebrism lighting, profound enveloping shadows, intense spotlight illumination, Caravaggio inspired, theatrical intensity, sculptural forms emerging from darkness, emotional profundity, high dynamic tenebrism, mysterious nocturnal drama",
+		"negative_prompt": "(realistic, photographic, photorealism, photo-realism:1.5), soft diffused lighting, even illumination, bright ambient glow, low contrast, pastel subtlety, flat shading, hazy outlines, vibrant saturation, deformed proportions, ugly distortions, text, washed-out highlights"
+    },
+    {
+		"name": "TC Textural Oil Masterwork",
+		"prompt": "{prompt}, in a textural oil painting style, (created with layered oil pigments and expressive impasto brushwork on coarse linen canvas:1.5), thick strokes reveal directional texture and subtle paint ridges that catch the light, natural pigment variation, visible bristle marks, and refined blending create a tactile, dimensional surface, balanced composition, rich tones, and chiaroscuro depth evoke the authenticity of a gallery masterpiece,",
+		"negative_prompt": "(realistic, photographic, photorealism, photo-realism:1.5), digital, CGI, photo, cartoon, anime, vector, watercolor, ink, pastel, smooth, airbrush, plastic, synthetic, sterile, overly sharp, flat, glossy, low detail, low resolution"
+    },
+    {
+		"name": "TC William Blake",
+		"prompt": "{prompt}, in the style of William Blake. Visionary romanticism, mystical symbolic imagery, intricate line engravings, ethereal ghostly figures, biblical prophetic scenes, sublime dramatic landscapes, hand-tinted watercolors, poetic intensity, organic flowing forms, divine revelations, chiaroscuro contrasts, mythical allegories",
+		"negative_prompt": "modern photographic, realistic mundane, simplistic abstraction, dark mechanical, futuristic sci-fi, vibrant neon, chaotic industrial, cartoonish, deformed, mutated, ugly, disfigured, text, graphic"
+    },
+    {
+		"name": "TC Zdzislaw Beksinski",
+		"prompt": "{prompt}, in the style of Zdzisław Beksiński. Dystopian surrealism, nightmarish visions, skeletal ethereal figures, apocalyptic desolate landscapes, muted earthy tones, eerie atmospheric dread, biomechanical fusions, surreal horror, intricate shadowy details, otherworldly desolation",
+		"negative_prompt": "(NSFW, naked, nude, nudity:1.8), vibrant colorful, cheerful whimsical, realistic everyday, modern urban, simplistic minimalism, bright lighting, cartoonish, deformed, mutated, ugly, disfigured, text"
+    }
 ]

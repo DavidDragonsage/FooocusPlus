@@ -1,9 +1,8 @@
-# https://github.com/comfyanonymous/ComfyUI/blob/master/nodes.py 
+# https://github.com/comfyanonymous/ComfyUI/blob/master/nodes.py
 
 import ldm_patched.modules.samplers
 import ldm_patched.modules.sample
 from ldm_patched.k_diffusion import sampling as k_diffusion_sampling
-import ldm_patched.utils.latent_visualization
 import torch
 import ldm_patched.modules.utils
 
@@ -247,7 +246,7 @@ class SamplerTCD:
         sampler = ldm_patched.modules.samplers.ksampler("tcd", {"eta": eta})
         return (sampler, )
 
-
+'''
 class SamplerCustom:
     @classmethod
     def INPUT_TYPES(s):
@@ -298,9 +297,8 @@ class SamplerCustom:
         else:
             out_denoised = out
         return (out, out_denoised)
-
+'''
 NODE_CLASS_MAPPINGS = {
-    "SamplerCustom": SamplerCustom,
     "BasicScheduler": BasicScheduler,
     "KarrasScheduler": KarrasScheduler,
     "ExponentialScheduler": ExponentialScheduler,

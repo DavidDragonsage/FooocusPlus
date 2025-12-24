@@ -170,7 +170,7 @@ class LoraMetadataExtractor:
                 "civitai_version_id": data.get("id"),
                 "civitai_base_model": data.get("baseModel", "Unknown"),
                 "civitai_trigger_words": data.get("trainedWords", []),
-                "civitai_description": data.get("description", ""),
+                "civitai_description": data.get("description") or "",
                 "civitai_clip_skip": data.get("clipSkip", None),
                 "civitai_images": []
             }

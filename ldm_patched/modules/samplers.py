@@ -4,7 +4,7 @@ import torch
 import collections
 import math
 from ldm_patched.modules import model_management
-from modules.meta_parser import verify_scheduler
+from modules.preset_support import verify_scheduler
 
 
 def get_area_and_mult(conds, x_in, timestep_in):

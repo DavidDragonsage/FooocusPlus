@@ -23,8 +23,11 @@ if not version.get_required_library():
 
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
-if "GRADIO_SERVER_PORT" not in os.environ:
-    os.environ["GRADIO_SERVER_PORT"] = "7865"
+# Gradio is no longer allowed to call home:
+os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
+os.environ["GRADIO_SERVER_PORT"] = "7865"
+# an update would cause some serious errors:
+os.environ["NO_ALBUMENTATIONS_UPDATE"] = "True"
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
@@ -186,11 +189,11 @@ if args.hf_mirror is not None:
 
 import common
 import modules.preset_resource as PR
+from enhanced.backend import comfyd
 from modules import config
 from modules.hash_cache import init_cache
-from modules.meta_parser import parse_meta_from_preset
+from modules.preset_support import init_config_preset
 from modules.model_loader import load_file_from_url
-from modules.user_structure import empty_dir
 from ldm_patched.modules.model_management import get_vram
 os.environ["U2NET_HOME"] = config.paths_inpaint[0]
 os.environ["BERT_HOME"] = config.paths_llms[0]
@@ -198,18 +201,8 @@ os.environ['GRADIO_TEMP_DIR'] = config.temp_path
 
 write_torch_base(torch_ver)
 
-if config.temp_path_cleanup_on_launch:
-    print()
-    interpret('Attempting to cleanup the temporary directory:')
-    print(Path(config.temp_path).resolve())
-    result = empty_dir(config.temp_path)
-    if result:
-        interpret("Cleanup successful")
-    else:
-        interpret("Failed to cleanup the content of the temporary directory")
 print()
 interpret('Initializing image processors...')
-
 
 launch_vram = int(get_vram()/1000)
 if launch_vram<6:
@@ -243,16 +236,16 @@ def download_models(default_model, previous_default_models, checkpoint_downloads
     )
 
     if args.disable_preset_download:
-        print('Skipped model download.')
+        interpret('Skipped model download.')
         return default_model, checkpoint_downloads
 
     if not args.always_download_new_model:
         if not os.path.isfile(get_file_from_folder_list(default_model, config.paths_checkpoints)):
             for alternative_model_name in previous_default_models:
                 if os.path.isfile(get_file_from_folder_list(alternative_model_name, config.paths_checkpoints)):
-                    print(f'You do not have [{default_model}] but you have [{alternative_model_name}].')
-                    print(f'FooocusPlus will use [{alternative_model_name}] to avoid downloading new models.')
-                    print('Use --always-download-new-model to avoid fallback and always get new models.')
+                    interpret(f'You do not have [{default_model}] but you have', alternative_model_name)
+                    interpret('To avoid downloading new models, FooocusPlus will use', alternative_model_name)
+                    interpret('To avoid fallback and always get new models, use this command line argument in the startup batch file:', '--always-download-new-model')
                     checkpoint_downloads = {}
                     default_model = alternative_model_name
                     break
@@ -278,28 +271,16 @@ if (common.is_low_vram_preset == True or launch_vram<6) and \
     (args.preset == 'initial' or args.preset == 'Default'):
     low_vram_preset_content = PR.get_lowVRAM_preset_content()
     common.preset_content = low_vram_preset_content
-    if common.preset_content != '':
-        common.is_low_vram_preset = True
-        preset_prepared = parse_meta_from_preset(low_vram_preset_content)
-        if config.default_comfyd_active_checkbox:
-            comfyd.stop()
-        default_model = preset_prepared.get('base_model')
-        config.default_base_model_name = default_model
-        config.default_cfg_scale = preset_prepared.get('guidance_scale')
-        config.default_overwrite_step = preset_prepared.get('steps')
-        config.default_sample_sharpness = preset_prepared.get('sharpness')
-        previous_default_models = preset_prepared.get('previous_default_models', [])
-        checkpoint_downloads = preset_prepared.get('checkpoint_downloads', {})
-        embeddings_downloads = preset_prepared.get('embeddings_downloads', {})
-        lora_downloads = preset_prepared.get('lora_downloads', {})
-        vae_downloads = preset_prepared.get('vae_downloads', {})
-    else:
-        common.is_low_vram_preset = False
+    common.is_low_vram_preset = True
+    if config.default_comfy_active_checkbox:
+        comfyd.stop()
 
+init_config_preset()
 
 config.default_base_model_name, config.checkpoint_downloads = download_models(
-    config.default_base_model_name, config.previous_default_models, config.checkpoint_downloads,
-    config.embeddings_downloads, config.lora_downloads, config.vae_downloads)
+    config.default_base_model_name, config.previous_default_models,
+    config.checkpoint_downloads, config.embeddings_downloads,
+    config.lora_downloads, config.vae_downloads)
 
 config.update_files()
 init_cache(config.model_filenames, config.paths_checkpoints, config.lora_filenames, config.paths_loras)

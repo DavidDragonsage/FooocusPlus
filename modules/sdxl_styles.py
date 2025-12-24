@@ -3,6 +3,8 @@ import re
 import json
 import math
 
+from enhanced.translator import interpret
+from modules.config import prompt_array_separator as ps
 from modules.extra_utils import get_files_from_folder
 from random import Random
 
@@ -13,12 +15,8 @@ styles_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../sdxl_s
 def normalize_key(k):
     k = k.replace('-', ' ')
     words = k.split(' ')
-    words = [w[:1].upper() + w[1:].lower() for w in words]
+    words = [w[:1].upper() + w[1:] for w in words]
     k = ' '.join(words)
-    k = k.replace('3d', '3D')
-    k = k.replace('Sai', 'SAI')
-    k = k.replace('Mre', 'MRE')
-    k = k.replace('(s', '(S')
     return k
 
 
@@ -31,7 +29,6 @@ for x in ['sdxl_styles_fooocus.json',
           'sdxl_styles_mre.json',
           'sdxl_styles_twri.json',
           'sdxl_styles_diva.json',
-          'sdxl_styles_leo_hpy.json'
           'sdxl_styles_marc_k3nt3l.json']:
     if x in styles_files:
         styles_files.remove(x)
@@ -46,8 +43,8 @@ for styles_file in styles_files:
                 negative_prompt = entry['negative_prompt'] if 'negative_prompt' in entry else ''
                 styles[name] = (prompt, negative_prompt)
     except Exception as e:
-        print(str(e))
-        print(f'Failed to load style file {styles_file}')
+        interpret(str(e))
+        interpret('Failed to load style file', styles_file)
 
 style_keys = list(styles.keys())
 fooocus_expansion = 'Fooocus V2'
@@ -66,9 +63,9 @@ def apply_style(style, positive):
 
 def get_words(arrays, total_mult, index):
     if len(arrays) == 1:
-        return [arrays[0].split(',')[index]]
+        return [arrays[0].split(ps)[index]]
     else:
-        words = arrays[0].split(',')
+        words = arrays[0].split(ps)
         word = words[index % len(words)]
         index -= index % len(words)
         index /= len(words)
@@ -78,22 +75,19 @@ def get_words(arrays, total_mult, index):
 
 def apply_arrays(text, index):
     arrays = re.findall(r'\[\[(.*?)\]\]', text)
-    if len(arrays) == 0:
-        return text
+    if len(arrays) > 0:
+        interpret('[Styles] Prompt Array processing:', text)
+        mult = 1
+        for arr in arrays:
+            words = arr.split(ps)
+            mult *= len(words)
 
-    print(f'[Arrays] processing: {text}')
-    mult = 1
-    for arr in arrays:
-        words = arr.split(',')
-        mult *= len(words)
-    
-    index %= mult
-    chosen_words = get_words(arrays, mult, index)
-    
-    i = 0
-    for arr in arrays:
-        text = text.replace(f'[[{arr}]]', chosen_words[i], 1)   
-        i = i+1
-    
-    return text
+        index %= mult
+        chosen_words = get_words(arrays, mult, index)
 
+        i = 0
+        for arr in arrays:
+            text = text.replace(f'[[{arr}]]', chosen_words[i], 1)
+            i = i+1
+    processed = text.strip()
+    return processed

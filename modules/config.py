@@ -2,9 +2,8 @@ import os
 import json
 import math
 import numbers
-import args_manager
 import common
-import enhanced.all_parameters as ads
+import string # required by prompt_array_separator verification
 import modules.constants as constants
 import modules.flags
 import modules.preset_resource as PR
@@ -12,15 +11,16 @@ import modules.user_structure as US
 import tempfile
 
 from pathlib import Path
+from args_manager import args
 from enhanced.translator import interpret
 from modules.extra_utils import get_files_from_folder, try_eval_env_var
 from modules.flags import OutputFormat, Performance, MetadataScheme
 from modules.model_loader import load_file_from_url
-
+from modules.ui_features import control_notification
 
 current_dir = Path.cwd().resolve()
 home_dir = current_dir.parent.parent.resolve()
-user_dir = Path(args_manager.args.user_dir).resolve()
+user_dir = Path(args.user_dir).resolve()
 config_dict = {}
 always_save_keys = []
 visited_keys = []
@@ -83,22 +83,22 @@ def get_path_output() -> str:
     global config_dict, user_dir
     path_output = Path(user_dir/'Outputs').resolve()
     path_output = get_dir_or_set_default('path_outputs', path_output, make_directory=True)
-    if args_manager.args.output_path:
-        config_dict['path_outputs'] = path_output = str(Path(args_manager.args.output_path).resolve())
+    if args.output_path:
+        config_dict['path_outputs'] = path_output = str(Path(args.output_path).resolve())
     interpret('Generated images will be stored in:', path_output)
     return path_output
 
 def get_config_path(config_file):
     global user_dir
-    if args_manager.args.config:
-        config_path = Path(args_manager.args.config)
+    if args.config:
+        config_path = Path(args.config)
     else:
         config_path = user_dir
     config_path = os.path.abspath(f'{config_path}/{config_file}')
     return config_path
 
 config_dict.update(PR.get_initial_preset_content())
-theme = args_manager.args.theme
+theme = args.theme
 
 config_path = get_config_path('/config.txt')
 config_example_path = get_config_path('/config_modification_tutorial.txt')
@@ -109,9 +109,6 @@ try:
         with open(config_path, "r", encoding="utf-8") as json_file:
             config_dict.update(json.load(json_file))
         always_save_keys = list(config_dict.keys())
-        for key in always_save_keys:
-            if key.startswith('default_') and key[8:] in ads.default:
-                ads.default[key[8:]] = config_dict[key]
         interpret('Loading config data from:', config_path)
 except Exception as e:
     interpret('Failed to load config data from:', config_path)
@@ -122,9 +119,9 @@ except Exception as e:
     interpret('3. There is no "," before the last "}".')
     interpret('4. All key and value formats are correct.')
 
-if args_manager.args.models_root:
-    get_dir_or_set_default('path_models_root', Path(args_manager.args.models_root).resolve())
-    path_models_root = Path(args_manager.args.models_root).resolve()
+if args.models_root:
+    get_dir_or_set_default('path_models_root', Path(args.models_root).resolve())
+    path_models_root = Path(args.models_root).resolve()
 else:
     path_models_root = get_dir_or_set_default('path_models_root', Path(user_dir/'models').resolve())
 path_models_root = Path(path_models_root).resolve()
@@ -207,8 +204,8 @@ def get_config_item_or_set_default(key, default_value, validator, disable_empty_
 
 
 def init_temp_path(temp_path: str | None, default_path: str) -> str:
-    if args_manager.args.temp_path:
-        temp_path = Path(args_manager.args.temp_path)
+    if args.temp_path:
+        temp_path = Path(args.temp_path)
 
     if temp_path != '' and \
         (Path(temp_path) != Path(default_path)):
@@ -258,13 +255,13 @@ preset_bar_category_tracking = get_config_item_or_set_default(
 )
 preset_bar_length = get_config_item_or_set_default(
     key='preset_bar_length',
-    default_value=8,
-    validator=lambda x: isinstance(x, int) and 1 <= x <= 30,
+    default_value=7,
+    validator=lambda x: isinstance(x, int) and 1 <= x <= 20,
     expected_type=int
 )
 enable_random_preset_in_category = get_config_item_or_set_default(
     key='enable_random_preset_in_category',
-    default_value=True,
+    default_value=False,
     validator=lambda x: isinstance(x, bool),
     expected_type=bool
 )
@@ -295,7 +292,7 @@ default_enhance_checkbox = get_config_item_or_set_default(
 )
 default_advanced_checkbox = get_config_item_or_set_default(
     key='default_advanced_checkbox',
-    default_value=ads.default['advanced_checkbox'],
+    default_value=False,
     validator=lambda x: isinstance(x, bool),
     expected_type=bool
 )
@@ -326,20 +323,20 @@ custom_performance_steps = get_config_item_or_set_default(
 )
 default_overwrite_step = get_config_item_or_set_default(
     key='default_overwrite_step',
-    default_value=ads.default['overwrite_step'],
+    default_value=-1,
     validator=lambda x: isinstance(x, int),
     expected_type=int
 )
 
 default_max_image_quantity = get_config_item_or_set_default(
     key='default_max_image_quantity',
-    default_value=ads.default['max_image_quantity'],
+    default_value=50,
     validator=lambda x: isinstance(x, int) and x >= 1,
     expected_type=int
 )
 default_image_quantity = get_config_item_or_set_default(
     key='default_image_quantity',
-    default_value=ads.default['image_quantity'],
+    default_value=4,
     validator=lambda x: isinstance(x, int) and 1 <= x <= default_max_image_quantity,
     expected_type=int
 )
@@ -405,13 +402,6 @@ default_pixart_aspect_ratio = get_config_item_or_set_default(
     expected_type=str
 )
 
-default_output_format = get_config_item_or_set_default(
-    key='default_output_format',
-    default_value=ads.default['output_format'],
-    validator=lambda x: x in OutputFormat.list(),
-    expected_type=str
-)
-
 default_prompt = get_config_item_or_set_default(
     key='default_prompt',
     default_value='',
@@ -426,6 +416,13 @@ default_prompt_negative = get_config_item_or_set_default(
     disable_empty_as_none=True,
     expected_type=str
 )
+prompt_array_separator = get_config_item_or_set_default(
+    key='prompt_array_separator',
+    default_value='|',
+    validator=lambda x: len(x) == 1 and x in string.punctuation,
+    expected_type=str
+)
+
 default_extra_variation = get_config_item_or_set_default(
     key='default_extra_variation',
     default_value=False,
@@ -491,6 +488,7 @@ default_refiner_model_name = default_refiner = get_config_item_or_set_default(
     validator=lambda x: isinstance(x, str),
     expected_type=str
 ).replace('\\', os.sep).replace('/', os.sep)
+
 default_refiner_switch = get_config_item_or_set_default(
     key='default_refiner_switch',
     default_value=0.60,
@@ -536,21 +534,19 @@ default_loras = [(y[0], y[1].replace('\\', os.sep).replace('/', os.sep), y[2]) i
 
 default_max_lora_number = get_config_item_or_set_default(
     key='default_max_lora_number',
-    default_value=len(default_loras) if isinstance(default_loras, list) and len(default_loras) > 0 else ads.default['max_lora_number'],
+    default_value=len(default_loras) if isinstance(default_loras, list) and len(default_loras) > 0 else 5,
     validator=lambda x: isinstance(x, int) and x >= 1
 )
 
-ads.init_all_params_index(default_max_lora_number, args_manager.args.disable_metadata)
-
 default_loras_min_weight = get_config_item_or_set_default(
     key='default_loras_min_weight',
-    default_value=ads.default['loras_min_weight'],
+    default_value=-2,
     validator=lambda x: isinstance(x, numbers.Number) and -10 <= x <= 10,
     expected_type=numbers.Number
 )
 default_loras_max_weight = get_config_item_or_set_default(
     key='default_loras_max_weight',
-    default_value=ads.default['loras_max_weight'],
+    default_value=3,
     validator=lambda x: isinstance(x, numbers.Number) and -10 <= x <= 10,
     expected_type=numbers.Number
 )
@@ -568,6 +564,62 @@ default_sample_sharpness = get_config_item_or_set_default(
     expected_type=numbers.Number
 )
 
+
+default_output_format = get_config_item_or_set_default(
+    key='default_output_format',
+    default_value='png',
+    validator=lambda x: x in OutputFormat.list(),
+    expected_type=str
+)
+default_save_metadata_to_images = get_config_item_or_set_default(
+    key='default_save_metadata_to_images',
+    default_value=True,
+    validator=lambda x: isinstance(x, bool),
+    expected_type=bool
+)
+default_metadata_scheme = get_config_item_or_set_default(
+    key='default_metadata_scheme',
+    default_value='Fooocus',
+    validator=lambda x: x in [y[1] for y in modules.flags.metadata_scheme if y[1] == x],
+    expected_type=str
+)
+metadata_created_by = get_config_item_or_set_default(
+    key='metadata_created_by',
+    default_value='FooocusPlus',
+    validator=lambda x: isinstance(x, str),
+    expected_type=str
+)
+default_generate_image_grid = get_config_item_or_set_default(
+    key='default_generate_image_grid',
+    default_value=False,
+    validator=lambda x: isinstance(x, bool),
+    expected_type=bool
+)
+disable_image_log = get_config_item_or_set_default(
+    key='disable_image_log',
+    default_value=False,
+    validator=lambda x: isinstance(x, bool),
+    expected_type=bool
+)
+show_newest_images_first = get_config_item_or_set_default(
+    key='show_newest_images_first',
+    default_value=True,
+    validator=lambda x: isinstance(x, bool),
+    expected_type=bool
+)
+default_black_out_nsfw = get_config_item_or_set_default(
+    key='default_black_out_nsfw',
+    default_value=False,
+    validator=lambda x: isinstance(x, bool),
+    expected_type=bool
+)
+default_save_only_final_enhanced_image = get_config_item_or_set_default(
+    key='default_save_only_final_enhanced_image',
+    default_value=False,
+    validator=lambda x: isinstance(x, bool),
+    expected_type=bool
+)
+
 default_sampler = get_config_item_or_set_default(
     key='default_sampler',
     default_value='dpmpp_2m_sde_gpu',
@@ -576,7 +628,7 @@ default_sampler = get_config_item_or_set_default(
 )
 default_scheduler = get_config_item_or_set_default(
     key='default_scheduler',
-    default_value=ads.default['scheduler_name'],
+    default_value='karras',
     validator=lambda x: x in modules.flags.scheduler_list if backend_engine == 'Fooocus' else modules.flags.comfy_scheduler_list,
     expected_type=str
 )
@@ -595,13 +647,13 @@ default_clip_skip = get_config_item_or_set_default(
 
 default_cfg_tsnr = get_config_item_or_set_default(
     key='default_cfg_tsnr',
-    default_value=ads.default['adaptive_cfg'],
+    default_value=7.0,
     validator=lambda x: isinstance(x, numbers.Number),
     expected_type=numbers.Number
 )
 default_overwrite_switch = get_config_item_or_set_default(
     key='default_overwrite_switch',
-    default_value=ads.default['overwrite_switch'],
+    default_value=-1,
     validator=lambda x: isinstance(x, int),
     expected_type=int
 )
@@ -633,7 +685,7 @@ vae_downloads = get_config_item_or_set_default(
 
 default_inpaint_engine_version = get_config_item_or_set_default(
     key='default_inpaint_engine_version',
-    default_value=ads.default['inpaint_engine'],
+    default_value='v2.6',
     validator=lambda x: x in modules.flags.inpaint_engine_versions,
     expected_type=str
 )
@@ -696,7 +748,7 @@ for image_count in range(default_controlnet_image_count):
 
 default_inpaint_advanced_masking_checkbox = get_config_item_or_set_default(
     key='default_inpaint_advanced_masking_checkbox',
-    default_value=ads.default['inpaint_advanced_masking_checkbox'],
+    default_value=False,
     validator=lambda x: isinstance(x, bool),
     expected_type=bool
 )
@@ -759,49 +811,19 @@ default_sam_max_detections = get_config_item_or_set_default(
     validator=lambda x: isinstance(x, int) and 0 <= x <= 10,
     expected_type=int
 )
-default_black_out_nsfw = get_config_item_or_set_default(
-    key='default_black_out_nsfw',
-    default_value=False,
-    validator=lambda x: isinstance(x, bool),
-    expected_type=bool
-)
-default_save_only_final_enhanced_image = get_config_item_or_set_default(
-    key='default_save_only_final_enhanced_image',
-    default_value=False,
-    validator=lambda x: isinstance(x, bool),
-    expected_type=bool
-)
-default_save_metadata_to_images = get_config_item_or_set_default(
-    key='default_save_metadata_to_images',
-    default_value=ads.default['save_metadata_to_images'],
-    validator=lambda x: isinstance(x, bool),
-    expected_type=bool
-)
-default_metadata_scheme = get_config_item_or_set_default(
-    key='default_metadata_scheme',
-    default_value='Fooocus',
-    validator=lambda x: x in [y[1] for y in modules.flags.metadata_scheme if y[1] == x],
-    expected_type=str
-)
-metadata_created_by = get_config_item_or_set_default(
-    key='metadata_created_by',
-    default_value='FooocusPlus',
-    validator=lambda x: isinstance(x, str),
-    expected_type=str
-)
-show_newest_images_first = get_config_item_or_set_default(
-    key='show_newest_images_first',
-    default_value=True,
-    validator=lambda x: isinstance(x, bool),
-    expected_type=bool
-)
+
 
 example_inpaint_prompts = [[x] for x in example_inpaint_prompts]
 example_enhance_detection_prompts = [[x] for x in example_enhance_detection_prompts]
 
-default_comfyd_active_checkbox = get_config_item_or_set_default(
-    key='default_comfyd_active_checkbox',
-    default_value=ads.default['comfyd_active_checkbox'],
+default_comfy_active_checkbox = get_config_item_or_set_default(
+    key='default_comfy_active_checkbox',
+    default_value=True,
+    validator=lambda x: isinstance(x, bool)
+)
+audio_notification = get_config_item_or_set_default(
+    key='audio_notification',
+    default_value=False,
     validator=lambda x: isinstance(x, bool)
 )
 default_image_catalog_checkbox = get_config_item_or_set_default(
@@ -811,13 +833,13 @@ default_image_catalog_checkbox = get_config_item_or_set_default(
 )
 default_image_catalog_max_number = get_config_item_or_set_default(
     key='default_image_catalog_max_number',
-    default_value=ads.default['image_catalog_max_number'],
+    default_value=100,
     validator=lambda x: isinstance(x, int),
     expected_type=int
 )
 default_backfill_prompt = get_config_item_or_set_default(
     key='default_backfill_prompt',
-    default_value=ads.default['backfill_prompt'],
+    default_value=False,
     validator=lambda x: isinstance(x, bool)
 )
 default_prompt_translator_enable = get_config_item_or_set_default(
@@ -879,18 +901,18 @@ default_inpaint_mask_sam_model = get_config_item_or_set_default(
 )
 default_mixing_image_prompt_and_vary_upscale = get_config_item_or_set_default(
     key='default_mixing_image_prompt_and_vary_upscale',
-    default_value=ads.default['mixing_image_prompt_and_vary_upscale'],
+    default_value=False,
     validator=lambda x: isinstance(x, bool)
 )
 default_mixing_image_prompt_and_inpaint = get_config_item_or_set_default(
     key='default_mixing_image_prompt_and_inpaint',
-    default_value=ads.default['mixing_image_prompt_and_inpaint'],
+    default_value=False,
     validator=lambda x: isinstance(x, bool)
 )
 
 default_freeu = [1.01, 1.02, 0.99, 0.95]
 
-default_adm_guidance = [ads.default['adm_scaler_positive'], ads.default['adm_scaler_negative'], ads.default['adm_scaler_end']]
+default_adm_guidance = [1.5, 0.8, 0.3]
 styles_definition = {}
 instruction = ''
 reference = ''
@@ -929,7 +951,8 @@ possible_preset_keys = {
     "lora_downloads": "lora_downloads",
     "vae_downloads": "vae_downloads",
     "default_vae": "vae",
-    # "default_inpaint_method": "inpaint_method", # disabled so inpaint mode doesn't refresh after every preset change
+    # "default_inpaint_method": "inpaint_method"
+    # disabled so inpaint mode doesn't refresh after every preset change
     "default_inpaint_engine_version": "inpaint_engine_version",
 
     "default_image_quantity": "image_quantity",
@@ -1298,16 +1321,29 @@ def downloading_sd35_large_model():
     )
     return os.path.join(paths_checkpoints[0] + '\SD3x', 'stableDiffusion35_large.safetensors')
 
-
 update_files()
 
+# initialize notification file status
+control_notification(audio_notification)
 
+# adjust for the args override that prevents use of Comfy
+if args.disable_comfyd:
+    default_comfy_active_checkbox = False
+
+default_aspect_ratio_values = []
 # Aspect Ratio support
-default_aspect_ratio_values = [default_standard_aspect_ratio, default_shortlist_aspect_ratio,\
-    default_sd1_5_aspect_ratio, default_pixart_aspect_ratio]
+def set_default_aspect_ratio_values():
+    global default_aspect_ratio_values
+    default_aspect_ratio_values = [default_standard_aspect_ratio,
+    default_shortlist_aspect_ratio,
+    default_sd1_5_aspect_ratio,
+    default_pixart_aspect_ratio]
+set_default_aspect_ratio_values()
 
-config_aspect_ratios = [available_standard_aspect_ratios, available_shortlist_aspect_ratios,\
-    available_sd1_5_aspect_ratios, available_pixart_aspect_ratios,]
+config_aspect_ratios = [available_standard_aspect_ratios,
+    available_shortlist_aspect_ratios,
+    available_sd1_5_aspect_ratios,
+    available_pixart_aspect_ratios]
 
 # Common support for prompt & image quantity preservation
 # during preset switching
@@ -1331,4 +1367,3 @@ common.is_low_vram_preset = default_low_vram_presets
 
 # Flags support
 modules.flags.custom_performance = custom_performance_steps
-

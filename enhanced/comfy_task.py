@@ -5,6 +5,7 @@ import common
 import ldm_patched
 import modules.config as config
 from enhanced.backend import ComfyTaskParams
+from enhanced.translator import interpret_warn
 from modules.model_loader import load_file_from_url
 
 default_method_names = ['Blend the Foreground with IC-Light', 'Create the Foreground with Convolutional Injection']
@@ -321,8 +322,8 @@ def check_download_flux_model(base_model, clip_model=None):
                     file_name=base_model
                 )
         else:
-            print(f'[ComfyTask] Could not automatically download {base_model}')
-            print('Please download this Flux file manually and place it in the correct Flux subdirectory')
+            interpret_warn('[ComfyTask] Could not automatically download', base_model)
+            interpret_warn('Please download this Flux file manually and place it in the correct Flux subdirectory')
 
     if clip_model:
         if not common.MODELS_INFO.exists_model(catalog="clip", model_path=clip_model):

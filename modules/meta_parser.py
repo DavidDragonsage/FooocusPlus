@@ -9,14 +9,16 @@ from PIL import Image
 
 import common
 import args_manager as args
-import enhanced.all_parameters as ads
 import enhanced.version
 import modules.config as config
 import modules.aspect_ratios as AR
+import modules.preset_resource as PR
 import modules.sdxl_styles
+import modules.user_structure as US
 from enhanced.translator import interpret
 from modules.flags import MetadataScheme, Performance, Steps, task_class_mapping, get_taskclass_by_fullname
 from modules.flags import default_class_params, scheduler_list, sampler_list, SAMPLERS, CIVITAI_NO_KARRAS
+from modules.preset_support import normalize_AR, parse_meta_from_preset, verify_sampler, verify_scheduler
 from modules.util import quote, unquote, extract_styles_from_prompt, is_json, sha256
 from modules.hash_cache import sha256_from_cache
 
@@ -29,24 +31,6 @@ get_layout_toggle_visible_inter = lambda x,y,z: gr.update(visible=x not in y, in
 get_layout_choices_visible_inter = lambda l,x,y,z:gr.update(choices=l, visible=x not in y, interactive=x not in z)
 get_layout_empty_visible_inter = lambda x,y,z: gr.update(visible=x not in y, interactive=x not in z) if x not in z else gr.update(value='', visible=x not in y, interactive=x not in z)
 
-
-def verify_sampler(arg_sampler):
-    if arg_sampler in sampler_list:
-        common.sampler_name = arg_sampler
-    elif common.scheduler_name in sampler_list:
-        return common.sampler_name
-    else:
-        common.sampler_name = config.default_sampler
-    return common.sampler_name
-
-def verify_scheduler(arg_scheduler):
-    if arg_scheduler in scheduler_list:
-        common.scheduler_name = arg_scheduler
-    elif common.scheduler_name in scheduler_list:
-        return common.scheduler_name
-    else:
-        common.scheduler_name = config.default_sampler
-    return common.scheduler_name
 
 def get_layout_visible_inter_loras(y,z,max_number):
     x = 'loras'
@@ -65,11 +49,9 @@ def get_layout_visible_inter_loras(y,z,max_number):
         results += [gr.update(visible= i+y1<max_number or y1<0, interactive= i+z1<max_number or z1<0)] * 3
     return results
 
+
 def switch_layout_template(presetdata: dict | str, state_params, preset_url=''):
-    presetdata_dict = presetdata
-    if isinstance(presetdata, str):
-        presetdata_dict = json.loads(presetdata)
-    assert isinstance(presetdata_dict, dict)
+    presetdata_dict = US.verify_dictionary(presetdata)
     enginedata_dict = presetdata_dict.get('engine', {})
     template_engine = get_taskclass_by_fullname(presetdata_dict.get('Backend Engine', presetdata_dict.get('backend_engine',
         task_class_mapping[enginedata_dict.get('backend_engine', 'Fooocus')])))
@@ -101,7 +83,7 @@ def switch_layout_template(presetdata: dict | str, state_params, preset_url=''):
     #    results += [get_layout_visible_inter('loras', visible, inter)] * 3
 
     #[output_format, inpaint_advanced_masking_checkbox, mixing_image_prompt_and_vary_upscale, mixing_image_prompt_and_inpaint, backfill_prompt, input_image_checkbox, state_topbar]
-    # if default_X in config_prese then update the value to gr.X else update with default value in ads.default[X]
+    # if default_X in config_preset then update the value to gr.X else update with default value in config
     update_value_if_existed = lambda x: gr.update() if x not in presetdata_dict else presetdata_dict[x]
     results.append(update_value_if_existed("output_format"))
     results.append(update_value_if_existed("inpaint_advanced_masking_checkbox"))
@@ -117,22 +99,26 @@ def switch_layout_template(presetdata: dict | str, state_params, preset_url=''):
     return results
 
 
-def load_parameter_button_click(raw_metadata: dict | str, is_generating: bool, inpaint_mode: str):
-    loaded_parameter_dict = raw_metadata
-    if isinstance(raw_metadata, str):
-        loaded_parameter_dict = json.loads(raw_metadata)
-    assert isinstance(loaded_parameter_dict, dict)
-
-    results = [True] if len(loaded_parameter_dict) > 0 else [gr.update()]
-
+def process_dictionary(loaded_parameter_dict, is_generating, inpaint_mode, results):
     get_image_quantity('image_quantity', 'Image Quantity', loaded_parameter_dict, results)
-    get_str('prompt', 'Prompt', loaded_parameter_dict, results)
+
+    prompt_str = get_str('prompt', 'Prompt', loaded_parameter_dict, results)
     get_str('negative_prompt', 'Negative Prompt', loaded_parameter_dict, results)
     get_list('styles', 'Styles', loaded_parameter_dict, results)
     performance = get_str('performance', 'Performance', loaded_parameter_dict, results)
     get_steps('steps', 'Steps', loaded_parameter_dict, results)
     get_number('overwrite_switch', 'Overwrite Switch', loaded_parameter_dict, results)
     get_resolution('resolution', 'Resolution', loaded_parameter_dict, results)
+    arg_resolution = ''
+    if loaded_parameter_dict.get("resolution"):
+        arg_resolution = loaded_parameter_dict.get("resolution")
+    elif loaded_parameter_dict.get("Resolution"):
+        arg_resolution = loaded_parameter_dict.get("Resolution")
+    if arg_resolution:
+        arg_resolution = normalize_AR(arg_resolution)
+        if arg_resolution != '0*0' and not ',' in arg_resolution:
+            common.current_AR = arg_resolution
+            interpret('[MetaParser] Aspect Ratio set by metadata or preset:', arg_resolution)
     get_number('guidance_scale', 'Guidance Scale', loaded_parameter_dict, results)
     get_number('sharpness', 'Sharpness', loaded_parameter_dict, results)
     get_adm_guidance('adm_guidance', 'ADM Guidance', loaded_parameter_dict, results)
@@ -143,7 +129,13 @@ def load_parameter_button_click(raw_metadata: dict | str, is_generating: bool, i
     get_str('refiner_model', 'Refiner Model', loaded_parameter_dict, results)
     get_number('refiner_switch', 'Refiner Switch', loaded_parameter_dict, results)
     get_str('sampler', 'Sampler', loaded_parameter_dict, results)
+    arg_sampler = loaded_parameter_dict.get("sampler")
+    if arg_sampler:
+        verify_sampler(arg_sampler)
     get_str('scheduler', 'Scheduler', loaded_parameter_dict, results)
+    arg_scheduler = loaded_parameter_dict.get("scheduler")
+    if arg_scheduler:
+        verify_scheduler(arg_scheduler)
     get_str('vae', 'VAE', loaded_parameter_dict, results)
     get_seed('seed', 'Seed', loaded_parameter_dict, results)
     get_inpaint_engine_version('inpaint_engine_version', 'Inpaint Engine Version', loaded_parameter_dict, results, inpaint_mode)
@@ -167,6 +159,43 @@ def load_parameter_button_click(raw_metadata: dict | str, is_generating: bool, i
     for i in range(config.default_max_lora_number):
         get_lora(f'lora_combined_{i + 1}', f'LoRA {i + 1}', loaded_parameter_dict, results, performance_filename)
 
+    return results
+
+
+# directly called by load metadata from
+# log via clipboard and prompt
+# Also called indirectly by load metada from image
+def read_meta_from_log(raw_metadata: dict | str, is_generating: bool, inpaint_mode: str):
+    loaded_parameter_dict = US.verify_dictionary(raw_metadata)
+    if not common.log_metadata:
+        common.log_metadata = loaded_parameter_dict
+    else:
+        loaded_parameter_dict = common.log_metadata
+
+    results = [True] if len(loaded_parameter_dict) > 0 else [gr.update()]
+
+    if not common.metadata_loading:
+        arg_preset = ''
+        if loaded_parameter_dict.get("current_preset"):
+            arg_preset = loaded_parameter_dict.get("current_preset")
+        elif loaded_parameter_dict.get("Preset"):
+            arg_preset = loaded_parameter_dict.get("Preset")
+        if arg_preset:
+            PR.current_preset = arg_preset
+            preset_content = PR.get_preset_content(PR.current_preset, quiet=False)
+            parse_meta_from_preset(preset_content)
+        PR.category_selection = PR.find_preset_category(PR.current_preset)
+
+    results = process_dictionary(loaded_parameter_dict, is_generating, inpaint_mode, results)
+    return results
+
+
+def load_parameters(raw_metadata: dict | str, is_generating: bool, inpaint_mode: str):
+    loaded_parameter_dict = US.verify_dictionary(raw_metadata)
+
+    results = [True] if len(loaded_parameter_dict) > 0 else [gr.update()]
+
+    results = process_dictionary(loaded_parameter_dict, is_generating, inpaint_mode, results)
     return results
 
 
@@ -211,7 +240,7 @@ def get_image_quantity(key: str, fallback: str | None, source_dict: dict, result
         assert h is not None
         h = int(h)
         h = min(h, config.default_max_image_quantity)
-        m = int(source_dict.get('max_image_quantity', ads.default["max_image_quantity"]))
+        m = int(source_dict.get('max_image_quantity', config.default_max_image_quantity))
         results.append(gr.update(value=h, maximum=m))
     except:
         results.append(1)
@@ -375,8 +404,8 @@ def get_lora(key: str, fallback: str | None, source_dict: dict, results: list, p
 
         if name == performance_filename:
             raise Exception
-        w_min = float(source_dict.get('loras_min_weight', ads.default['loras_min_weight']))
-        w_max = float(source_dict.get('loras_max_weight', ads.default['loras_max_weight']))
+        w_min = float(source_dict.get('loras_min_weight', config.default_loras_min_weight))
+        w_max = float(source_dict.get('loras_max_weight', config.default_loras_max_weight))
         weight = float(weight)
         results.append(enabled)
         results.append(name)
@@ -397,81 +426,6 @@ def get_sha256(filepath):
             filehash = sha256(filepath)
         hash_cache[filepath] = filehash
     return hash_cache[filepath]
-
-
-def parse_meta_from_preset(preset_content):
-    assert isinstance(preset_content, dict)
-    preset_prepared = {}
-    items = preset_content
-
-    for settings_key, meta_key in config.possible_preset_keys.items():
-        # for presets that do not have a default prompt or negative prompt
-        # and almost all presets do not have an image quantity:
-        items.setdefault("default_prompt", common.positive)
-        items.setdefault("default_prompt_negative", common.negative)
-        items.setdefault("default_image_quantity", common.image_quantity)
-
-        if settings_key == "default_loras":
-            loras = getattr(config, settings_key)
-            if settings_key in items:
-                loras = items[settings_key]
-            for index, lora in enumerate(loras[:config.default_max_lora_number]):
-                if len(lora) == 2:
-                    lora[0] = lora[0].replace('\\', os.sep).replace('/', os.sep)
-                elif  len(lora) == 3:
-                    lora[1] = lora[1].replace('\\', os.sep).replace('/', os.sep)
-                preset_prepared[f'lora_combined_{index + 1}'] = ' : '.join(map(str, lora))
-        elif settings_key == "default_prompt":
-            if items[settings_key] == "":
-                items[settings_key] = common.positive
-            else:
-                common.positive = items[settings_key]
-                interpret('[MetaParser] Positive prompt set by preset')
-        elif settings_key == "default_prompt_negative":
-            if items[settings_key] == "":
-                items[settings_key] = common.negative
-            else:
-                common.negative = items[settings_key]
-                interpret(f'[MetaParser] Negative prompt set by preset')
-        elif settings_key == "default_aspect_ratio":
-            if settings_key in items and (items[settings_key] is not None or items[settings_key] != '0*0'):
-                default_aspect_ratio = items[settings_key]
-                width, height = AR.AR_split(default_aspect_ratio)
-            else:
-                if common.current_AR:
-                    default_aspect_ratio = common.current_AR
-                else:
-                    default_aspect_ratio = AR.default_standard_AR
-                    interpret('Metadata fallback to default aspect ratio:', default_aspect_ratio)
-                width, height = AR.AR_split(default_aspect_ratio)
-            preset_prepared[meta_key] = (width, height)
-        elif settings_key == "default_refiner_switch":
-            try:
-                common.refiner_slider = items[settings_key]
-            except:
-                if type(common.refiner_slider) != 'float':
-                    common.refiner_slider = config.default_refiner_switch
-        elif settings_key == "default_sampler":
-            try:
-                verify_sampler(items[settings_key])
-            except:
-                common.sampler_name = config.default_sampler
-        elif settings_key == "default_scheduler":
-            try:
-                verify_scheduler(items[settings_key])
-            except:
-                common.scheduler_name = config.default_scheduler
-        elif settings_key not in items and settings_key in config.allow_missing_preset_key:
-            continue
-        else:
-            preset_prepared[meta_key] = items[settings_key] if settings_key in items and items[settings_key] is not None else getattr(config, settings_key)
-
-        if settings_key == "default_styles" or settings_key == "default_aspect_ratio":
-            preset_prepared[meta_key] = str(preset_prepared[meta_key])
-        if settings_key in ["default_model", "default_refiner"]:
-            preset_prepared[meta_key] = preset_prepared[meta_key].replace('\\', os.sep).replace('/', os.sep)
-
-    return preset_prepared
 
 
 class MetadataParser(ABC):
@@ -501,8 +455,10 @@ class MetadataParser(ABC):
     def to_string(self, metadata: dict) -> str:
         raise NotImplementedError
 
-    def set_data(self, raw_prompt, full_prompt, raw_negative_prompt, full_negative_prompt, steps, base_model_name,
-                 refiner_model_name, loras, vae_name, styles_definition):
+    def set_data(self, raw_prompt, full_prompt,
+        raw_negative_prompt, full_negative_prompt,
+        steps, base_model_name, refiner_model_name,
+        loras, vae_name, styles_definition):
         self.raw_prompt = raw_prompt
         interpret('Metadata raw_prompt:', raw_prompt)
         self.full_prompt = full_prompt
@@ -888,7 +844,7 @@ def get_metadata_parser(metadata_scheme: MetadataScheme) -> MetadataParser:
             raise NotImplementedError
 
 
-def read_info_from_image(file) -> tuple[str | None, MetadataScheme | None]:
+def read_meta_from_image(file) -> tuple[str | None, MetadataScheme | None]:
     items = (file.info or {}).copy()
 
     parameters = items.pop('parameters', None)
@@ -927,6 +883,7 @@ def read_info_from_image(file) -> tuple[str | None, MetadataScheme | None]:
         if isinstance(parameters, str):
             metadata_scheme = MetadataScheme.A1111
     return parameters, metadata_scheme
+
 
 def params_lora_fixed(parameters):
     loras_p = {k: v for k, v in parameters.items() if k.startswith("LoRA [")}

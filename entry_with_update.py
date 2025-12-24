@@ -71,7 +71,7 @@ try:
     merge_result, _ = repo.merge_analysis(remote_commit.id)
 
     if merge_result & pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE:
-        print(f'{branch_name if branch_name!="main" else "FooocusPlus"}: Already up-to-date, {str(local_commit.id)[:7]}')
+        print(f'{branch_name if branch_name!="main" else "FooocusPlus"} is already up-to-date')
     elif merge_result & pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD:
         local_branch.set_target(remote_commit.id)
         repo.head.set_target(remote_commit.id)

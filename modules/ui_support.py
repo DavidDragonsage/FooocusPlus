@@ -7,9 +7,7 @@ import re
 import gradio as gr
 from pathlib import Path
 
-import args_manager as args
 import common
-import enhanced.all_parameters as ads
 import enhanced.gallery as gallery_util
 import enhanced.superprompter as superprompter
 import enhanced.comfy_task as comfy_task
@@ -24,9 +22,12 @@ import modules.sdxl_styles as sdxl_styles
 import modules.style_sorter as style_sorter
 import modules.util as util
 
+from args_manager import args
 from enhanced.backend import comfyd
 from enhanced.translator import interpret
+from enhanced.version import announce_version
 from enhanced.welcome import get_welcome_image
+from modules.preset_support import parse_meta_from_preset
 from modules.model_loader import load_file_from_url
 
 
@@ -65,7 +66,7 @@ def get_system_message():
 
     f_log_path = os.path.abspath("./fooocusplus_log.md")
     if len(update_msg_f)>0:
-        body_f = f'<b id="update_f">[FooocusPlus]</b>: {update_msg_f}<a href="{args.args.webroot}/file={f_log_path}">>></a>   '
+        body_f = f'<b id="update_f">[FooocusPlus]</b>: {update_msg_f}<a href="file={f_log_path}">>></a>   '
     else:
         body_f = '<b id="update_f"> </b>'
     import mistune
@@ -152,11 +153,11 @@ function(system_params) {
 def init_nav_bars(state_params, request: gr.Request):
 #   print(f'request.headers:{request.headers}')
     if "__lang" not in state_params.keys():
-        state_params.update({"__lang": args.args.language})
+        state_params.update({"__lang": args.language})
     if "__theme" not in state_params.keys():
-        state_params.update({"__theme": args.args.theme})
+        state_params.update({"__theme": args.theme})
     if "__preset" not in state_params.keys():
-        state_params.update({"__preset": args.args.preset})
+        state_params.update({"__preset": args.preset})
     if "__session" not in state_params.keys() and "cookie" in request.headers.keys():
         cookies = dict([(s.split('=')[0], s.split('=')[1]) for s in request.headers["cookie"].split('; ')])
         if "SESSION" in cookies.keys():
@@ -165,7 +166,7 @@ def init_nav_bars(state_params, request: gr.Request):
     if "__is_mobile" not in state_params.keys():
         state_params.update({"__is_mobile": True if user_agent.find("Mobile")>0 and user_agent.find("AppleWebKit")>0 else False})
     if "__webpath" not in state_params.keys():
-        state_params.update({"__webpath": f'{args.args.webroot}/file={os.getcwd()}'})
+        state_params.update({"__webpath": f'file={os.getcwd()}'})
     if "__max_per_page" not in state_params.keys():
         if state_params["__is_mobile"]:
             state_params.update({"__max_per_page": 9})
@@ -182,7 +183,7 @@ def init_nav_bars(state_params, request: gr.Request):
     state_params.update({"note_box_state": ['',0,0]})
     state_params.update({"array_wildcards_mode": ''})
     state_params.update({"wildcard_in_wildcards": 'root'})
-    state_params.update({"bar_button": args.args.preset})
+    state_params.update({"bar_button": args.preset})
     state_params.update({"init_process": 'finished'})
     results = refresh_nav_bars(state_params)
     file_welcome = get_welcome_image()
@@ -191,15 +192,17 @@ def init_nav_bars(state_params, request: gr.Request):
         interpret(' Not found!')
     else:
         print(f' {file_welcome}')
-    print()
     results += [gr.update(value=f'{file_welcome}')]
     results += [gr.update(value=state_params["__theme"])]
     results += [gr.update(choices=state_params["__output_list"], value=None), gr.update(visible=len(state_params["__output_list"])>0, open=False)]
     results += [gr.update(value=False if state_params["__is_mobile"] else config.default_inpaint_advanced_masking_checkbox)]
-    preset = args.args.preset
+    preset = args.preset
     preset_url = get_preset_inc_url(preset)
     state_params.update({"__preset_url":preset_url})
     results += [gr.update(visible=True if 'blank.inc.html' not in preset_url else False)]
+    if common.version_update < 5:
+        announce_version()
+    print()
     return results
 
 def get_preset_inc_url(preset_name='blank'):
@@ -207,9 +210,9 @@ def get_preset_inc_url(preset_name='blank'):
     preset_inc_path = os.path.abspath(f'./presets/html/{preset_name}.html')
     blank_inc_path = os.path.abspath(f'./presets/html/blank.inc.html')
     if os.path.exists(preset_inc_path):
-        return f'{args.args.webroot}/file={preset_inc_path}'
+        return f'file={preset_inc_path}'
     else:
-        return f'{args.args.webroot}/file={blank_inc_path}'
+        return f'file={blank_inc_path}'
 
 def refresh_nav_bars(state_params):
     state_params.update({"__nav_name_list": PR.get_presetnames_in_folder(common.default_bar_category)})
@@ -291,6 +294,7 @@ def down_absent_model(state_params):
     state_params.update({'bar_button': state_params["bar_button"].replace('\u2B07', '')})
     return gr.update(visible=False), state_params
 
+
 def reset_layout_params(prompt, negative_prompt, state_params, is_generating, inpaint_mode, comfyd_active_checkbox):
     global system_message, preset_down_note_info
 
@@ -305,9 +309,11 @@ def reset_layout_params(prompt, negative_prompt, state_params, is_generating, in
     interpret('[UI Support] Changed the preset from', state_params["__preset"] + ' → ' + preset)
     state_params.update({"__preset": preset})
 
-    args.args.preset = preset
-    config_preset = PR.get_preset_content(preset, quiet=False)
-    preset_prepared = meta_parser.parse_meta_from_preset(config_preset)
+    if common.metadata_loading:
+        config_preset = common.log_metadata
+    else:
+        config_preset = PR.get_preset_content(preset, quiet=False)
+    preset_prepared = parse_meta_from_preset(config_preset)
 
     engine = preset_prepared.get('engine', {}).get('backend_engine', 'Fooocus')
     state_params.update({"engine": engine})
@@ -336,16 +342,16 @@ def reset_layout_params(prompt, negative_prompt, state_params, is_generating, in
     state_params.update({"__preset_url":preset_url})
     results = refresh_nav_bars(state_params)
     results += meta_parser.switch_layout_template(preset_prepared, state_params, preset_url)
-    results += meta_parser.load_parameter_button_click(preset_prepared, is_generating, inpaint_mode)
+    results += meta_parser.load_parameters(preset_prepared, is_generating, inpaint_mode)
     return results
 
 
 def download_models(default_model, previous_default_models, checkpoint_downloads, embeddings_downloads, lora_downloads, vae_downloads):
-    if args.args.disable_preset_download:
+    if args.disable_preset_download:
         interpret('[UI Support] Skipped model download')
         return default_model, checkpoint_downloads
 
-    if not args.args.always_download_new_model:
+    if not args.always_download_new_model:
         if not os.path.isfile(common.MODELS_INFO.get_file_path_by_name('checkpoints', default_model)):
             for alternative_model_name in previous_default_models:
                 if os.path.isfile(common.MODELS_INFO.get_file_path_by_name('checkpoints', alternative_model_name)):

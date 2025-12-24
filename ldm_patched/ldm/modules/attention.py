@@ -14,7 +14,7 @@ if model_management.xformers_enabled():
     import xformers
     import xformers.ops
 
-from ldm_patched.modules.args_parser import args
+from args_manager import args
 import ldm_patched.modules.ops
 ops = ldm_patched.modules.ops.disable_weight_init
 

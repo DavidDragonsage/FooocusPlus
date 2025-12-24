@@ -1,3 +1,98 @@
+# 1.0.9 Add/Remove to/from Favourites, Batch Generation, Image Grid, Image Grids, Image Recovery, New Styles & UI Popup Messages
+
+* introduced Add/Remove Current Preset to/from Favorites
+  * for new users, the Favorites are: Default, Cheyenne18,
+  * Flux1Krea_8GGUF, HyperFlux1S8 and HyperFlux5
+  * these Favorites can be added with the Restore Favorites button
+* the Flux preset categories now less abbreviated:
+  * Flux1Dev, Flux1Krea, Flux1Schnell and HyperFlux1D
+  * both HyperFlux Schnell presets are now in the Flux1Schnell category
+* introduced Image Recovery to restore images lost in a crash or deletion
+  * temporary images are removed during the generative cycle, not at launch
+* introduced Batch Generate to the new Batch Control accordion in Settings
+* Batch Generate is supported by a Batch Count slider, varying from 1 to 25
+  * Batch Generate restarts image generation the specified number of times
+  * it is ideal for creating multiple Image Grids
+  * Batch Generate also works as an Image Quantity multiplier
+* the Generate Image Grid feature is upgraded to save grids to Outputs
+  * grids are optimized to avoid the creation of partial rows
+  * aspect ratio awareness is used to make the grids as square as possible
+  * grid size is controlled by Image Quantity and limited to 16 images
+  * the grid may be viewed in the Catalog but not in the log file
+  * the Generate Image Grid control is located in the Batch Control accordion
+* under the Main Prompt box, introduced the Features option to hold:
+  * IC-Light and Edit, the new image editor
+  * unlike Input Image, these functions are always available
+* Edit is composed of five optional dropdowns:
+  * Adjustments include Brightness, Contrast, Hue, Saturation & Sharpness
+  * Transformations can resize, flip and crop the image
+  * Transparency options create a transparent image or an invisible background
+  * Composite images can be created by positioning overlays on a base
+  * Effects include Blurs, Edge Enhance, Posterize & Solarize
+  * all image functions preserve image metadata, if any
+* Prompt Array processing now correctly removes leading & trailing spaces
+* changed the Prompt Array separator from the comma to the vertical bar,
+  * adjustable in config.txt with the "prompt_array_separator" parameter
+* introduced new Info and Warning UI popups to support these features:
+  * Batch Generate, Image Grid, Make New Preset, Model Downloads,
+  * Recover Images, Refresh All Files and Version Updates, etc.
+* an audio Notification can occur at the end of a generative batch
+  * this option is set by "Enable Audio Notification", under Extras
+  * also set by "audio_notification": true in config.txt
+  * by default, notification uses the original Fooocus mp3 sound clip
+  * UserDir/master_audio contains 11 alternative notification files
+  * any mp3 placed in UserDir/user_audio will be chosen at random
+  * also the "Refresh All Files" button makes a new random selection
+* for Welcome images, user png images now override the built-in jpgs
+  * the logo, white and black pngs are found in UserDir/control_images
+* the Advanced tab Image Control accordion now contains these functions:
+  * Recover Images, Image Format, Save Metadata to Images, Metadata Scheme,
+  * Disable Image Log, Show Newest Images First, Disable Preview,
+  * Black Out NSFW & Save Only the Final Enhanced Image
+* Apply Metadata and Load Parameters now work correctly with Flux models
+* moved all args_parser command line argument coding to args_manager
+  * deleted args_parser.py, options.py and latent_visualization.py
+* corrected args.directml coding so that it properly sets the device ID
+* deleted the arguments that were unused, redundant or compromised security:
+  * --cache-path, --debug-mode, --disable-analytics,
+  * --disable-enhance-output-sorting, --disable-header-check,
+  * --disable-image-log, --disable-server-log, --enable-auto-describe-image,
+  * --external-working-path, --is-windows-embedded-python, --listen,
+  * --location, --multi-user, --port, --share, --preview-option, --webroot,
+  * --web-upload-size (some of these were removed in previous versions)
+* now args.disable_comfyd completely prevents the use of Comfy
+* config.default_comfy_active_checkbox or the UI control toggles Comfy use
+  * the config.default_comfyd_active_checkbox is gone: incorrect default
+* moved all config defaults to modules.config from enhanced.all_parameters
+  * deleted enhanced.all_parameters.py
+* "Make New Preset" can now correctly replace the Default preset
+  * improved the button's appearance, it is now similar to "Image Recovery"
+* there is now the option to "Save the Current Aspect Ratio" in the new preset
+* startup preset batch files now set all parameters correctly
+  * introduced the Flux1Krea8 and SD1.5_RealVis startup batch files
+  * replaced the Juggernaut & HyperFlux presets with Juggernaut8 & HyperFlux5
+* regenerating images from the log, image metadata or gallery work correctly
+  * the Current Preset field is updated correctly
+* the Custom startup batch file and the Custom preset have been removed
+* added the Rossetti Steampunk, Science Fiction and World styles
+* added 36 new TaffyCarl (Carl Bratcher) styles(!) and updated the Stylesheet
+* fixed the Styles menu so that it properly displays acronyms & initials
+* there is now a console note that UserDir/wildcards is the working directory
+* moved four functions from webui to modules.ui_util to reduce module bloat:
+  * sort_enhance_images(), generate_clicked()
+  * inpaint_mode_change(), enhance_inpaint_mode_change()
+* added two new functions to modules.ui_util:
+  * init_batch_counter(), update_batch_counter()
+* resolved a bug with the Preset Bar checkbox not working
+* reduced the tab width (Settings, Styles, etc.) to accommodate languages
+* simplified the "up-to-date" console message, removing the coded part
+* program name & version now appears in the bottom left corner of the canvas
+* System Information now displays the Gradio version
+  * removed the Gradio footer as it was conveying no useful information
+* Tech Note: "special" enhanced.toolbox CSS moved to standard style.css file
+* Hotfix0: none<br/><br/>
+
+
 # 1.0.8 Prompt Translation
 
 * installs any of 40 language packs available from Argos Translate
@@ -44,7 +139,7 @@
 * debugged and updated support for AMD graphics card users
 * added HF-Mirror support for Chinese users, in the two Chinese batch files
 * to reduce image distortion, the main canvas is now set for a minimum height of 300px
-* updated python_embedded version to 1.06 (current users are already updated)
+* updated python_embedded version to 1.06 (current users are already updated)<br/>
 * Hotfix20: added a diagnostic to test a user problem with LoRA loading
 * Hotfix19: a disabled Preset Bar no longer reappears when changing presets
 * Hotfix18: added three point error control for Scheduler values
@@ -72,7 +167,7 @@
   * this is to encourage the creation of a user created Default to suit individual needs
   * removed the "test" Random Prompt Topic and rationalized the random prompt names
 * Hotfix2: fix the version numbering problem
-* Hotfix1: fix startup update problem
+* Hotfix1: fix startup update problem<br/><br/>
 
 
 # 1.0.6 Bug Fixes & UI Refinements
@@ -119,12 +214,12 @@
 * adjusted the Guidance Scale (CFG) slider from a 0.001 to a 0.1 step increment
 * adjusted the Image Sharpness slider from a 0.001 to a 0.1 step increment
 * if a directory is not accessible, the program no longer tries to rename it ".corrupted"
-* in support of UK users, all presets referring to CivitAI links now refer to the FooocusPlus repo
+* in support of UK users, all presets referring to CivitAI links now refer to the FooocusPlus repo<br/>
 * Hotfix5: removed the non-destructive error condition when using Describe
 * Hotfix4: improved legacy graphics card support
 * Hotfix3: "Refresh All Files" correctly adds new LoRAs and does not cause an error
 * Hotfix2: Linux is finally functional: dependency errors and non-compliant coding were resolved
-* Hotfix1: restored the visibility of the Stop & Skip buttons during generation
+* Hotfix1: restored the visibility of the Stop & Skip buttons during generation<br/><br/>
 
 
 # 1.0.5 Bug Fixes & Enhancements
@@ -150,7 +245,7 @@
 * all batch startup files now contain a note about copying them to the FooocusPlus directory
 * removed the HF Mirror argument from the Chinese batch files, it was causing an error
 * fixed a bug with Clip Skip that affected some users
-* xformers installation now uses verify_installed_version() rather than Torchruntime
+* xformers installation now uses verify_installed_version() rather than Torchruntime<br/><br/>
 
 
 # 1.0.4 Bug Fix for Incorrect Model Paths & Installation Corruption by AMD Support
@@ -161,7 +256,7 @@
 * directml support for AMD video cards is deleted if not required
 * the presence of directml files in the Python libraries was sabotaging NVIDIA installations
 * in the GUI, "Forced Overwrite of Sampling Step" is grouped with Performance Options
-* to reduce clutter, the Performance Options are now available from an accordion
+* to reduce clutter, the Performance Options are now available from an accordion<br/><br/>
 
 
 # 1.0.3 Critical Bug Fixes & NVIDIA 50xx Support
@@ -180,7 +275,7 @@
 * the library files have been cleaned up and several items have been updated
 * these library updates will automatically install during launch
 * these changes are also available in the python_embedded archive at Hugging Face
-* the image seed options are now accessed through the Image Seed Control accordion
+* the image seed options are now accessed through the Image Seed Control accordion<br/><br/>
 
 
 # 1.0.2 LowVRAM Support
@@ -190,7 +285,7 @@
 * in this mode, the default category is LowVRAM and the preset is 4GB_Default
 * the 4GB_Default preset now uses Segmind-Vega in normal mode
 * the VegaRT preset operates Segming-Vega in "Real Time" mode
-* Styles can now be configured in UserDir, like Presets and Topics
+* Styles can now be configured in UserDir, like Presets and Topics<br/><br/>
 
 
 # 1.0.1 Maintenance Update
@@ -201,7 +296,7 @@
 * fixed a bug that was partially installing python_embedded within the program directory
 * this phantom python_embedded folder is automatically deleted if present
 * from 1.0.0, Flux models are installed in either the "FluxDev" or "FluxSchnell" folders
-* if an obsolete "Flux" folder is found and it is empty, it is automatically deleted
+* if an obsolete "Flux" folder is found and it is empty, it is automatically deleted<br/><br/>
 
 
 # 1.0.0 Welcome to FooocusPlus 1.0.0!
@@ -244,7 +339,7 @@
 * fixed a strange bug in which the "Specific Seed" value was being trashed when changing presets
 * fixed bugs with SuperPrompter, Wildcard Panel, Sampler selector, Refiner switch and metadata processing
 * subject to testing, this version provisionally supports NVIDIA 50xx video cards
-* temporarily removed several Wildcard files that need improvement
+* temporarily removed several Wildcard files that need improvement<br/><br/>
 
 
 # 0.9.8 Dev
@@ -280,7 +375,7 @@
 * Torch and its dependencies are now dynamically installed according to the user's operating system and hardware
 * this dynamic system uses Torchruntime and the Torch version is recorded in torch_base.txt in UserDir
 * added the Flux_BlackColor_SaMay.safetensors & FluxDFaeTasticDetails.safetensors to the built-in LoRAs
-* added the Flux AntiBlur.safetensors & Hyper-FLUX.1-dev-8steps-lora.safetensors to the Starter Pack LoRAs
+* added the Flux AntiBlur.safetensors & Hyper-FLUX.1-dev-8steps-lora.safetensors to the Starter Pack LoRAs<br/><br/>
 
 
 # 0.9.7 Dev
@@ -318,7 +413,7 @@
 * "python_embeded" is renamed "python_embedded": changed all internal references
 * updated many Python libraries and fixed the Onnx Graphsurgeon bug
 * python_embedded now includes version control: if the version is incorrect then program loading stops
-* resolved the bug: "SaveImageWebsocket.IS_CHANGED() missing 1 required positional argument: 's'"
+* resolved the bug: "SaveImageWebsocket.IS_CHANGED() missing 1 required positional argument: 's'"<br/><br/>
 
 
 # 0.9.6 Beta7
@@ -341,7 +436,7 @@
 * in Beta5, the two 4GB presets now correctly download the specified base models
 * in Beta6, added clip_model error control to comfy_task and added clip_model parameter to Flux1S_GGUF
 * in Beta7, corrected a bug with "Refresh All Files" and also gave it a realistically sized button
-* in Beta8, disabled all further updating to reduce the possibility of corruption by FooocusPlus 1.0.0
+* in Beta8, disabled all further updating to reduce the possibility of corruption by FooocusPlus 1.0.0<br/><br/>
 
 
 # 0.9.5
@@ -355,7 +450,7 @@
 * disabled the topbar preset tooltips and iFrame Instruction pane in all languages
 * removed the presets html and samples folder and reduced the image folder to just one image
 * simplified the Javascript tooltip code down to just a return statement
-* balanced entry_with_update.py to include only the best features from Fooocus & SimpleSDXL2
+* balanced entry_with_update.py to include only the best features from Fooocus & SimpleSDXL2<br/><br/>
 
 
 # 0.9.4
@@ -375,7 +470,7 @@
 * by default, the Outputs folder is now located in the FooocusPlus folder
 * when the Translator is disabled, the Random Prompt and SuperPrompt buttons are reformatted
 * FooocusPlus is now an independent fork, no longer dependent on SimpleSDXL2 or mainline Fooocus
-* the file structure of FooocusPlus is now self-contained, containing all models within FooocusPlusAI
+* the file structure of FooocusPlus is now self-contained, containing all models within FooocusPlusAI<br/><br/>
 
 
 # 0.9.1 to 0.9.3
@@ -397,7 +492,7 @@
 * the UI Language selector is removed since it was redundant and only partially functional
 * the system information displayed at the bottom of the Extras (formerly Enhanced) pane has been improved
 * preliminary work on supporting Stable Diffusion 3.5 has been initiated
-* the FooocusPlus version number is now tied to this log rather than being hard coded
+* the FooocusPlus version number is now tied to this log rather than being hard coded<br/><br/>
 
 
 # 0.9.0
@@ -407,4 +502,3 @@
 * introduced en_uk.json to support European English
 * installed corrected version of watercolor_2 & mandala_art styles
 * installed pony_real style in the new FooocusPlus style json
-

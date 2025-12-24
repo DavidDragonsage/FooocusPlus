@@ -13,7 +13,7 @@ from ldm_patched.modules.conds import CONDRegular
 from ldm_patched.modules.sample import get_additional_models, get_models_from_cond, cleanup_additional_models
 from ldm_patched.modules.samplers import resolve_areas_and_cond_masks, wrap_model, calculate_start_end_timesteps, \
     create_cond_with_same_area_if_none, pre_run_control, apply_empty_x_to_equal_area, encode_model_conds
-from modules.meta_parser import verify_scheduler
+from modules.preset_support import verify_scheduler
 
 current_refiner = None
 refiner_switch_step = -1

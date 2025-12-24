@@ -5,7 +5,7 @@ from pathlib import Path
 from modules.launch_util import verify_installed_version
 from args_manager import args
 import common
-import modules.user_structure as US
+
 
 full_file = True # identifies if language file is complete
 english_from_language = ''

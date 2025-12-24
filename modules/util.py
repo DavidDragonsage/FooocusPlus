@@ -1,22 +1,20 @@
-from pathlib import Path
-
+import cv2
+import hashlib
+import json
 import numpy as np
 import datetime
 import random
 import math
 import os
-import cv2
 import re
-from modules.config import path_outputs
+from pathlib import Path
+from PIL import Image
 from typing import List, Tuple, AnyStr, NamedTuple
 
-import json
-import hashlib
-
-from PIL import Image
-
-import modules.config
+import modules.config as config
 import modules.sdxl_styles
+import modules.user_structure as US
+from enhanced.translator import interpret, interpret_info
 from modules.flags import Performance
 
 LANCZOS = (Image.Resampling.LANCZOS if hasattr(Image, 'Resampling') else Image.LANCZOS)
@@ -166,7 +164,7 @@ def join_prompts(*args, **kwargs):
     return ', '.join(prompts)
 
 
-def generate_temp_filename(folder=f'{path_outputs}/', extension='png'):
+def generate_temp_filename(folder=f'{config.path_outputs}/', extension='png'):
     current_time = datetime.datetime.now()
     date_string = current_time.strftime("%Y-%m-%d")
     time_string = current_time.strftime("%Y-%m-%d_%H-%M-%S")
@@ -174,6 +172,74 @@ def generate_temp_filename(folder=f'{path_outputs}/', extension='png'):
     filename = f"{time_string}_{random_number}.{extension}"
     result = os.path.join(folder, date_string, filename)
     return date_string, os.path.abspath(result), filename
+
+def remove_image_grid():
+    success = False
+    image_grid = US.find_file_path(config.temp_path, 'image.png')
+    if image_grid:
+        if image_grid.is_file():
+            success = US.remove_file(image_grid)
+    return success
+
+def cleanup_temp_files():
+    # called by ui_util.generate_clicked()
+    if config.temp_path_cleanup_on_launch:
+        print()
+        interpret('Cleaning up the temporary directory:')
+        print(Path(config.temp_path).resolve())
+        success = US.empty_dir(config.temp_path)
+        if success:
+            interpret("Cleanup successful")
+        else:
+            interpret("Could not cleanup the content of the temporary directory")
+        print()
+    elif config.default_generate_image_grid:
+        success = remove_image_grid()
+        if success:
+            interpret("Image grid cleanup successful")
+    return
+
+def save_image_grid(recover=False):
+    print()
+    success = False
+    image_grid = US.find_file_path(config.temp_path, 'image.png')
+    if image_grid:
+        date_string, file_dest, only_name = generate_temp_filename(f'{config.path_outputs}/', 'png')
+        path_outputs = Path(config.path_outputs)
+        path_full = Path(path_outputs/date_string/only_name)
+        path_dest = US.copy_file(image_grid, path_full)
+        if recover:
+            interpret_info('Saved the image grid to', path_full)
+        else:
+            interpret('Saved the image grid to', path_full)
+            print()
+        success = True
+    elif config.default_generate_image_grid:
+        if recover:
+            interpret('Could not locate an image grid in', config.temp_path)
+        else:
+            interpret_info('Could not locate an image grid in', config.temp_path)
+            print()
+    return success
+
+def recover_images():
+    success = save_image_grid(True)
+    file_list = US.list_files_by_patterns(config.temp_path,
+        arg_pattern1='*.*', arg_pattern2='')
+    image_list = US.list_files_excluding(file_list, ['image.png'])
+    if image_list:
+        date_string, file_dest, only_name = generate_temp_filename(f'{config.path_outputs}/', '')
+        path_outputs = Path(config.path_outputs)
+        today_outputs = Path(path_outputs/date_string)
+        copy_count, exists_count = US.copy_files(image_list, today_outputs)
+        interpret_info(f'Recovered {copy_count} images to', today_outputs)
+        interpret_info(f'Omitted {exists_count} images that already exist')
+    elif success == True:
+        interpret_info('Recovered the image grid but no other recovery images found')
+    else:
+        interpret_info('No recovery images found!')
+    print()
+    return
 
 folder_variation = {}
 def get_files_from_folder(folder_path, extensions=None, name_filter=None, variation=False):
@@ -201,8 +267,6 @@ def get_files_from_folder(folder_path, extensions=None, name_filter=None, variat
                         filenames.append(path)
                 else:
                     filenames.append(path)
-
-
     return filenames
 
 
@@ -278,10 +342,10 @@ def unwrap_style_text_from_prompt(style_text, prompt):
         try:
             left, right = stripped_style_text.split("{prompt}", 2)
         except ValueError as e:
-            # If the style text has multple "{prompt}"s, we can't split it into
-            # two parts. This is an error, but we can't do anything about it.
-            print(f"Unable to compare style text to prompt:\n{style_text}")
-            print(f"Error: {e}")
+            # If the style text has multiple "{prompt}"s,
+            # we can't split it into two parts. This is an error.
+            interpret('Unable to compare style text to prompt:\n', style_text)
+            interpret('Error:', e)
             return False, prompt, ''
 
         left_pos = stripped_prompt.find(left)
@@ -497,16 +561,16 @@ def cleanup_prompt(prompt):
 
 
 def apply_wildcards(wildcard_text, rng, i, read_wildcards_in_order) -> str:
-    for _ in range(modules.config.wildcards_max_bfs_depth):
+    for _ in range(config.wildcards_max_bfs_depth):
         placeholders = re.findall(r'__([\w-]+)__', wildcard_text)
         if len(placeholders) == 0:
             return wildcard_text
 
-        print(f'[Utility] Wildcard processing: {wildcard_text}')
+        interpret('[Utility] Wildcard processing:', wildcard_text)
         for placeholder in placeholders:
             try:
-                matches = [x for x in modules.config.wildcard_filenames if os.path.splitext(os.path.basename(x))[0] == placeholder]
-                words = open(os.path.join(modules.config.path_wildcards, matches[0]), encoding='utf-8').read().splitlines()
+                matches = [x for x in config.wildcard_filenames if os.path.splitext(os.path.basename(x))[0] == placeholder]
+                words = open(os.path.join(config.path_wildcards, matches[0]), encoding='utf-8').read().splitlines()
                 words = [x for x in words if x != '']
                 assert len(words) > 0
                 if read_wildcards_in_order:
@@ -514,12 +578,12 @@ def apply_wildcards(wildcard_text, rng, i, read_wildcards_in_order) -> str:
                 else:
                     wildcard_text = wildcard_text.replace(f'__{placeholder}__', rng.choice(words), 1)
             except:
-                print(f'[Utility] Wildcard Warning: {placeholder}.txt missing or empty. '
-                      f'Using "{placeholder}" as a normal word.')
+                interpret('[Utility] Wildcard Warning, missing or empty', f'{placeholder}.txt')
+                interpet(f'Using the wildcard as a normal word')
                 wildcard_text = wildcard_text.replace(f'__{placeholder}__', placeholder)
-            print(f'[Utility] Wildcard text: {wildcard_text}')
+            interpret('[Utility] Wildcard text:', wildcard_text)
 
-    print(f'[Utility] Wildcard BFS stack overflow. Current text: {wildcard_text}')
+    interpret('[Utility] Wildcard BFS stack overflow. Current text:', wildcard_text)
     return wildcard_text
 
 

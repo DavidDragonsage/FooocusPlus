@@ -1,8 +1,7 @@
 import threading
-import common
 import args_manager
+import common
 import modules.config as config
-import modules.aspect_ratios as AR
 from extras.inpaint_mask import generate_mask_from_image, SAMOptions
 from modules.patch import PatchSettings, patch_settings, patch_all
 
@@ -132,7 +131,7 @@ class AsyncTask:
         self.translation_methods = self.params_backend.pop('translation_methods')
         self.comfyd_active_checkbox = self.params_backend.pop('comfyd_active_checkbox')
 
-        self.save_final_enhanced_image_only = args.pop() if not args_manager.args.disable_image_log else False
+        self.save_final_enhanced_image_only = args.pop() if not config.disable_image_log else False
         self.save_metadata_to_images = args.pop() if not args_manager.args.disable_metadata else False
         meta_scheme = args.pop()
         if meta_scheme != 'a1111':
@@ -197,10 +196,13 @@ class AsyncTask:
         self.images_to_enhance_count = 0
         self.enhance_stats = {}
 
-        #print(f'params_backend:{self.params_backend}')
+        # print(f'params_backend:{self.params_backend}')
         self.task_class = self.params_backend.pop('backend_engine', 'Fooocus')
         self.task_name = self.params_backend.pop('preset', 'Default')
         self.task_method = self.params_backend.pop('task_method', 'text2image')
+        if common.default_engine:
+            self.task_class = common.default_engine.get("backend_engine")
+            self.task_method = common.default_engine.get("backend_params", {}).get("task_method")
         #print(f'task_class={self.task_class}, task_name={self.task_name}, task_method={self.task_method}')
         if 'layer' in self.current_tab and self.task_class == 'Fooocus' and self.input_image_checkbox:
             self.task_class = 'Comfy'
@@ -263,12 +265,14 @@ def worker():
     from datetime import datetime
     from enhanced.translator import interpret
     from extras.censor import default_censor
+    from modules.ar_util import AR_split
     from modules.sdxl_styles import apply_style, get_random_style, fooocus_expansion, apply_arrays, random_style_name
     from modules.private_logger import log
     from extras.expansion import safe_str
-    from modules.util import (remove_empty_str, HWC3, resize_image, get_image_shape_ceil, set_image_shape_ceil,
-                              get_shape_ceil, resample_image, erode_or_dilate, parse_lora_references_from_prompt,
-                              apply_wildcards)
+    from modules.util import (remove_empty_str, HWC3, resize_image,
+        get_image_shape_ceil, set_image_shape_ceil,
+        get_shape_ceil, resample_image, erode_or_dilate,
+        parse_lora_references_from_prompt, apply_wildcards)
     from modules.upscaler import perform_upscale
     from modules.flags import Performance
     from modules.meta_parser import get_metadata_parser
@@ -278,7 +282,7 @@ def worker():
 
     pid = os.getpid()
     print()
-    interpret('Starting the FooocusPlus generative AI worker...') # previously printed the PID, which seems to be irrelevant in a single user app.
+    interpret('Starting the FooocusPlus generative AI worker...')
 
     try:
         async_gradio_app = common.GRADIO_ROOT
@@ -286,10 +290,12 @@ def worker():
         print(e)
     ldm_patched.modules.model_management.print_memory_info()
 
+
     def progressbar(async_task, number, arg_text):
         text = interpret(arg_text, '', True)
         interpret('[Worker]', text)
         async_task.yields.append(['preview', (number, text, None)])
+        return
 
     def yield_result(async_task, imgs, progressbar_index, black_out_nsfw, censor=True, do_not_show_finished_images=False):
         if not isinstance(imgs, list):
@@ -307,11 +313,17 @@ def worker():
         async_task.yields.append(['results', async_task.results])
         return
 
+
     def build_image_wall(async_task):
         results = []
 
-        if len(async_task.results) < 2:
+        image_count = len(async_task.results)
+        if image_count < 2:
             return
+        elif image_count > 16:
+            image_count = 16
+        elif image_count == 11 or image_count == 13:
+            image_count -= 1
 
         for img in async_task.results:
             if isinstance(img, str) and os.path.exists(img):
@@ -324,6 +336,7 @@ def worker():
             results.append(img)
 
         H, W, C = results[0].shape
+        aspect_ratio = W/H
 
         for img in results:
             Hn, Wn, Cn = img.shape
@@ -334,22 +347,47 @@ def worker():
             if C != Cn:
                 return
 
-        cols = float(len(results)) ** 0.5
-        cols = int(math.ceil(cols))
-        rows = float(len(results)) / float(cols)
+        # stack landscapes and avoid partial rows:
+        # image_count == 2, 3, 5 or 7
+        if (image_count == 2 or (image_count % 2 != 0 and image_count <= 7)) and aspect_ratio > 1:
+            cols = 1
+        # align odd numbers of portraits & squares in a row:
+        # image_count == 2, 3, 5 or 7
+        elif image_count == 2 or (image_count % 2 != 0 and image_count <= 7):
+            cols = image_count
+        # image_count == 9, 12 or 15, landscape:
+        elif image_count % 3 == 0 and image_count >= 9 and aspect_ratio > 1:
+            cols = 3
+        # image_count == 9, 12 or 15, portrait or square:
+        elif image_count % 3 == 0 and image_count >= 9:
+            cols = image_count // 3
+        # image_count is 4, 6, 8, 10 or 14, landscape:
+        elif image_count % 2 == 0 and image_count < 16 and aspect_ratio > 1:
+            cols = 2
+        # image_count is 4, 6, 8, 10 or 14, portrait or square:
+        elif image_count % 2 == 0 and image_count < 16:
+            cols = image_count // 2
+        # image_count == 16
+        else:
+            cols = 4
+        # calculate the number of rows needed for a grid
+        # originally it produced a final partial row if necessary:
+        rows = float(image_count) / float(cols)
         rows = int(math.ceil(rows))
 
         wall = np.zeros(shape=(H * rows, W * cols, C), dtype=np.uint8)
 
         for y in range(rows):
             for x in range(cols):
-                if y * cols + x < len(results):
+                if y * cols + x < image_count:
                     img = results[y * cols + x]
                     wall[y * H:y * H + H, x * W:x * W + W, :] = img
 
-        # must use deep copy otherwise gradio is super laggy. Do not use list.append() .
+        # must use deep copy otherwise gradio is super laggy
+        # Do not use list.append()
         async_task.results = async_task.results + [wall]
         return
+
 
     def process_task(all_steps,
             async_task, callback, controlnet_canny_path, controlnet_cpds_path, current_task_id,
@@ -396,8 +434,7 @@ def worker():
             if 'cn' in goals:
                 for cn_flag, cn_path in [
                     (flags.cn_canny, controlnet_canny_path),
-                    (flags.cn_cpds, controlnet_cpds_path)
-                ]:
+                    (flags.cn_cpds, controlnet_cpds_path)]:
                     for cn_img, cn_stop, cn_weight in async_task.cn_tasks[cn_flag]:
                         positive_cond, negative_cond = core.apply_controlnet(
                             positive_cond, negative_cond,
@@ -431,8 +468,7 @@ def worker():
         progressbar(async_task, current_progress, interpret(f'Saving image {current_task_id + 1}/{total_count} to system...', '', True))
         img_paths = save_and_log(async_task, height, imgs, task, use_expansion, width, loras, persist_image)
         yield_result(async_task, img_paths, current_progress, async_task.black_out_nsfw, False,
-                     do_not_show_finished_images=not show_intermediate_results or async_task.disable_intermediate_results)
-
+            do_not_show_finished_images=not show_intermediate_results or async_task.disable_intermediate_results)
         return imgs, img_paths, current_progress
 
     def apply_patch_settings(async_task):
@@ -495,10 +531,11 @@ def worker():
                 styles_name = task['styles'] if not use_expansion else [fooocus_expansion] + task['styles']
                 styles_definition = {k: modules.sdxl_styles.styles[k] for k in styles_name if k and k not in ['Fooocus V2', 'Fooocus Enhance', 'Fooocus Sharp', 'Fooocus Masterpiece', 'Fooocus Photograph', 'Fooocus Negative', 'Fooocus Cinematic']}
                 metadata_parser = modules.meta_parser.get_metadata_parser(async_task.metadata_scheme)
-                metadata_parser.set_data(task['log_positive_prompt'], task['positive'],
-                                         task['log_negative_prompt'], task['negative'],
-                                         async_task.steps, async_task.base_model_name, async_task.refiner_model_name,
-                                         loras, async_task.vae_name, '')
+                metadata_parser.set_data(task['log_positive_prompt'],
+                    task['positive'],
+                    task['log_negative_prompt'], task['negative'],
+                    async_task.steps, async_task.base_model_name, async_task.refiner_model_name,
+                    loras, async_task.vae_name, '')
 
             d.append(('Backend Engine', 'backend_engine', async_task.task_class_full))
             if async_task.metadata_scheme.value.lower() == 'a1111':
@@ -767,19 +804,19 @@ def worker():
         extra_negative_prompts = negative_prompts[1:] if len(negative_prompts) > 1 else []
 
         lora_filenames = modules.util.remove_performance_lora(config.lora_filenames,
-                                                              async_task.performance_selection)
-        loras, prompt = parse_lora_references_from_prompt(prompt, async_task.loras,
-                                                          config.default_max_lora_number,
-                                                          lora_filenames=lora_filenames)
+            async_task.performance_selection)
+        loras, prompt = parse_lora_references_from_prompt(prompt,
+            async_task.loras, config.default_max_lora_number,
+            lora_filenames=lora_filenames)
         loras += async_task.performance_loras
         if async_task.task_class in ['Fooocus']:
             if advance_progress:
                 current_progress += 1
             progressbar(async_task, current_progress, 'Loading models...')
             pipeline.refresh_everything(refiner_model_name=async_task.refiner_model_name,
-                                    base_model_name=async_task.base_model_name,
-                                    loras=loras, base_model_additional_loras=base_model_additional_loras,
-                                    use_synthetic_refiner=use_synthetic_refiner, vae_name=async_task.vae_name)
+                base_model_name=async_task.base_model_name,
+                loras=loras, base_model_additional_loras=base_model_additional_loras,
+                use_synthetic_refiner=use_synthetic_refiner, vae_name=async_task.vae_name)
             pipeline.set_clip_skip(async_task.clip_skip)
         else:
             pipeline.reload_expansion()
@@ -1111,12 +1148,14 @@ def worker():
                 comfyd.stop()
 
     def process_enhance(all_steps,
-            async_task, callback, controlnet_canny_path, controlnet_cpds_path,
-            current_progress, current_task_id, denoising_strength, inpaint_disable_initial_latent,
-            inpaint_engine, inpaint_respective_field, inpaint_strength,
-            prompt, negative_prompt, final_scheduler_name, goals, height, img, mask,
-            preparation_steps, steps, switch, tiled, total_count, use_expansion, use_style,
-            use_synthetic_refiner, width, show_intermediate_results=True, persist_image=True):
+        async_task, callback, controlnet_canny_path, controlnet_cpds_path,
+        current_progress, current_task_id, denoising_strength,
+        inpaint_disable_initial_latent, inpaint_engine,
+        inpaint_respective_field, inpaint_strength, prompt,
+        negative_prompt, final_scheduler_name, goals, height,
+        img, mask, preparation_steps, steps, switch, tiled,
+        total_count, use_expansion, use_style, use_synthetic_refiner,
+        width, show_intermediate_results=True, persist_image=True):
         base_model_additional_loras = []
         inpaint_head_model_path = None
         inpaint_parameterized = inpaint_engine != 'None'  # inpaint_engine = None, improve detail
@@ -1138,8 +1177,9 @@ def worker():
                     img = default_censor(img)
                 progressbar(async_task, current_progress, f'Saving image {current_task_id + 1}/{total_count} to system...')
                 uov_image_path = log(img, d, output_format=async_task.output_format, persist_image=persist_image)
-                yield_result(async_task, uov_image_path, current_progress, async_task.black_out_nsfw, False,
-                             do_not_show_finished_images=not show_intermediate_results or async_task.disable_intermediate_results)
+                yield_result(async_task, uov_image_path, current_progress,
+                    async_task.black_out_nsfw, False,
+                    do_not_show_finished_images=not show_intermediate_results or async_task.disable_intermediate_results)
                 return current_progress, img, prompt, negative_prompt
 
         if 'inpaint' in goals and inpaint_parameterized:
@@ -1277,7 +1317,7 @@ def worker():
         tiled = False
 
 
-        width, height = AR.AR_split(async_task.aspect_ratios_selection)
+        width, height = AR_split(async_task.aspect_ratios_selection)
         width, height = int(width), int(height)
 
         skip_prompt_processing = False
@@ -1688,7 +1728,7 @@ def worker():
 
             try:
                 handler(task)
-                if task.generate_image_grid:
+                if config.default_generate_image_grid:
                     build_image_wall(task)
                 task.yields.append(['finish', task.results])
                 if task.task_class not in flags.comfy_classes:

@@ -1,45 +1,46 @@
 import os
 import modules.config
 import glob
+import modules.user_structure as US
 import modules.util as util
 import numpy as np
 import random
 import time
+from args_manager import args
+from enhanced.translator import interpret
 from pathlib import Path
 from PIL import Image
-import args_manager
-import modules.user_structure as US
 
-
-user_dir = Path(args_manager.args.user_dir).resolve()
+user_dir = Path(args.user_dir).resolve()
 
 def get_welcome_image():
     path_welcome = Path(user_dir/'welcome_images').resolve()
-    skip_jpg = Path(path_welcome/'skip.jpg').resolve()
-    if not skip_jpg.is_file(): # if skip.jpg exists then ignore all jpgs & jpegs
-        welcomes = US.list_files_by_patterns(path_welcome,
-            arg_pattern1='*.jpg', arg_pattern2='*.jpeg')
-        if welcomes:
-            file_welcome = Path(path_welcome/random.choice(welcomes)).resolve()
-            return file_welcome
+    path_logo = Path(path_welcome/'FooocusPlus_logo.png').resolve()
+    path_default_welcome = Path(path_welcome/'control_images/welcome.png').resolve()
 
-    skip_png = Path(path_welcome/'skip.png').resolve()
-    # if skip.png exists then use the fallback, welcome.png
-    if not skip_png.is_file():
-        welcomes = US.list_files_by_patterns(path_welcome,
-            arg_pattern1='*.png', arg_pattern2='')
-        if welcomes:
-            file_welcome = Path(path_welcome/random.choice(welcomes)).resolve()
+    welcomes = US.list_files_by_patterns(path_welcome,
+        arg_pattern1='*.png', arg_pattern2='')
+    if welcomes:
+        if path_logo.is_file():
             # when the fill_background code is ready, activate this line:
-            # file_welcome = fill_background_png(path_welcome, file_welcome, 1152, 896)
+            # path_logo = fill_background_png(path_logo, 1344, 756)
+            return path_logo
+        else:
+            file_welcome = Path(path_welcome/random.choice(welcomes)).resolve()
             return file_welcome
 
-    file_welcome = Path(path_welcome/'welcome.png').resolve()
-    if file_welcome.is_file():
+    welcomes = US.list_files_by_patterns(path_welcome,
+        arg_pattern1='*.jpg', arg_pattern2='*.jpeg')
+    if welcomes:
+        file_welcome = Path(path_welcome/random.choice(welcomes)).resolve()
         return file_welcome
+
+    if path_default_welcome.is_file():
+        return path_default_welcome
     else:
         print()
-        print(f'[Welcome] ERROR: Please restore {file_welcome}')
+        interpret('[Welcome] ERROR: Cannot find', path_default_welcome)
+        interpret('in', Path(user_dir/'control_images').resolve())
         print()
     return ''
 
@@ -141,7 +142,7 @@ def add_foreground(background, foreground):
     composite.paste(foreground_rgb, (paste_horizontal, paste_vertical), mask=foreground_rgb)
     return composite
 
-def fill_background_png(pathname, filename, width, height):
+def fill_background_png(filename, width, height):
     splash_bg = generate_background(width, height)
     splash_full = add_foreground(splash_bg, filename)
     return splash_full

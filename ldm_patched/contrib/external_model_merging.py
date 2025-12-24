@@ -1,4 +1,4 @@
-# https://github.com/comfyanonymous/ComfyUI/blob/master/nodes.py 
+# https://github.com/comfyanonymous/ComfyUI/blob/master/nodes.py
 
 import ldm_patched.modules.sd
 import ldm_patched.modules.utils
@@ -9,7 +9,7 @@ import ldm_patched.utils.path_utils
 import json
 import os
 
-from ldm_patched.modules.args_parser import args
+from args_manager import args
 
 class ModelMergeSimple:
     @classmethod

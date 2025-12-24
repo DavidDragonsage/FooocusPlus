@@ -16,7 +16,6 @@ import ldm_patched.modules.sd
 import ldm_patched.controlnet.cldm
 import ldm_patched.modules.model_patcher
 import ldm_patched.modules.samplers
-import ldm_patched.modules.args_parser
 import warnings
 import safetensors.torch
 import modules.constants as constants
@@ -472,7 +471,7 @@ def build_loaded(module, loader_name):
                 if isinstance(path, str):
                     if os.path.exists(path):
                         if os.path.isdir(path):
-                            print(f'The {path} directory is not accessible')
+                            print(f'[Patch] The {path} directory is not accessible')
                             return result
                         exp += f'File corrupted: {path} \n'
                         corrupted_backup_file = path + '.corrupted'

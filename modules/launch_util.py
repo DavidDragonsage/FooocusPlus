@@ -82,6 +82,7 @@ def is_installed_version(package, version_required):
         return False
     return True
 
+
 def verify_installed_version(package_name, package_ver, dependencies = False, use_index = '', package_url = ''):
     result = True
     index_url_line = f' --index-url {use_index}' if use_index != '' else ''
