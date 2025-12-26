@@ -2294,8 +2294,8 @@ with common.GRADIO_ROOT:
                 outputs=features_checkbox)
 
             def toggle_auto_describe():
-              args.args.enable_auto_describe_image = not args.args.enable_auto_describe_image
-              if args.args.enable_auto_describe_image == True:
+              config.enable_auto_describe_image = not config.enable_auto_describe_image
+              if config.enable_auto_describe_image == True:
                 bool_string = 'Enabled'
               else:
                 bool_string = 'Disabled'
