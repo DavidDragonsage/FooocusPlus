@@ -299,8 +299,8 @@ div:has(> #positive_prompt) {
     margin: 5px 5px 0px !important;
 }
 .column_chkbox {
-    max-width: 250px !important;
-    min-width: 250px !important;
+    max-width: 200px !important;
+    min-width: 200px !important;
 }
 .dropdown_info {
     font-size: 12px !important;

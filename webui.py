@@ -327,6 +327,7 @@ with common.GRADIO_ROOT:
                                     value = False, container=True,
                                     elem_classes='edit_check',
                                     interactive=True)
+
                             with gr.Row():
                                 brighten_slider = gr.Slider(
                                     label="Brightness",
@@ -460,7 +461,7 @@ with common.GRADIO_ROOT:
 
                             with gr.Accordion(label='Overlay the Output Image onto a Base', visible=True, open=False):
                                 with gr.Row():
-                                    gr.Markdown(value='A Position slider with a zero value indicates that the overlay is as large as the base in that dimension. Crop the overlay so it may be positioned away from the center.',
+                                    gr.Markdown(value='If a Position slider cannot be moved from zero, the overlay is as large as the base in that dimension. Either crop the overlay or uncheck "Contain Overlay" to move it.',
                                     elem_classes='dropdown_info')
                                 with gr.Row():
                                     base_image_display = grh.Image(
@@ -535,7 +536,7 @@ with common.GRADIO_ROOT:
                                 with gr.Column(elem_classes=['column_chkbox']):
                                     with gr.Row():
                                         edge_more_chk = gr.Checkbox(
-                                            label="Edge EnhancePlus",
+                                            label="Edge Enhance 2",
                                             value = False, container=True,
                                             elem_classes='edit_check',
                                             interactive=True)
@@ -2651,7 +2652,17 @@ with common.GRADIO_ROOT:
                   reset_preset_func + load_data_outputs,
                 queue=False, show_progress=False
             ).then(
-                fn=lambda: time.sleep(10),
+                fn=lambda: time.sleep(6),
+                outputs=None
+            ).then(
+                fn=image_metadata_import,
+                inputs=[metadata_input_image,
+                state_is_generating, state_topbar],
+                outputs=reset_preset_layout +
+                  reset_preset_func + load_data_outputs,
+                queue=False, show_progress=False
+            ).then(
+                fn=lambda: time.sleep(6),
                 outputs=None
             ).then(
                 fn=image_metadata_import,
@@ -2749,7 +2760,7 @@ with common.GRADIO_ROOT:
         def trigger_auto_describe(mode, img, prompt, apply_styles):
             # keep prompt if not empty
             show_progress=False
-            if prompt == '' and args.args.enable_auto_describe_image:
+            if prompt == '' and config.enable_auto_describe_image:
                 show_progress=True
                 return trigger_describe(mode, img, apply_styles)
             return gr.update(), gr.update()

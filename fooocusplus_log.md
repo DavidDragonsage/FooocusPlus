@@ -90,7 +90,9 @@
 * System Information now displays the Gradio version
   * removed the Gradio footer as it was conveying no useful information
 * Tech Note: "special" enhanced.toolbox CSS moved to standard style.css file
-* Hotfix0: none<br/><br/>
+* Hotfix0: fixed a bug with Upscale or Variation
+  * revised the Overlay help text
+  * improved "Apply Metadata from Image" logic<br/><br/>
 
 
 # 1.0.8 Prompt Translation
