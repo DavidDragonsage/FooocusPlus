@@ -239,38 +239,39 @@ with common.GRADIO_ROOT:
 
                         skip_button.click(skip_clicked, inputs=currentTask, outputs=currentTask, queue=False, show_progress=False)
 
-            with gr.Row():
-                with gr.Column(scale=0):
-                    with gr.Row(elem_id='advanced_check_row'):
-
+                with gr.Row(equal_height=True, elem_id='advanced_check_row'):
+                    with gr.Column(min_width=0, scale=1):
                         advanced_checkbox = gr.Checkbox(
                             label='Advanced',
                             value=config.default_advanced_checkbox,
-                            container=False, elem_classes='main_check')
-
+                            container=False, elem_id='advanced_check')
+                    with gr.Column(min_width=0, scale=1):
                         features_checkbox = gr.Checkbox(
                             label='Features',
                             value=False,
-                            container=False, elem_classes='main_check')
-
+                            container=False)
+                    with gr.Column(min_width=0, scale=1):
                         input_image_checkbox = gr.Checkbox(
                             label='Input Image',
                             value=config.default_image_prompt_checkbox,
                             interactive = not common.default_engine,
-                            container=False, elem_classes='main_check')
-
+                            container=False)
+                    with gr.Column(min_width=0, scale=1):
                         preset_bar_checkbox = gr.Checkbox(
                             label='Preset Bar',
                             value=config.enable_preset_bar,
-                            container=False, elem_classes='main_check')
-
-                with gr.Column(scale=0):
-                    preset_label = gr.Markdown(value=f'<b>Current Preset:</b>',
-                    container=False, visible=True, elem_id='preset_label')
-
-                with gr.Column(min_width=140):
-                    preset_info = gr.Markdown(value=f'<b>{args.args.preset}</b>',
-                    container=False, visible=True, elem_id='preset_info')
+                            container=False)
+                    with gr.Column(min_width=0, scale=0,
+                            elem_id='preset_wrapper_col'):
+                        with gr.Row(elem_id='preset_inner_row'):
+                            preset_label = gr.Markdown(
+                                value=f'<b>Current Preset:</b>',
+                                container=False, visible=True,
+                                elem_id='preset_label')
+                            preset_info = gr.Markdown(
+                                value=f'<b>{args.args.preset}</b>',
+                                container=False, visible=True,
+                                elem_id='preset_info')
 
             with gr.Group(visible=False, elem_classes='toolbox') as image_toolbox:
                 image_tools_box_title = gr.Markdown('<b>Toolbox</b>', visible=True)
@@ -1441,7 +1442,7 @@ with common.GRADIO_ROOT:
                     label='Wildcard Filenames',
                     samples=wildcards.get_wildcards_samples(),
                     visible=True, samples_per_page=35)
-                read_wildcards_in_order = gr.Checkbox(label="Generate Wildcards in Order",
+                read_wildcards_in_order = gr.Checkbox(label="Generate Wildcard Contents in Order",
                     value=False, visible=True)
                 with gr.Accordion(label='Wildcard Contents',
                     visible=True, open=False) as words_in_wildcard:
@@ -1743,9 +1744,10 @@ with common.GRADIO_ROOT:
                                 type='pil')
                             metadata_import_button = gr.Button(
                                 value='Apply Metadata', interactive=False)
+                            with gr.Row(elem_classes='elem_centre'):
+                                gr.HTML('<font size="3"><a href="https://github.com/DavidDragonsage/FooocusPlus/wiki/Image-Regeneration" target="_blank">\U0001F4DA Image Regeneration</a>')
                             with gr.Accordion("Preview Metadata", open=False, visible=True) as metadata_preview:
                                 metadata_json = gr.JSON(label='Metadata')
-
 
                         def trigger_metadata_preview(file):
                             parameters, metadata_scheme = modules.meta_parser.read_meta_from_image(file)
@@ -2447,11 +2449,13 @@ with common.GRADIO_ROOT:
 
         def preset_bar_menu_change(enable_presetbar):
             config.enable_preset_bar = enable_presetbar
-            return gr.update(visible=enable_presetbar)
+            return gr.update(value=enable_presetbar), \
+                   gr.update(visible=enable_presetbar)
 
-        preset_bar_checkbox.change(preset_bar_menu_change,
+        preset_bar_checkbox.change(
+            preset_bar_menu_change,
             inputs=preset_bar_checkbox,
-            outputs=preset_row,
+            outputs=[preset_bar_checkbox, preset_row],
             queue=False, show_progress=False)
 
         inpaint_mode.change(UIU.inpaint_mode_change, inputs=[inpaint_mode, inpaint_engine_state], outputs=[
@@ -2791,6 +2795,7 @@ with common.GRADIO_ROOT:
 
     prompt_regen_button.click(toolbox.toggle_note_box_regen, inputs=model_check + [state_topbar],\
         outputs=[params_note_info, params_note_regen_button, params_note_box, state_topbar], show_progress=False)
+
     params_note_regen_button.click(toolbox.reset_image_params, inputs=[state_topbar, state_is_generating, inpaint_mode],\
         outputs=reset_preset_layout + reset_preset_func + load_data_outputs + [params_note_regen_button, params_note_box], show_progress=False)
 

@@ -308,35 +308,69 @@ div:has(> #positive_prompt) {
     margin: 0px 0px -10px 5px !important;
 }
 
-#advanced_check_row{
-    max-width: 610px !important;
-    width: 610px !important;
+#advanced_check_row {
+    align-items: center;
+    display: flex; !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
 }
-.main_check{
-    margin-right: -25px !important;
-    max-width: 80px !important;
-    padding: 0px 5px !important;
+#advanced_check_row > .form,
+#advanced_check_row > .column,
+#advanced_check_row > div {
+    min-width: min-content !important;
 }
+#advanced_check_row > div:first-child {
+    margin-right: auto !important;
+}
+#advanced_check_row label span {
+    white-space: nowrap;
+    width: max-content !important;
+}
+#advanced_check_row .prose,
+#advanced_check_row label span {
+    white-space: nowrap !important;
+}
+#advanced_check_row > div {
+    min-width: unset !important;
+}
+#advanced_check {
+    padding-left: 5px;
+}
+#preset_inner_row {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 4px !important;
+    min-width: max-content !important; /* Prevents truncation */
+    padding-top: 10px;
+}
+#preset_inner_row .prose {
+    display: inline-block !important;
+    flex-shrink: 0 !important;
+    min-width: max-content !important;
+}
+#preset_label, #preset_info {
+    color: blue !important;
+    font-size: 1.05em !important;
+    font-weight: bold !important;
+    min-width: max-content !important;
+    white-space: nowrap !important;
+}
+#preset_label {
+    text-align: right !important;
+}
+#preset_info {
+    padding-right: 5px !important;
+    text-align: left !important;
+}
+
 .edit_check{
-    padding: 5px !important;
+    margin-right: -40px !important;
+    max-width: 45px !important;
+    padding: 0px 5px !important;
 }
 .min_check {
     min-width: min(1px, 100%) !important;
-}
-
-#preset_label{
-    color: blue !important;
-    font-size: 1.05em !important;
-    font-weight: bold !important;
-    margin: -1px 0px 0px 25px !important;
-    text-align: right !important;
-}
-#preset_info{
-    color: blue !important;
-    font-size: 1.05em !important;
-    font-weight: bold !important;
-    margin: -1px 0px 0px 5px !important;
-    text-align: left !important;
 }
 
 .resizable_area {
