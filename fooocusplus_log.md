@@ -90,9 +90,9 @@
 * System Information now displays the Gradio version
   * removed the Gradio footer as it was conveying no useful information
 * Tech Note: "special" enhanced.toolbox CSS moved to standard style.css file
-* Hotfix2: reenabled the Preset Bar checkbox & reformatted that checkbox row
+* Hotfix2: Re-enabled the Preset Bar checkbox & reformatted the checkbox row
   * under the Metadata tab, linked to the Image Regeneration Wiki article
-* Hotfix1: fixed a bug with Upscale/Variation & Describe
+* Hotfix1: Fixed a bug with Upscale/Variation & Describe
   * revised the Overlay help text
   * improved "Apply Metadata from Image" logic<br/><br/>
 
