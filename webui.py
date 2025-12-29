@@ -2155,9 +2155,14 @@ with common.GRADIO_ROOT:
                         with gr.Row():
                             gr.Markdown(value='Remove all Favorites except the Default and store them in "UserDir/user_presets/Old Favorites".',
                                 elem_classes='button_info2')
+                        try:
+                            init_interactive=US.init_preset_structure()>0
+                        except:
+                            init_interactive=interactive=False
                         with gr.Row(elem_classes='elem_centre'):
-                            clear_favorites_button = gr.Button(value='Clear Favorites',
-                            interactive=US.init_preset_structure()>0,
+                            clear_favorites_button = gr.Button(
+                            value='Clear Favorites',
+                            interactive=init_interactive,
                             elem_classes='button_classic2')
 
                 with gr.Group():
