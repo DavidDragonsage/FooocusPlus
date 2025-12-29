@@ -26,7 +26,8 @@ def copy_dir_structure(arg_source, arg_dest): # dirs without files
             new_dir = dest_path / item.relative_to(source_path)
             new_dir.mkdir(parents = True, exist_ok = True)
 
-def copy_file(arg_source, arg_dest, overwrite = False): # preserves metadata
+def copy_file(arg_source, arg_dest, overwrite = False):
+    # preserves metadata
     # copy one file
     # assumes the destination directory already exists
     # will not overwrite an existing file
@@ -61,6 +62,15 @@ def copy_files(file_list, arg_dest): # preserves metadata
             exists_count += 1
     return copy_count, exists_count
 
+def count_files(arg_dir):
+    # count files in a directory
+    # ignores sub-directories
+    path_dir = Path(arg_dir)
+    # each time a file is found the integer 1 is produced
+    # the sum functions adds all of the 1's together
+    count = sum(1 for entry in path_dir.iterdir() if entry.is_file())
+    return count
+
 def delete_file(arg_file):
     remove_file_path = Path(arg_file)
     remove_file_path.unlink(missing_ok=True)
@@ -68,7 +78,8 @@ def delete_file(arg_file):
     return success
 
 def empty_dir(arg_dir):
-    # remove directory contents
+    # remove the directory contents
+    # but not the directory itself
     result = True
     empty_path = Path(arg_dir)
     try:
@@ -211,6 +222,25 @@ def move_file(arg_source_file, arg_dest_dir):
     else:
         success = ''
     return success
+
+def move_files_excluding(arg_source_dir, arg_dest_dir,
+        excluding_list):
+    # moves files to a new directory,
+    # deleting the originals
+    # ignoring files in excluding_list
+    source_directory_path = Path(arg_source_dir)
+    destination_directory_path = Path(arg_dest_dir)
+    all_files = [f for f in source_directory_path.iterdir() if f.is_file()]
+    files_to_move = list_files_excluding(all_files, excluding_list)
+    moved_count = 0
+    for source_file_path in files_to_move:
+        success = move_file(source_file_path, destination_directory_path)
+        if success:
+            moved_count += 1
+        else:
+            interpret('Did not move', source_file_path.name)
+    interpret(f'Moved {moved_count} files out of {len(all_files)}')
+    return moved_count
 
 def random_file_copy(from_dir, to_dir, as_file):
     file_list = list_files_by_patterns(from_dir, "*.mp3", "")
@@ -398,9 +428,9 @@ def init_starter_presets(user_presets_path, restore=False):
     # from 1.0.9
     starter_presets_path = Path('masters/starter_presets')
     user_favorites_path = Path(user_presets_path/'Favorite')
-
     # add starter presets to user favorites
     # but only for a new installation
+    # or the "Restore Favorites" button was selected
     if not user_favorites_path.is_dir() or restore==True:
         copy_dirs(starter_presets_path, user_favorites_path)
         print()
@@ -408,8 +438,14 @@ def init_starter_presets(user_presets_path, restore=False):
         print()
     return
 
+def clear_user_favorites(user_presets_path):
+    source_dir = Path(user_dir_path/f'user_presets/Favorite/')
+    dest_dir = Path(user_dir_path/f'user_presets/Old Favorites')
+    success = move_files_excluding(source_dir, dest_dir, '')
+    return success
 
-def init_preset_structure(init=False, restore_favorites=False):
+def init_preset_structure(init=False, restore_favorites=False,
+        clear_favorites=False):
     master_presets_path = Path('masters/master_presets')
     ref_master_presets_path = Path(user_dir_path/'master_presets')
     remove_dirs(ref_master_presets_path)
@@ -424,13 +460,20 @@ def init_preset_structure(init=False, restore_favorites=False):
     if init:
         replace_obsolete_categories(user_presets_path)
         init_starter_presets(user_presets_path, restore=restore_favorites)
+    elif clear_favorites:
+        clear_user_favorites(user_presets_path)
+
+    # if count>0 then clear_favorites_button is Interactive:
+    count=count_files(Path(user_dir_path/f'user_presets/Favorite/'))
 
     copy_dir_structure(master_presets_path, user_presets_path)
     copy_dirs(user_presets_path, working_presets_path)
     old_favourites_path = Path(working_presets_path/'Old Favorites')
     remove_dirs(old_favourites_path)
-    interpret('Verified the working preset directory:', working_presets_path)
-    return
+    # do not announce a simple call for favourites count:
+    if any([init, restore_favorites, clear_favorites]):
+        interpret('Verified the working preset directory:', working_presets_path)
+    return count
 
 
 def create_user_structure(user_dir):

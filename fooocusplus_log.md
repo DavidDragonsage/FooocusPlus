@@ -90,6 +90,11 @@
 * System Information now displays the Gradio version
   * removed the Gradio footer as it was conveying no useful information
 * Tech Note: "special" enhanced.toolbox CSS moved to standard style.css file
+* Release Date: December 23rd, 2025<br/>
+* Hotfix3: Added "Clear Favorites" to the Favorite Preset Control accordion
+  * the new Favorite Preset Control accordion is located under the Extras tab
+  * removed the preset_bar_category_tracking option from config parameters
+  * added release dates to all FooocusPlus versions, if applicable
 * Hotfix2: Re-enabled the Preset Bar checkbox & reformatted the checkbox row
   * under the Metadata tab, linked to the Image Regeneration Wiki article
 * Hotfix1: Fixed a bug with Upscale/Variation & Describe
@@ -116,7 +121,8 @@
 * moved the "Mask Erode or Dilate" control from Expert Mode to Inpaint/Outpaint
 * "Mask Erode or Dilate" is available only if "Enable Advanced Masking" is checked
 * removed the "allow_custom_value" option from the Sampler and Scheduler controls
-* "zh" is the language detector for Simplified Chinese but "cn" is accepted<br/>
+* "zh" is the language detector for Simplified Chinese but "cn" is accepted
+* Release Date: September 13th, 2025<br/>
 * Hotfix6: Gradio information moved from footer to System Information
   * prepared enhanced.version module for FooocusPlus 1.0.9
 * Hotfix5: introduced error control on FreeU values during Save Preset
@@ -143,7 +149,8 @@
 * debugged and updated support for AMD graphics card users
 * added HF-Mirror support for Chinese users, in the two Chinese batch files
 * to reduce image distortion, the main canvas is now set for a minimum height of 300px
-* updated python_embedded version to 1.06 (current users are already updated)<br/>
+* updated python_embedded version to 1.06 (current users are already updated)
+* Release Date: August 13th, 2025<br/>
 * Hotfix20: added a diagnostic to test a user problem with LoRA loading
 * Hotfix19: a disabled Preset Bar no longer reappears when changing presets
 * Hotfix18: added three point error control for Scheduler values
@@ -218,7 +225,8 @@
 * adjusted the Guidance Scale (CFG) slider from a 0.001 to a 0.1 step increment
 * adjusted the Image Sharpness slider from a 0.001 to a 0.1 step increment
 * if a directory is not accessible, the program no longer tries to rename it ".corrupted"
-* in support of UK users, all presets referring to CivitAI links now refer to the FooocusPlus repo<br/>
+* in support of UK users, all presets referring to CivitAI links now refer to the FooocusPlus repo
+* Release Date: July 28th, 2025<br/>
 * Hotfix5: removed the non-destructive error condition when using Describe
 * Hotfix4: improved legacy graphics card support
 * Hotfix3: "Refresh All Files" correctly adds new LoRAs and does not cause an error
@@ -249,7 +257,8 @@
 * all batch startup files now contain a note about copying them to the FooocusPlus directory
 * removed the HF Mirror argument from the Chinese batch files, it was causing an error
 * fixed a bug with Clip Skip that affected some users
-* xformers installation now uses verify_installed_version() rather than Torchruntime<br/><br/>
+* xformers installation now uses verify_installed_version() rather than Torchruntime
+* Release Date: July 1st, 2025<br/>><br/>
 
 
 # 1.0.4 Bug Fix for Incorrect Model Paths & Installation Corruption by AMD Support
@@ -260,7 +269,8 @@
 * directml support for AMD video cards is deleted if not required
 * the presence of directml files in the Python libraries was sabotaging NVIDIA installations
 * in the GUI, "Forced Overwrite of Sampling Step" is grouped with Performance Options
-* to reduce clutter, the Performance Options are now available from an accordion<br/><br/>
+* to reduce clutter, the Performance Options are now available from an accordion
+* Release Date: June 15th, 2025<br/><<br/>
 
 
 # 1.0.3 Critical Bug Fixes & NVIDIA 50xx Support
@@ -279,7 +289,8 @@
 * the library files have been cleaned up and several items have been updated
 * these library updates will automatically install during launch
 * these changes are also available in the python_embedded archive at Hugging Face
-* the image seed options are now accessed through the Image Seed Control accordion<br/><br/>
+* the image seed options are now accessed through the Image Seed Control accordion
+* Release Date: May 23rd, 2025<br/><br/>
 
 
 # 1.0.2 LowVRAM Support
@@ -289,7 +300,8 @@
 * in this mode, the default category is LowVRAM and the preset is 4GB_Default
 * the 4GB_Default preset now uses Segmind-Vega in normal mode
 * the VegaRT preset operates Segming-Vega in "Real Time" mode
-* Styles can now be configured in UserDir, like Presets and Topics<br/><br/>
+* Styles can now be configured in UserDir, like Presets and Topics
+* Release Date: about May 22nd, 2025<br/><br/>
 
 
 # 1.0.1 Maintenance Update
@@ -300,8 +312,8 @@
 * fixed a bug that was partially installing python_embedded within the program directory
 * this phantom python_embedded folder is automatically deleted if present
 * from 1.0.0, Flux models are installed in either the "FluxDev" or "FluxSchnell" folders
-* if an obsolete "Flux" folder is found and it is empty, it is automatically deleted<br/><br/>
-
+* if an obsolete "Flux" folder is found and it is empty, it is automatically deleted
+* Release Date: about May 22nd, 2025<br/><br/>
 
 # 1.0.0 Welcome to FooocusPlus 1.0.0!
 
@@ -343,7 +355,8 @@
 * fixed a strange bug in which the "Specific Seed" value was being trashed when changing presets
 * fixed bugs with SuperPrompter, Wildcard Panel, Sampler selector, Refiner switch and metadata processing
 * subject to testing, this version provisionally supports NVIDIA 50xx video cards
-* temporarily removed several Wildcard files that need improvement<br/><br/>
+* temporarily removed several Wildcard files that need improvement
+* Release Date: May 22nd, 2025<br/><br/>
 
 
 # 0.9.8 Dev
@@ -379,7 +392,8 @@
 * Torch and its dependencies are now dynamically installed according to the user's operating system and hardware
 * this dynamic system uses Torchruntime and the Torch version is recorded in torch_base.txt in UserDir
 * added the Flux_BlackColor_SaMay.safetensors & FluxDFaeTasticDetails.safetensors to the built-in LoRAs
-* added the Flux AntiBlur.safetensors & Hyper-FLUX.1-dev-8steps-lora.safetensors to the Starter Pack LoRAs<br/><br/>
+* added the Flux AntiBlur.safetensors & Hyper-FLUX.1-dev-8steps-lora.safetensors to the Starter Pack LoRAs
+* Release Date: not publicly released<br/><br/>
 
 
 # 0.9.7 Dev
@@ -417,7 +431,8 @@
 * "python_embeded" is renamed "python_embedded": changed all internal references
 * updated many Python libraries and fixed the Onnx Graphsurgeon bug
 * python_embedded now includes version control: if the version is incorrect then program loading stops
-* resolved the bug: "SaveImageWebsocket.IS_CHANGED() missing 1 required positional argument: 's'"<br/><br/>
+* resolved the bug: "SaveImageWebsocket.IS_CHANGED() missing 1 required positional argument: 's'"
+* Release Date: not publicly released<br/><br/>
 
 
 # 0.9.6 Beta7
@@ -440,7 +455,8 @@
 * in Beta5, the two 4GB presets now correctly download the specified base models
 * in Beta6, added clip_model error control to comfy_task and added clip_model parameter to Flux1S_GGUF
 * in Beta7, corrected a bug with "Refresh All Files" and also gave it a realistically sized button
-* in Beta8, disabled all further updating to reduce the possibility of corruption by FooocusPlus 1.0.0<br/><br/>
+* in Beta8, disabled all further updating to reduce the possibility of corruption by FooocusPlus 1.0.0
+* Release Date: March 15th, 2025<br/><br/>
 
 
 # 0.9.5
@@ -454,7 +470,8 @@
 * disabled the topbar preset tooltips and iFrame Instruction pane in all languages
 * removed the presets html and samples folder and reduced the image folder to just one image
 * simplified the Javascript tooltip code down to just a return statement
-* balanced entry_with_update.py to include only the best features from Fooocus & SimpleSDXL2<br/><br/>
+* balanced entry_with_update.py to include only the best features from Fooocus & SimpleSDXL2
+* Pre-release version<br/><br/>
 
 
 # 0.9.4
@@ -474,7 +491,8 @@
 * by default, the Outputs folder is now located in the FooocusPlus folder
 * when the Translator is disabled, the Random Prompt and SuperPrompt buttons are reformatted
 * FooocusPlus is now an independent fork, no longer dependent on SimpleSDXL2 or mainline Fooocus
-* the file structure of FooocusPlus is now self-contained, containing all models within FooocusPlusAI<br/><br/>
+* the file structure of FooocusPlus is now self-contained, containing all models within FooocusPlusAI
+* Pre-release version<br/><br/>
 
 
 # 0.9.1 to 0.9.3
@@ -496,7 +514,8 @@
 * the UI Language selector is removed since it was redundant and only partially functional
 * the system information displayed at the bottom of the Extras (formerly Enhanced) pane has been improved
 * preliminary work on supporting Stable Diffusion 3.5 has been initiated
-* the FooocusPlus version number is now tied to this log rather than being hard coded<br/><br/>
+* the FooocusPlus version number is now tied to this log rather than being hard coded
+* Pre-release versions<br/><br/>
 
 
 # 0.9.0

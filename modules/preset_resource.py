@@ -388,11 +388,23 @@ def preset_favorite_modify2():
            gr.update(value='Favorite')
 
 def restore_favorites():
-    US.init_preset_structure(init=True, restore_favorites=True)
-    current_preset = 'Default'
-    category_selection = 'Favorite'
-    return gr.update(value='Cheyenne18'), \
-           gr.update(value='Favorite')
+    count = US.init_preset_structure(init=True, restore_favorites=True)
+    return  gr.update(value='Cheyenne18'), \
+            gr.update(value='Favorite'), \
+            gr.update(interactive=count>0)
+
+def clear_favorites():
+    global current_preset, current_category
+    count = US.init_preset_structure(clear_favorites=True)
+    if current_preset == 'Default':
+        current_preset = 'Elsewhere'
+        current_category = 'General'
+    else:
+        current_preset = 'Default'
+        current_category = 'Favorite'
+    return  gr.update(value=current_preset), \
+            gr.update(value=current_category), \
+            gr.update(interactive=count>0)
 
 def preset_count():
     return len(get_preset_list())

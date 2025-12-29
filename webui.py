@@ -2138,7 +2138,7 @@ with common.GRADIO_ROOT:
                             info='Do not save the aspect ratio unless you want it to change when switching presets')
 
                 if not args.args.disable_preset_selection and PR.get_preset_list():
-                    with gr.Group():
+                    with gr.Accordion(label='Favorite Preset Control', visible=True, open=False):
                         with gr.Row():
                             gr.Markdown(value='Add or remove the current preset from the Favorite category. Removed favorites are saved in "UserDir/user_presets/Old Favorites". The Default preset cannot be removed.',
                                 elem_classes='button_info2')
@@ -2151,6 +2151,13 @@ with common.GRADIO_ROOT:
                                 elem_classes='button_info2')
                         with gr.Row(elem_classes='elem_centre'):
                             restore_favorites_button = gr.Button(value='Restore Favorites',
+                            elem_classes='button_classic2')
+                        with gr.Row():
+                            gr.Markdown(value='Remove all Favorites except the Default and store them in "UserDir/user_presets/Old Favorites".',
+                                elem_classes='button_info2')
+                        with gr.Row(elem_classes='elem_centre'):
+                            clear_favorites_button = gr.Button(value='Clear Favorites',
+                            interactive=US.init_preset_structure()>0,
                             elem_classes='button_classic2')
 
                 with gr.Group():
@@ -2318,12 +2325,21 @@ with common.GRADIO_ROOT:
 
             restore_favorites_button.click(
                     PR.restore_favorites,
-                    outputs=[preset_selection, category_selection],
+                    outputs=[preset_selection, category_selection,
+                        clear_favorites_button],
                     queue=False, show_progress=False
                 ).then(
                     fn=lambda: interpret_info('Restored the default favorites'),
                     outputs=None)
 
+            clear_favorites_button.click(
+                    PR.clear_favorites,
+                    outputs=[preset_selection, category_selection,
+                        clear_favorites_button],
+                    queue=False, show_progress=False
+                ).then(
+                    fn=lambda: interpret_info('Cleared all favorites except the default'),
+                    outputs=None)
 
             def notification_control(enable_notification):
                 config.audio_notification = enable_notification
