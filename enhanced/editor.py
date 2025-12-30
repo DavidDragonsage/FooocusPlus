@@ -240,6 +240,7 @@ def erase_logic(edit_image, erase_bool):
         black = r.point(lambda _: 0)
         clear = r.point(lambda _: 0)
         output_image = _Image.merge("RGBA", (black, black, black, clear))
+        interpret('The image has been deleted and replaced with pure transparency')
     else:
         output_image = edit_image
     return output_image
