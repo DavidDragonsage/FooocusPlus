@@ -444,12 +444,19 @@ with common.GRADIO_ROOT:
 
                         with gr.Accordion(label='Transparency & Composition', visible=True, open=False):
                             with gr.Row():
-                                background_chk = gr.Checkbox(
-                                    label="Remove Background",
-                                    value = False, container=True,
-                                    elem_classes='edit_check',
-                                    interactive=True,
-                                    info='Make the background invisible')
+                                with gr.Column(elem_classes=['column_chkbox']):
+                                    background_chk = gr.Checkbox(
+                                        label="Remove Background",
+                                        value = False, container=True,
+                                        elem_classes='edit_check',
+                                        interactive=True,
+                                        info='Make the background invisible')
+                                    erase_chk = gr.Checkbox(
+                                        label="Erase Image",
+                                        value = False, container=True,
+                                        elem_classes='edit_check',
+                                        interactive=True,
+                                        info='Create a blank transparent image')
                                 transparency_slider = gr.Slider(
                                     label="Percent Transparency",
                                     minimum=0, maximum=100,
@@ -544,15 +551,17 @@ with common.GRADIO_ROOT:
 
                             with gr.Row():
                                 posterize_slider = gr.Slider(
-                                    label="Posterize",
+                                    label="Posterize (Reduce Color Resolution)",
                                     minimum=1, maximum=8,
                                     value=8, step=1,
-                                    interactive=True)
+                                    interactive=True,
+                                    info='8-bit/channel=True Color, 1-bit/channel=8 possible colors')
                                 solarize_slider = gr.Slider(
                                     label="Solarize Threshold (Selective Invert)",
                                     minimum=-1, maximum=255,
                                     value=-1, step=1,
-                                    interactive=True)
+                                    interactive=True,
+                                    info='-1=Off, 0=Full Inversion, 255=No Inversion')
 
                         with gr.Group():
                             with gr.Row():
@@ -601,6 +610,7 @@ with common.GRADIO_ROOT:
                             mirror_bool: bool,
                             flip_vertical_bool: bool,
                             background_bool: bool,
+                            erase_bool: bool,
                             transparency_f: float,
                             box_blur_int: int,
                             gaussian_blur_int: int,
@@ -635,6 +645,7 @@ with common.GRADIO_ROOT:
                                 mirror_bool,
                                 flip_vertical_bool,
                                 background_bool,
+                                erase_bool,
                                 transparency_f,
                                 box_blur_int,
                                 gaussian_blur_int,
@@ -715,6 +726,7 @@ with common.GRADIO_ROOT:
                             flip_vertical_chk,
                             flip_AR_chk,
                             background_chk,
+                            erase_chk,
                             transparency_slider,
                             box_blur_slider,
                             gaussian_blur_slider,
@@ -744,6 +756,7 @@ with common.GRADIO_ROOT:
                             mirror_chk,
                             flip_vertical_chk,
                             background_chk,
+                            erase_chk,
                             transparency_slider,
                             box_blur_slider,
                             gaussian_blur_slider,
@@ -783,6 +796,7 @@ with common.GRADIO_ROOT:
                             mirror_chk,
                             flip_vertical_chk,
                             background_chk,
+                            erase_chk,
                             # transparency_slider is
                             # handled manually via button
                             box_blur_slider,

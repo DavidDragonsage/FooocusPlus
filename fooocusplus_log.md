@@ -91,6 +91,9 @@
   * removed the Gradio footer as it was conveying no useful information
 * Tech Note: "special" enhanced.toolbox CSS moved to standard style.css file
 * Release Date: December 23rd, 2025<br/>
+* Hotfix4: In the Editor, added ""Erase Image" to create transparencies
+  * "Percent Transparency" now preserves the underlying image when 100%
+  * corrected a formatting error in Transparency created by Hotfix3
 * Hotfix3: Added "Clear Favorites" to the Favorite Preset Control accordion
   * the new Favorite Preset Control accordion is located under the Extras tab
   * removed the preset_bar_category_tracking option from config parameters

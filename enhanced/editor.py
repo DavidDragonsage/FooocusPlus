@@ -104,6 +104,7 @@ def reset_to_defaults(arg_image):
         False,          # flip_vertical_chk default
         False,          # flip_AR_chk default
         False,          # background_chk default
+        False,          # erase_chk default
         0.0,            # transparency percentage default
         0,              # box_blur_slider default
         0,              # gaussian_blur_slider default
@@ -231,6 +232,18 @@ def remove_background_logic(edit_image, background_bool):
         output_image = edit_image
     return output_image
 
+def erase_logic(edit_image, erase_bool):
+    if erase_bool:
+        if edit_image.mode != "RGBA":
+            edit_image = edit_image.convert("RGBA")
+        r, g, b, a = edit_image.split()
+        black = r.point(lambda _: 0)
+        clear = r.point(lambda _: 0)
+        output_image = _Image.merge("RGBA", (black, black, black, clear))
+    else:
+        output_image = edit_image
+    return output_image
+
 def transparency_logic(edit_image, transparency_f):
     # alpha_value = 0 is fully transparent, 255 is fully opaque
     # ensure the image has an alpha channel:
@@ -240,14 +253,16 @@ def transparency_logic(edit_image, transparency_f):
     else:
         output_image = edit_image
 
-    # Convert the 0-100% transparency to 0-255 opacity
+    # convert the 0-100% transparency to 0-255 opacity:
     opacity_value = 255 - int((transparency_f / 100.0) * 255.0)
+    # get existing alpha channel:
+    alpha = output_image.getchannel('A')
 
-    # Apply the desired alpha value
-    alpha = output_image.split()[-1] # get existing alpha channel
-    alpha = alpha.point(lambda i: i * (opacity_value / 255)) # scale alpha channel values
+    # prevent data loss by ensuring a minimum value of 1
+    # this prevents the 'clean transparent pixels to black' optimization
+    alpha = alpha.point(lambda i: max(1, int(i * (opacity_value / 255))))
+
     output_image.putalpha(alpha)
-
     return output_image
 
 def display_transparency_percentage(transparency_f):
@@ -276,6 +291,7 @@ def apply_enhancements(
     mirror_bool: bool,
     flip_vertical_bool: bool,
     background_bool: bool,
+    erase_bool: bool,
     transparency_f: float,
     box_blur_int: int,
     gaussian_blur_int: int,
@@ -318,6 +334,8 @@ def apply_enhancements(
 
     # --- Step 4: Final Composition and Transparency Logic ---
     processed_image = remove_background_logic(processed_image, background_bool)
+
+    processed_image = erase_logic(processed_image, erase_bool)
 
     processed_image = transparency_logic(processed_image, transparency_f)
 
