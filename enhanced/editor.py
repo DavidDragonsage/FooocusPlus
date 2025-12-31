@@ -245,6 +245,24 @@ def erase_logic(edit_image, erase_bool):
         output_image = edit_image
     return output_image
 
+def remove_transparency_logic(edit_image):
+    if edit_image.mode == "RGBA":
+        edit_image = edit_image.convert("RGB")
+        output_image = edit_image.convert("RGBA")
+        interpret('Removed all transparency')
+    else:
+        output_image = edit_image
+    # background_chk, erase_chk, transparency_slider
+    return  (output_image,
+            output_image, output_image,
+            gr.update(value=False),
+            gr.update(value=False),
+            gr.update(value=0.0))
+
+def display_transparency_percentage(transparency_f):
+    interpret_info('Image transparency', f'= {transparency_f}%')
+    return
+
 def transparency_logic(edit_image, transparency_f):
     # alpha_value = 0 is fully transparent, 255 is fully opaque
     # ensure the image has an alpha channel:
@@ -265,10 +283,6 @@ def transparency_logic(edit_image, transparency_f):
 
     output_image.putalpha(alpha)
     return output_image
-
-def display_transparency_percentage(transparency_f):
-    interpret_info('Image transparency', f'= {transparency_f}%')
-    return
 
 
 def apply_enhancements(

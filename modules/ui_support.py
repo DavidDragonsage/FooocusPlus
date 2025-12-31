@@ -269,7 +269,7 @@ def process_after_generation(state_params):
     state_params.update({"__output_list": output_list})
     state_params.update({"__finished_nums_pages": f'{finished_nums},{finished_pages}'})
     # generate_button, stop_button, skip_button, state_is_generating
-    results = [gr.update(visible=True, interactive=True)] + [gr.update(visible=False, interactive=False), gr.update(visible=False, interactive=False), False]
+    results = [gr.update(value='Generate', visible=True, interactive=True)] + [gr.update(visible=False, interactive=False), gr.update(visible=False, interactive=False), False]
     # gallery_index, index_radio
     results += [gr.update(choices=state_params["__output_list"], value=None), gr.update(visible=len(state_params["__output_list"])>0, open=False)]
     # prompt, random_button, translator_button, super_prompter, background_theme, image_tools_checkbox, bar0_button, bar1_button, bar2_button, bar3_button, bar4_button, bar5_button, bar6_button, bar7_button, bar8_button

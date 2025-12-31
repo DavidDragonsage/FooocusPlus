@@ -198,25 +198,35 @@ with common.GRADIO_ROOT:
                                 size='sm', min_width = 75, visible=config.default_prompt_translator_enable)
 
                     with gr.Column(scale=2, min_width=75):
-                        generate_button = gr.Button(label="Generate",
-                        value="Generate", elem_classes='type_row',
-                        elem_id='generate_button', visible=True, min_width = 75)
+                        generate_button = gr.Button(
+                            value="Generate",
+                            elem_classes='type_row',
+                            elem_id='generate_button',
+                            visible=True, min_width = 75)
 
-                        reset_button = gr.Button(label="Reconnect",
-                        value="Reconnect", elem_classes='type_row',
-                        elem_id='reset_button', visible=False, min_width = 75)
+                        reset_button = gr.Button(
+                            value="Reconnect",
+                            elem_classes='type_row',
+                            elem_id='reset_button',
+                            visible=False, min_width = 75)
 
-                        load_parameter_button = gr.Button(label="Load Parameters",
-                        value="Load Parameters", elem_classes='type_row',
-                        elem_id='load_parameter_button', visible=False, min_width = 75)
+                        load_parameter_button = gr.Button(
+                            value="Load Parameters",
+                            elem_classes='type_row',
+                            elem_id='load_parameter_button',
+                            visible=False, min_width = 75)
 
-                        skip_button = gr.Button(label="Skip", value="Skip",
-                        elem_classes='type_row_half', elem_id='skip_button',
-                        visible=False, min_width = 75)
+                        skip_button = gr.Button(
+                            value="Skip",
+                            elem_classes='type_row_half',
+                            elem_id='skip_button',
+                            visible=False, min_width = 75)
 
-                        stop_button = gr.Button(label="Stop", value="Stop",
-                        elem_classes='type_row_half', elem_id='stop_button',
-                        visible=False, min_width = 75)
+                        stop_button = gr.Button(
+                            value="Stop",
+                            elem_classes='type_row_half',
+                            elem_id='stop_button',
+                            visible=False, min_width = 75)
 
                         def stop_clicked(currentTask):
                             currentTask.last_stop = 'stop'
@@ -444,27 +454,32 @@ with common.GRADIO_ROOT:
 
                         with gr.Accordion(label='Transparency & Composition', visible=True, open=False):
                             with gr.Row():
-                                with gr.Column(elem_classes=['column_chkbox']):
-                                    background_chk = gr.Checkbox(
-                                        label="Remove Background",
-                                        value = False, container=True,
-                                        elem_classes='edit_check',
-                                        interactive=True,
-                                        info='Make the background invisible')
-                                    erase_chk = gr.Checkbox(
-                                        label="Erase Image",
-                                        value = False, container=True,
-                                        elem_classes='edit_check',
-                                        interactive=True,
-                                        info='Create a blank transparent image')
-                                transparency_slider = gr.Slider(
-                                    label="Percent Transparency",
-                                    minimum=0, maximum=100,
-                                    value=0.0, step=0.5,
-                                    interactive=True,
-                                    info='At 100% the whole image is invisible')
+                                remove_transparency_btn = gr.Button(
+                                    value = "Remove All Transparency",
+                                    elem_classes='button_edit')
+                                with gr.Column():
+                                    with gr.Row():
+                                        background_chk = gr.Checkbox(
+                                            label="Remove Background",
+                                            value = False, container=True,
+                                            elem_classes='edit_check',
+                                            interactive=True,
+                                            info='Make the background invisible')
+                                        erase_chk = gr.Checkbox(
+                                            label="Erase Image",
+                                            value = False, container=True,
+                                            elem_classes='edit_check',
+                                            interactive=True,
+                                            info='Create a blank transparent image')
+                                    with gr.Row():
+                                        transparency_slider = gr.Slider(
+                                            label="Percent Transparency",
+                                            minimum=0, maximum=100,
+                                            value=0.0, step=0.5,
+                                            interactive=True,
+                                            info='At 100% the whole image is invisible')
                                 apply_transparency_btn = gr.Button(
-                                    value = "Apply Transparency",
+                                    value = "Apply Percent Transparency",
                                     elem_classes='button_edit')
 
                             with gr.Accordion(label='Overlay the Output Image onto a Base', visible=True, open=False):
@@ -505,26 +520,26 @@ with common.GRADIO_ROOT:
 
                                 with gr.Row():
                                     reload_overlay_btn = gr.Button(
-                                            value = "Reload Overlay",
-                                            elem_classes='button_classic3')
-
-                                    rotate_overlay_slider = gr.Slider(
-                                        label='Rotate Overlay',
-                                        minimum=-180, maximum=+180,
-                                        value=0, step=1,
-                                        interactive=True,
-                                        min_width=320)
-
-                                    contain_chk = gr.Checkbox(
-                                        label='Contain Overlay',
-                                        value = True, container=True,
-                                        elem_classes='edit_check',
-                                        interactive=True,
-                                        info='Keep the overlay within the base image')
-
+                                        value = "Reload Overlay",
+                                        elem_classes='button_edit')
+                                    with gr.Column():
+                                        with gr.Row():
+                                            contain_chk = gr.Checkbox(
+                                                label='Contain Overlay',
+                                                value = True, container=True,
+                                                elem_classes='edit_check',
+                                                interactive=True,
+                                                info='Keep the overlay within the base image')
+                                        with gr.Row():
+                                            rotate_overlay_slider = gr.Slider(
+                                                label='Rotate Overlay',
+                                                minimum=-180, maximum=+180,
+                                                value=0, step=1,
+                                                interactive=True,
+                                                min_width=320)
                                     save_composite_btn = gr.Button(
                                         value = "Save Composite Image",
-                                        elem_classes='button_classic3')
+                                        elem_classes='button_edit')
 
                         with gr.Accordion(label='Effects', visible=True, open=False):
                             with gr.Row():
@@ -940,6 +955,22 @@ with common.GRADIO_ROOT:
                             outputs=all_transform_outputs)
 
                         # --- Transparency & Composition Section ---
+
+                        remove_transparency_btn.click(
+                            edit.remove_transparency_logic,
+                                inputs = [input_image_display],
+                                outputs = [input_image_display,
+                                    output_image_display,
+                                    output_image_state,
+                                    background_chk, erase_chk,
+                                    transparency_slider]
+                        ).then(
+                            on_ui_update_trigger,
+                            # reruns the entire stack using the current slider values:
+                            inputs=all_inputs_for_update,
+                            outputs=[output_image_display,
+                                output_image_state],
+                            show_progress=True, queue=False)
 
                         apply_transparency_btn.click(
                             edit.display_transparency_percentage,
@@ -1791,11 +1822,13 @@ with common.GRADIO_ROOT:
 
                 gr.HTML('<a href="https://daviddragonsage-fooocusplus.static.hf.space/index.html" target="_blank">\U0001F4DA Documentation</a>')
 
-                style_search_bar = gr.Textbox(show_label=False, container=False,
+                style_search_bar = gr.Textbox(
+                    show_label=False, container=False,
                     placeholder="\U0001F50E Type here to search styles...",
                     value="",
                     label='Search Styles')
-                style_selections = gr.CheckboxGroup(show_label=False, container=False,
+                style_selections = gr.CheckboxGroup(
+                    show_label=False, container=False,
                     choices=copy.deepcopy(style_sorter.all_styles),
                     value=copy.deepcopy(config.default_styles),
                     label='Selected Styles',
@@ -1894,9 +1927,11 @@ with common.GRADIO_ROOT:
 #                            container=False, visible=True)
 
                 with gr.Row():
-                    refresh_files = gr.Button(label='Refresh', value='\U0001f504 Refresh All Files')
+                    refresh_files = gr.Button(
+                        value='\U0001f504 Refresh All Files')
 #                with gr.Row():
-#                    refresh_files = gr.Button(label='LoRA_Triggers', value='\U0001f504 Load LoRA Trigger Words')
+#                    refresh_files = gr.Button(
+#                        value='\U0001f504 Load LoRA Trigger Words')
 
             with gr.Tab(label='Advanced', elem_id="scrollable-box"):
                 guidance_scale = gr.Slider(label='Guidance Scale (CFG)', minimum=0.1, maximum=30.0, step=0.1,
@@ -2721,9 +2756,12 @@ with common.GRADIO_ROOT:
 
         # stop ".then chain" early
         # should_stop_flag = gr.State(value=False)
-        generate_button.click(UIS.process_before_generation,
-            inputs=[state_topbar, params_backend] + ehps,
-            outputs=[aspect_ratios_select, stop_button,
+        generate_button.click(
+            fn=lambda: gr.update(interactive=False),
+                outputs=[generate_button]) \
+            .then(UIS.process_before_generation,
+                inputs=[state_topbar, params_backend] + ehps,
+                outputs=[aspect_ratios_select, stop_button,
                 skip_button, generate_button, gallery,
                 state_is_generating, index_radio,
                 image_toolbox, prompt_info_box] +

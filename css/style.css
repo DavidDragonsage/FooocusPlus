@@ -281,7 +281,9 @@ div:has(> #positive_prompt) {
     width: 80% !important;
 }
 .button_edit {
+    align-self: center;
     border-radius: 10px !important;
+    max-height: 100px !important;
     max-width: 150px !important;
 }
 .button_info {
