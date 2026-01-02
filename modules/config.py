@@ -565,14 +565,33 @@ default_sample_sharpness = get_config_item_or_set_default(
 )
 
 
+edit_contain_overlay = get_config_item_or_set_default(
+    key='edit_contain_overlay',
+    default_value=True,
+    validator=lambda x: isinstance(x, bool),
+    expected_type=bool
+)
+
 default_output_format = get_config_item_or_set_default(
     key='default_output_format',
     default_value='png',
     validator=lambda x: x in OutputFormat.list(),
     expected_type=str
 )
+edit_output_format = get_config_item_or_set_default(
+    key='edit_output_format',
+    default_value='png',
+    validator=lambda x: x in EditFormat.list(),
+    expected_type=str
+)
 default_save_metadata_to_images = get_config_item_or_set_default(
     key='default_save_metadata_to_images',
+    default_value=True,
+    validator=lambda x: isinstance(x, bool),
+    expected_type=bool
+)
+edit_save_metadata_to_images = get_config_item_or_set_default(
+    key='edit_save_metadata_to_images',
     default_value=True,
     validator=lambda x: isinstance(x, bool),
     expected_type=bool

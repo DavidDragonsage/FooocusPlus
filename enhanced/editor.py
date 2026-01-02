@@ -26,12 +26,23 @@ def convert_to_rgba(img: _Image.Image) -> _Image.Image:
         img = img.convert('RGBA')
     return img
 
-def on_upload_trigger(input_image: _Image.Image):
+def copy_to_base(output_image_data):
+    base_image_data = copy.deepcopy(output_image_data)
+    return base_image_data
+
+def copy_to_source(output_image_data):
+    input_image_data = copy.deepcopy(output_image_data)
+    return input_image_data
+
+def on_upload_trigger(input_image: _Image.Image, meta=False):
     if input_image is None:
         return None, None
     # load the metadata
-    common.input_meta = input_image.info
     print()
+    if meta:
+        interpret('[Edit] Copied the output image to the input')
+    else:
+        common.input_meta = input_image.info
     if input_image.mode == 'RGBA':
         rgba_img = input_image
         interpret('[Edit] The input image mode is', 'RGBA:')
@@ -45,6 +56,8 @@ def on_upload_trigger(input_image: _Image.Image):
         interpret('Could not find metadata in the input image')
     return rgba_img, rgba_img
 
+def call_upload_trigger(input_image: _Image.Image):
+    return on_upload_trigger(input_image, meta=True)
 
 def reset_transforms(arg_image):
     # return default values for all transformation components
@@ -259,6 +272,10 @@ def remove_transparency_logic(edit_image):
             gr.update(value=False),
             gr.update(value=0.0))
 
+def save_metadata_logic(save_metadata_bool):
+    config.edit_save_metadata_to_images = save_metadata_bool
+    return save_metadata_bool
+
 def display_transparency_percentage(transparency_f):
     interpret_info('Image transparency', f'= {transparency_f}%')
     return
@@ -438,7 +455,7 @@ def save_image(output_image, format_str, save_meta):
             # for efficient storage
             output_image = output_image.convert('L')
             interpret('Detected only grayscale content, saving as a true grayscale image')
-    if save_meta:
+    if save_meta and config.edit_save_metadata_to_images:
         # initiate a PngInto object
         metadata = PngInfo()
         for key, value in save_meta.items():
@@ -453,13 +470,13 @@ def save_image(output_image, format_str, save_meta):
     path_full = Path(path_outputs/date_string/only_name).resolve()
     # Save the image using the most appropriate mode
     save_path = f"{path_full}{format_str.lower()}"
-    if save_meta:
+    if save_meta and config.edit_save_metadata_to_images:
         output_image.save(save_path, format=format_str.upper(), pnginfo=metadata)
     else:
         output_image.save(save_path, format=format_str.upper())
     interpret_info('Saved edited image to', save_path)
     interpret('Using image mode:', output_image.mode)
-    if save_meta:
+    if save_meta and config.edit_save_metadata_to_images:
         interpret('Saved with metadata')
     else:
         interpret('Saved without metadata')

@@ -91,6 +91,10 @@
   * removed the Gradio footer as it was conveying no useful information
 * Tech Note: "special" enhanced.toolbox CSS moved to standard style.css file
 * Release Date: December 23rd, 2025<br/>
+* Hotfix6: added TC coloured pencil, rock horror & space styles
+  * in the Editor, added "Copy to Source", "Copy to Base" & "Save Metadata"
+  * the Editor now uses these config options: "edit_contain_overlay",
+  * "edit_output_format" & "edit_save_metadata_to_images"
 * Hotfix5: In the Editor, added "Remove Transparency"
   * introduced bug fixes for mislabelling of the "Generate" button
 * Hotfix4: In the Editor, added "Erase Image" to create transparencies

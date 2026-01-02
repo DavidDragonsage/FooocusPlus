@@ -65,6 +65,11 @@
 		"negative_prompt": "(realistic, photographic, photorealism, photo-realism:1.5), flat, digital, overly smooth, photo-realistic, CGI, plastic, vector, airbrush, cartoon, anime, sketch, 3d render, pixelated, watercolor, ink, pastel, crayon, overly sharp, glossy, sterile, artificial, computer generated, low resolution"
     },
     {
+		"name": "TC Black Hole Accretion Disk",
+		"prompt": "{prompt}, ultra-massive black hole with razor-sharp event horizon silhouette, glowing super-heated accretion disk in molten gold crimson and electric blue, relativistic Doppler beaming splitting colors left and right, warped starfield bent into Einstein ring, plasma jets shooting along rotation axis, gravitational lensing magnifying background galaxies into perfect arcs, pitch-black void with zero ambient light, high dynamic range with pure blacks and blinding plasma, cinematic scale spanning millions of light-years, photorealistic relativistic physics",
+		"negative": "cartoonish, low contrast, blue sky, daylight, blurry horizon, artifacts"
+    },
+    {
         "name": "TC Brian Froud",
         "prompt": "{prompt}, in the style of Brian Froud. Faerie portraiture, whimsical mysterious, intricate detailed painterly, rich color palette, enchanted realms, quirky mythical creatures, hidden magical details, dreamlike faery worlds, textured organic forms, folklore-inspired fantasy",
         "negative_prompt": "harsh modern, urban mechanical, simplistic geometry, dark foreboding, chaotic frenzy, monochromatic stark, futuristic sci-fi, anime, cartoon, deformed, mutated, ugly, disfigured, text, crayon"
@@ -73,6 +78,21 @@
 		"name": "TC Chiaroscuro Technique",
 		"prompt": "{prompt}, in the Chiaroscuro technique. dramatic contrasts of light and shadow, tenebrism effects, volumetric depth, sculptural forms, intense illumination, profound darkness, Rembrandt and Caravaggio inspired, moody atmosphere, high dynamic range, emotional intensity, spotlight drama",
 		"negative_prompt": "(realistic, photographic, photorealism, photo-realism:1.5), flat lighting, even illumination, pastel hues, soft gradients, diffused glow, low contrast, cartoonish outlines, vibrant saturation, blurry forms, deformed proportions, ugly distortions, text, overexposed highlights"
+    },
+    {
+		"name": "TC Coloured Pencil Full Art",
+		"prompt": "{prompt}, epic fantasy illustration, entirely coloured pencil illustration, coloured pencil drawing on textured paper, visible pencil strokes and cross-hatching, hand-drawn coloured pencil art, rich layered colours, fine pencil texture throughout, {prompt}, sketchbook style, artistic shading, detailed pencil lines, nostalgic illustration look, 8k",
+		"negative_prompt": "photo, photorealistic, realistic skin, smooth skin, digital art, painting, 3d render, glossy, plastic, real life, photograph, hyperrealistic, cut-and-paste, mixed media, different styles in one image"
+    },
+    {
+		"name": "TC Coloured Pencil Realistic",
+		"prompt": "{prompt}, epic fantasy illustration, entirely coloured pencil illustration, coloured pencil strokes, light color, visible paper texture, colored pencil art, coloured pencil drawing, vibrant yet soft coloured pencils, visible pencil strokes, cross-hatching texture, slightly grainy paper texture, rich layered colors, hyper-realistic coloured pencil, ultra-fine detail, realistic paper texture, precise layering, prismatic color shifts, subtle color blending, hand-drawn aesthetic, fine details with pencil lines, warm and cool tone balance, artistic and nostalgic, sketchbook style, beautiful light shading, highly detailed, 8k",
+		"negative_prompt": "photo, photorealistic, digital painting, oil paint, watercolor, acrylic, vector art, smooth gradients, airbrush, blurry, low detail, ugly, deformed, noisy, blurry, low contrast, 3d render, cg, plastic shine, glossy, over-saturated neon, anime, cartoon, greyscale, black and white, text, watermark, signature"
+    },
+    {
+		"name": "TC Coloured Pencil Soft",
+		"prompt": "{prompt}, epic fantasy illustration, entirely coloured pencil illustration, coloured pencil strokes, light color, visible paper texture, coloured pencil art, coloured pencil drawing, vibrant yet soft coloured pencils, gentle pastel tones, very soft shading, dreamy and delicate, light pressure strokes, visible pencil strokes, cross-hatching texture, slightly grainy paper texture, rich layered colors, subtle color blending, hand-drawn aesthetic, fine details with pencil lines, warm and cool tone balance, artistic and nostalgic, sketchbook style, beautiful light shading, highly detailed, 8k",
+		"negative_prompt": "photo, photorealistic, digital painting, oil paint, watercolor, acrylic, harsh lines, heavy cross-hatching, dark shadows, ugly, deformed, noisy, blurry, low contrast, vector art, smooth gradients, airbrush, blurry, low detail, 3d render, cg, plastic shine, glossy, over-saturated neon, anime, cartoon, greyscale, black and white, text, watermark, signature"
     },
     {
 		"name": "TC Gustave Dore",
@@ -140,6 +160,16 @@
         "negative_prompt": "modern realistic, urban contemporary, simplistic minimalism, dark dystopian, chaotic abstract, monochromatic, eerie unsettling, anime, cartoon, deformed, mutated, ugly, disfigured, text, painting"
     },
     {
+		"name": "TC Protoplanetary Disk",
+		"prompt": "{prompt}, edge-on protoplanetary disk around young T-Tauri star, dark dusty lane bisecting glowing gas, spiral density waves, silhouetted proto-planets casting shadows, backlit by central star with corona flares, scattered light creating rainbow diffraction spikes, ultra-fine dust texture, pitch-black void with dense background stars, cinematic depth of field",
+		"negative": "bright sky, cartoon planets, low detail dust"
+    },
+    {
+		"name": "TC Pulsar Magnetosphere",
+		"prompt": "{prompt}, rapidly spinning neutron star with lighthouse beams of gamma-ray light, crackling magnetosphere filled with auroral curtains in neon green purple and white, particle beams carving helical paths, synchrotron radiation rings, ultra-dense starfield warped by gravity, magnetic field lines visible as glowing filaments, high-frequency pulses strobing the scene, pure black void background, HDR with blinding beams and inky shadows",
+		"negative": "soft glow, low detail, earth atmosphere, artifacts"
+    },
+    {
 		"name": "TC Realistic Oil Painting",
 		"prompt": "{prompt}, in a finely detailed realistic oil painting style, (painted with layered translucent oil pigments on textured linen canvas, with visible brushwork and subtle impasto depth:1.5), each stroke carries direction and light, creating tactile realism and organic imperfections, the surface shows gentle sheen and pigment variation, rich tonal blending, natural edge transitions, and balanced color harmony under soft, directional lighting, evokes a hand-painted gallery masterpiece with timeless realism, realistic pigment texture:0.7, organic imperfections:0.6, physical paint behavior:0.8",
 		"negative_prompt": "(realistic, photographic, photorealism, photo-realism:1.5), digital, CGI, photo-realistic photography, airbrushed, vector art, cartoon, anime, 3d render, smooth gradients, flat color, plastic texture, watercolor, ink, pastel, sketch, low detail, overly sharp, glossy, synthetic, sterile, low resolution"
@@ -153,6 +183,11 @@
 		"name": "TC Rene Magritte",
 		"prompt": "{prompt}, in the style of René Magritte. Surrealism, paradoxical everyday scenes, ordinary objects in impossible contexts, dreamlike wit and mystery, cloudy skies, meticulous realism with bizarre logic, thought-provoking illusions, enigmatic atmospheres, subtle humour",
 		"negative_prompt": "abstract chaotic, vibrant fantastical, dark horrific, simplistic cartoonish, futuristic sci-fi, deformed, mutated, ugly, disfigured, text, graphic"
+    },
+    {
+		"name": "TC Rock Horror",
+		"prompt": "{prompt}, epic fantasy illustration, in the Sfumato technique style. subtle blending of tones, soft hazy transitions, atmospheric depth, Renaissance mastery, Leonardo da Vinci inspired, ethereal mist, delicate gradations, luminous shadows, smoky veils, introspective serenity, layered subtlety",
+		"negative_prompt": "(realistic, photographic, photorealism, photo-realism:1.5), harsh outlines, stark contrasts, bold lines, flat shading, cartoonish, digital artifacts, vibrant saturation, sharp edges, modern graphics, deformed proportions, ugly distortions, text, overexposed"
     },
     {
         "name": "TC Rodney Matthews",
@@ -193,6 +228,11 @@
 		"name": "TC Subtle Oil Painting",
 		"prompt": "{prompt}, in a subtle oil painting style, rich layered colors, (subtle visible brush strokes, textured canvas surface:1.5), luminous highlights, depth of field, classical composition, warm earthy tones, atmospheric perspective, delicate impasto details, harmonious blending",
 		"negative_prompt": "(realistic, photographic, photorealism, photo-realism:1.5), dark, gloomy, futuristic, chaotic, industrial, desolate, monochromatic, eerie, apocalyptic, unsettling, anime, cartoon, graphic, text, crayon, deformed, mutated, ugly, disfigured, overly textured, heavy impasto, blurry, low resolution, overexposed, underexposed, digital, pixelated, smooth gradients"
+    },
+    {
+		"name": "TC Supernova Remnant",
+		"prompt": "{prompt}, expanding spherical shockwave from recent core-collapse supernova, glowing filamentary shell in turquoise gold and magenta, turbulent gas knots with Rayleigh-Taylor fingers, central neutron star or black hole silhouette, ejected heavy elements forming colorful loops, background galaxies dimmed behind dust veil, ultra-sharp debris trails, high dynamic range with pure blacks and incandescent highlights, epic scale",
+		"negative": "blurry, low contrast, cartoon, overexposed core"
     },
     {
 		"name": "TC Tenebrism Technique",

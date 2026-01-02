@@ -284,6 +284,7 @@ div:has(> #positive_prompt) {
     align-self: center;
     border-radius: 10px !important;
     max-height: 100px !important;
+    min-height: 100px !important;
     max-width: 150px !important;
 }
 .button_info {
@@ -363,8 +364,23 @@ div:has(> #positive_prompt) {
     text-align: left !important;
 }
 
+.checkbox_holder{
+    display: flex !important;
+    /* Vertical centering: */
+    align-items: center !important;
+    /* Horizontal centering: */
+    justify-content: center !important;
+    width: 100% !important;
+}
 .edit_check{
     padding: 5px !important;
+}
+.edit_check_centre{
+    width: fit-content !important;
+    min-width: unset !important;
+    /* use these if centring is needed:
+    margin-left: auto !important;
+    margin-right: auto !important; */
 }
 .min_check {
     min-width: min(1px, 100%) !important;

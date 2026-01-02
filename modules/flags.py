@@ -249,6 +249,15 @@ class OutputFormat(Enum):
     def list(cls) -> list:
         return list(map(lambda c: c.value, cls))
 
+class EditFormat(Enum):
+    PNG = 'png'
+    GIF = 'gif'
+    JPEG = 'jpeg'
+    WEBP = 'webp'
+
+    @classmethod
+    def list(cls) -> list:
+        return list(map(lambda c: c.value, cls))
 
 class PerformanceLoRA(Enum):
     Quality = None

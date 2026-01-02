@@ -526,7 +526,8 @@ with common.GRADIO_ROOT:
                                         with gr.Row():
                                             contain_chk = gr.Checkbox(
                                                 label='Contain Overlay',
-                                                value = True, container=True,
+                                                value = config.edit_contain_overlay,
+                                                container=True,
                                                 elem_classes='edit_check',
                                                 interactive=True,
                                                 info='Keep the overlay within the base image')
@@ -585,13 +586,29 @@ with common.GRADIO_ROOT:
                                     elem_classes='button_classic3')
                                 save_format = gr.Dropdown(
                                     label="Save Format",
-                                    choices=["png", "gif", "jpeg", "webp"],
-                                    value="png",
+                                    choices=flags.EditFormat.list(),
+                                    value=config.edit_output_format,
                                     visible=True, interactive=True)
-
                                 save_image = gr.Button(
                                     value='Save Image',
                                     elem_classes='button_classic3')
+                            with gr.Row():
+                                with gr.Column(scale=1):
+                                    with gr.Row():
+                                        copy_source = gr.Button(
+                                            value='Copy to Source',
+                                            elem_classes='button_edit')
+                                        copy_base = gr.Button(
+                                            value='Copy to Base',
+                                            elem_classes='button_edit')
+                                with gr.Column(elem_classes="checkbox_holder", scale=1):
+                                    edit_save_metadata_chk = gr.Checkbox(
+                                        label="Save Metadata",
+                                        value = config.edit_save_metadata_to_images,
+                                        container=True,
+                                        elem_classes='edit_check_centre',
+                                        interactive=True,
+                                        info='Save image parameters for the Output and Composite images')
 
                                 # mirror of output_image_display
                                 # used to preserve RGBA values
@@ -988,7 +1005,7 @@ with common.GRADIO_ROOT:
                         # state variable holds the original base image
                         original_base_image_state = gr.State(value=None)
 
-                        def on_base_image_upload_trigger(uploaded_image_data, output_image_overlay_data):
+                        def on_base_image_upload_trigger(uploaded_image_data, output_image_overlay_data, meta=False):
                             """
                             Triggered when a new base image is uploaded.
                             It calculates centring and updates UI components dynamically.
@@ -998,7 +1015,14 @@ with common.GRADIO_ROOT:
 
                             # load the metadata
                             print()
-                            if uploaded_image_data.info:
+                            if meta:
+                                interpret('[Edit] Copied the output image to the base image')
+                                common.base_meta = common.input_meta
+                                if common.input_meta:
+                                    interpret('Using the output image metadata')
+                                else:
+                                    interpret('Could not find metadata in the output image')
+                            elif uploaded_image_data.info:
                                 common.base_meta = uploaded_image_data.info
                                 interpret('Loaded base image metadata to save in the composite image')
                             else:
@@ -1115,6 +1139,44 @@ with common.GRADIO_ROOT:
                             fn=edit.on_save_output_click,
                             inputs=[output_image_state, save_format],
                             outputs=[download_file]) # Directs the saved file path to the download component
+
+                        copy_source.click(
+                            edit.copy_to_source,
+                            inputs=output_image_display,
+                            outputs=input_image_display
+                        ).then(
+                            edit.call_upload_trigger,
+                            inputs=[input_image_display],
+                            outputs=[output_image_display,
+                                output_image_state]
+                        ).then(
+                            fn=edit.reset_to_defaults,
+                            inputs=[input_image_display],
+                            outputs=all_reset_outputs)
+
+                        def call_base_upload_trigger_with_meta(uploaded_image_data, output_image_overlay_data):
+                            # This wrapper explicitly calls the trigger with meta=True
+                            return on_base_image_upload_trigger(
+                                uploaded_image_data, output_image_overlay_data, meta=True)
+
+                        copy_base.click(
+                            edit.copy_to_base,
+                            inputs=output_image_display,
+                            outputs=base_image_display
+                        ).then(
+                            fn=call_base_upload_trigger_with_meta,
+                            inputs=[base_image_display,
+                                output_image_state],
+                            outputs=[composite_image_display,
+                            horizontal_slider, vertical_slider,
+                            rotate_overlay_slider,
+                            original_base_image_state])
+
+                        edit_save_metadata_chk.change(
+                            fn=edit.save_metadata_logic,
+                            inputs=edit_save_metadata_chk,
+                            outputs=edit_save_metadata_chk)
+
 
 
                     with gr.TabItem(label='IC-Light', id='layer_tab') as layer_tab:
@@ -1705,6 +1767,9 @@ with common.GRADIO_ROOT:
 
                         disable_seed_increment = gr.Checkbox(label='Freeze Seed',
                             info='Make similar images while processing an array or wildcards', value=False)
+
+                        with gr.Row(elem_classes='elem_centre'):
+                            gr.HTML('<font size="3"><a href="https://github.com/DavidDragonsage/FooocusPlus/wiki/Image-Seed-Control" target="_blank">\U0001F4DA Image Seed Control</a>')
 
                 def update_history_link():
                     return gr.update(value=f'<font size="3">&emsp;<a href="file={get_current_html_path(output_format)}"\
