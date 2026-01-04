@@ -93,8 +93,8 @@
 * Release Date: December 23rd, 2025<br/>
 * Hotfix7: introduced UserDir/user_wildcards directory
   * UserDir/user_wildcards can override built-in wildcards
-  * UserDir/wildcards has been deleted
-  * all custom wildcards were moved to UserDir/user_wildcards
+  * the UserDir/wildcards directory has been deleted
+  * any custom wildcards were saved to UserDir/user_wildcards
   * removed "path_wildcards" from config.txt options
   * also removed "temp_path_cleanup_on_launch" from config
   * in the canadian & ethnic wildcards, replaced Afro with African
