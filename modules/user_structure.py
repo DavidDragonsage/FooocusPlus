@@ -457,9 +457,11 @@ def clear_user_favorites(user_presets_path):
 def init_preset_structure(init=False, restore_favorites=False,
         clear_favorites=False):
     master_presets_path = Path('masters/master_presets')
-    ref_master_presets_path = Path(user_dir_path/'master_presets')
-    remove_dirs(ref_master_presets_path)
-    copy_dirs(master_presets_path, ref_master_presets_path)
+    old_presets_path = Path(user_dir_path/'master_presets')
+    remove_dirs(old_presets_path)
+    ref_presets_path = Path(user_dir_path/'reference_presets')
+    remove_dirs(ref_presets_path)
+    copy_dirs(master_presets_path, ref_presets_path)
 
     working_presets_path = Path('presets').resolve()
     remove_dirs(working_presets_path)
@@ -493,13 +495,14 @@ def create_user_structure(user_dir):
     user_dir_path = Path(user_dir).resolve()
     interpret('Initialized the user directory at:', user_dir_path)
 
-
     # initialize the user mp3 audio directory
     # which hold notification audio file options
     master_audio_path = Path(masters_path/'master_audio')
-    ref_master_audio_path = Path(user_dir_path/'master_audio')
-    remove_dirs(ref_master_audio_path)
-    copy_dirs(master_audio_path, ref_master_audio_path)
+    old_audio_path = Path(user_dir_path/'master_audio')
+    remove_dirs(old_audio_path)
+    ref_audio_path = Path(user_dir_path/'reference_audio')
+    remove_dirs(ref_audio_path)
+    copy_dirs(master_audio_path, ref_audio_path)
     user_audio_path = Path(user_dir_path/'user_audio')
     make_dir(user_audio_path)
     interpret('Verified the working notification audio directory:', user_audio_path)
@@ -514,10 +517,10 @@ def create_user_structure(user_dir):
     # want from "FooocusPlus\UserDir\batch_startups"
     # to the parent directory, "FooocusPlus" to use it
     master_batch_path = Path(masters_path/'master_batch_startups')
-    ref_master_batch_path = Path(user_dir_path/'batch_startups')
-    remove_dirs(ref_master_batch_path)
-    copy_dirs(master_batch_path, ref_master_batch_path)
-    interpret('Verified the batch file startup directory:', ref_master_batch_path)
+    ref_batch_path = Path(user_dir_path/'batch_startups')
+    remove_dirs(ref_batch_path)
+    copy_dirs(master_batch_path, ref_batch_path)
+    interpret('Verified the batch file startup directory:', ref_batch_path)
 
 
     # initialize the Language structure delete
@@ -526,9 +529,11 @@ def create_user_structure(user_dir):
     # '.masters/master_language' to UserDir
     # for the user's reference only
     master_language_path = Path('masters/master_language')
-    ref_master_language_path = Path(user_dir_path/'master_language')
-    remove_dirs(ref_master_language_path)
-    copy_dirs(master_language_path, ref_master_language_path)
+    old_language_path = Path(user_dir_path/'master_language')
+    remove_dirs(old_language_path)
+    ref_language_path = Path(user_dir_path/'reference_language')
+    remove_dirs(ref_language_path)
+    copy_dirs(master_language_path, ref_language_path)
 
     # delete '.language', i.e. FooocusPlusAI/language'
     # which is used as a temporary working folder
@@ -554,9 +559,11 @@ def create_user_structure(user_dir):
 
     # initialize the Styles structure
     master_styles_path = Path('masters/master_styles')
-    ref_master_styles_path = Path(user_dir_path/'master_styles')
-    remove_dirs(ref_master_styles_path)
-    copy_dirs(master_styles_path, ref_master_styles_path)
+    old_styles_path = Path(user_dir_path/'master_styles')
+    remove_dirs(old_styles_path)
+    ref_styles_path = Path(user_dir_path/'reference_styles')
+    remove_dirs(ref_styles_path)
+    copy_dirs(master_styles_path, ref_styles_path)
 
     working_styles_path = Path('sdxl_styles').resolve()
     remove_dirs(working_styles_path)
@@ -574,9 +581,11 @@ def create_user_structure(user_dir):
     # copy the contents of '.masters/master_topics' to user_dir
     # for the user's reference only
     master_topics_path = Path('masters/master_topics')
-    ref_master_topics_path = Path(user_dir_path/'master_topics')
-    remove_dirs(ref_master_topics_path)
-    copy_dirs(master_topics_path, ref_master_topics_path)
+    old_topics_path = Path(user_dir_path/'master_topics')
+    remove_dirs(old_topics_path)
+    ref_topics_path = Path(user_dir_path/'reference_topics')
+    remove_dirs(ref_topics_path)
+    copy_dirs(master_topics_path, ref_topics_path)
 
     # delete './custom/OneButtonPrompt/random_prompt/userfiles'
     # which is used as a temporary working folder
@@ -585,8 +594,10 @@ def create_user_structure(user_dir):
     remove_dirs(working_topics_path)
     copy_dirs(master_topics_path, working_topics_path)
 
-    # overwrite 'userfiles' with the contents of user_dir './user_topics'
-    # this allows a user to completely customize the available topics, if desired
+    # overwrite 'userfiles' with the contents
+    # of user_dir './user_topics'
+    # this allows a user to completely customize
+    # the available topics, if desired
     user_topics_path = Path(user_dir_path/'user_topics')
     make_dir(user_topics_path)
     copy_dirs(user_topics_path, working_topics_path)
@@ -605,10 +616,12 @@ def create_user_structure(user_dir):
 
 
     # initialize the Wildcards structure
+    # we do not need to delete UserDir/master_wildcards
+    # because it never existed
     master_wildcards_path = Path(masters_path/'master_wildcards')
-    ref_master_wildcards_path = Path(user_dir_path/'master_wildcards')
-    remove_dirs(ref_master_wildcards_path)
-    copy_dirs(master_language_path, ref_master_language_path)
+    ref_wildcards_path = Path(user_dir_path/'reference_wildcards')
+    remove_dirs(ref_wildcards_path)
+    copy_dirs(master_wildcards_path, ref_wildcards_path)
 
     working_wildcards_path = Path('wildcards').resolve()
     remove_dirs(working_wildcards_path)
