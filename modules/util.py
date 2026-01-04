@@ -241,7 +241,7 @@ def get_files_from_folder(folder_path, extensions=None, name_filter=None, variat
     global folder_variation
 
     if not os.path.isdir(folder_path):
-        raise ValueError("Folder path is not a valid directory.")
+        return
 
     filenames = []
     for root, dirs, files in os.walk(folder_path, topdown=False):
