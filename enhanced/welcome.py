@@ -19,7 +19,7 @@ def get_welcome_image():
     path_default_welcome = Path(path_welcome/'control_images/welcome.png').resolve()
 
     welcomes = US.list_files_by_patterns(path_welcome,
-        arg_pattern1='*.png', arg_pattern2='')
+        pattern1='*.png', pattern2='')
     if welcomes:
         if path_logo.is_file():
             # when the fill_background code is ready, activate this line:
@@ -30,7 +30,7 @@ def get_welcome_image():
             return file_welcome
 
     welcomes = US.list_files_by_patterns(path_welcome,
-        arg_pattern1='*.jpg', arg_pattern2='*.jpeg')
+        pattern1='*.jpg', pattern2='*.jpeg')
     if welcomes:
         file_welcome = Path(path_welcome/random.choice(welcomes)).resolve()
         return file_welcome

@@ -32,6 +32,7 @@ sorted_styles.json
 /outputs
 /presets
 /sdxl_styles
+/wildcards
 /config.json
 /log
 /webui.settings.bat

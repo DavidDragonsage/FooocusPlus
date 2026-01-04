@@ -91,6 +91,15 @@
   * removed the Gradio footer as it was conveying no useful information
 * Tech Note: "special" enhanced.toolbox CSS moved to standard style.css file
 * Release Date: December 23rd, 2025<br/>
+* Hotfix7: introduced UserDir/user_wildcards directory
+  * UserDir/user_wildcards can override built-in wildcards
+  * UserDir/wildcards has been deleted
+  * all custom wildcards were moved to UserDir/user_wildcards
+  * removed "path_wildcards" from config.txt options
+  * also removed "temp_path_cleanup_on_launch" from config
+  * in the canadian & ethnic wildcards, replaced Afro with African
+    (this reduced the obsession with Afro hairstyles)
+  * improved some UI formatting in the Editor & Extras
 * Hotfix6: added TC coloured pencil, rock horror & space styles
   * in the Editor, added "Copy to Source", "Copy to Base" & "Save Metadata"
   * the Editor now uses these config options: "edit_contain_overlay",

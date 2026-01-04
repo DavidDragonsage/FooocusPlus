@@ -1,4 +1,4 @@
-Afro-Canadian
+African-Canadian
 Algonquian
 American Canadian
 Anishinaabe
@@ -25,7 +25,7 @@ Japanese Canadian
 Jewish Canadian
 Korean Canadian
 Métis
-Multi-ethnic Canadian
+Multi-Ethnic Canadian
 Nuu-chah-nulth
 Salish
 Scottish Canadian

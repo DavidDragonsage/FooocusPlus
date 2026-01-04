@@ -5,13 +5,13 @@ Adivasi
 Afghan
 African
 Afrikaner
-Afro-American
-Afro-Asian
-Afro-Caribbean
-Afro-European
-Afro-Hispanic
-Afro-Kittian
-Afro-Nevisian
+African-American
+African-Asian
+African-Caribbean
+African-European
+African-Hispanic
+African-Kittian
+African-Nevisian
 Ainu
 Albanian
 Aleut
@@ -235,7 +235,7 @@ Montenegrin
 Moroccan
 Motswana
 Mozambican
-Multi-ethnic
+Multi-Ethnic
 Naga ethnicity
 Namibian
 Native Hawaiian

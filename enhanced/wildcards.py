@@ -40,7 +40,7 @@ def set_wildcard_path_list(name, list_value):
 
 
 def get_wildcards_samples(path="root"):
-    global path_wildcards, wildcards, wildcards_list, wildcards_translation, wildcards_template, wildcards_weight_range, wildcard_regex
+    global wildcards, wildcards_list, wildcards_translation, wildcards_template, wildcards_weight_range, wildcard_regex
     wildcards_list_all = sorted([f[:-4] for f in get_files_from_folder(path_wildcards, ['.txt'], None, variation=True)])
     for wildcard in wildcards_list_all:
         words = open(os.path.join(path_wildcards, f'{wildcard}.txt'), encoding='utf-8').read().splitlines()
@@ -80,7 +80,7 @@ def get_wildcards_samples(path="root"):
 
 
 def get_words_of_wildcard_samples(wildcard="root"):
-    global wildcards, wildcards_list, path_wildcards, wildcards_words_translation
+    global wildcards, wildcards_list, wildcards_words_translation
     if wildcard == "root":
         wildcard = wildcards_list[wildcard][0]
     if args.args.language == 'en' or args.args.language == 'en_uk':

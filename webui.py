@@ -593,32 +593,29 @@ with common.GRADIO_ROOT:
                                     value='Save Image',
                                     elem_classes='button_classic3')
                             with gr.Row():
-                                with gr.Column(scale=1):
-                                    with gr.Row():
-                                        copy_source = gr.Button(
-                                            value='Copy to Source',
-                                            elem_classes='button_edit')
-                                        copy_base = gr.Button(
-                                            value='Copy to Base',
-                                            elem_classes='button_edit')
-                                with gr.Column(elem_classes="checkbox_holder", scale=1):
-                                    edit_save_metadata_chk = gr.Checkbox(
-                                        label="Save Metadata",
-                                        value = config.edit_save_metadata_to_images,
-                                        container=True,
-                                        elem_classes='edit_check_centre',
-                                        interactive=True,
-                                        info='Save image parameters for the Output and Composite images')
+                                copy_source = gr.Button(
+                                    value='Copy to Source',
+                                    elem_classes='button_edit')
+                                copy_base = gr.Button(
+                                    value='Copy to Base',
+                                    elem_classes='button_edit')
+                                edit_save_metadata_chk = gr.Checkbox(
+                                label="Save Metadata",
+                                value = config.edit_save_metadata_to_images,
+                                container=True,
+                                elem_classes='edit_check_full',
+                                interactive=True,
+                                info='Save image parameters for the Output and Composite images')
 
-                                # mirror of output_image_display
-                                # used to preserve RGBA values
-                                output_image_state = gr.State(value=None)
+                            # mirror of output_image_display
+                            # used to preserve RGBA values
+                            output_image_state = gr.State(value=None)
 
-                                # a hidden file component specifically
-                                # for download
-                                download_file = gr.File(
-                                    label="Download Image",
-                                    visible=False)
+                            # a hidden file component specifically
+                            # for download
+                            download_file = gr.File(
+                                label="Download Image",
+                                visible=False)
 
                         def on_ui_update_trigger(
                             # passed in from the input gr.Image value
@@ -975,12 +972,14 @@ with common.GRADIO_ROOT:
 
                         remove_transparency_btn.click(
                             edit.remove_transparency_logic,
-                                inputs = [input_image_display],
+                                inputs = [input_image_display,
+                                    composite_image_display],
                                 outputs = [input_image_display,
                                     output_image_display,
                                     output_image_state,
                                     background_chk, erase_chk,
-                                    transparency_slider]
+                                    transparency_slider,
+                                    composite_image_display]
                         ).then(
                             on_ui_update_trigger,
                             # reruns the entire stack using the current slider values:
@@ -1005,7 +1004,7 @@ with common.GRADIO_ROOT:
                         # state variable holds the original base image
                         original_base_image_state = gr.State(value=None)
 
-                        def on_base_image_upload_trigger(uploaded_image_data, output_image_overlay_data, meta=False):
+                        def on_base_image_upload_trigger(uploaded_image_data, output_image_overlay_data, meta=''):
                             """
                             Triggered when a new base image is uploaded.
                             It calculates centring and updates UI components dynamically.
@@ -1015,13 +1014,16 @@ with common.GRADIO_ROOT:
 
                             # load the metadata
                             print()
-                            if meta:
+                            if meta == 'copy_to_base':
                                 interpret('[Edit] Copied the output image to the base image')
                                 common.base_meta = common.input_meta
                                 if common.input_meta:
                                     interpret('Using the output image metadata')
                                 else:
                                     interpret('Could not find metadata in the output image')
+                            elif meta == 'reload_overlay' and \
+                                common.base_meta:
+                                interpret('Using base image metadata to save in the composite image')
                             elif uploaded_image_data.info:
                                 common.base_meta = uploaded_image_data.info
                                 interpret('Loaded base image metadata to save in the composite image')
@@ -1095,9 +1097,19 @@ with common.GRADIO_ROOT:
                         vertical_slider.change(
                             fn=edit.update_composite_image, inputs=slider_inputs, outputs=composite_image_display
                         )
+
+                        def call_base_upload_trigger_for_reload(
+                            base_image_display,
+                            output_image_state):
+                            # this wrapper explicitly calls the trigger with meta='reload_overlay'
+                            return on_base_image_upload_trigger(
+                                base_image_display, output_image_state,
+                                meta='reload_overlay')
+
                         reload_overlay_btn.click(
-                            fn=on_base_image_upload_trigger,
-                            inputs=[base_image_display, output_image_state],
+                            fn=call_base_upload_trigger_for_reload,
+                            inputs=[base_image_display,
+                                output_image_state],
                             outputs=[composite_image_display, horizontal_slider, vertical_slider, rotate_overlay_slider,
                             original_base_image_state]
                         )
@@ -1154,10 +1166,12 @@ with common.GRADIO_ROOT:
                             inputs=[input_image_display],
                             outputs=all_reset_outputs)
 
-                        def call_base_upload_trigger_with_meta(uploaded_image_data, output_image_overlay_data):
-                            # This wrapper explicitly calls the trigger with meta=True
+                        def call_base_upload_trigger_with_meta(
+                            uploaded_image_data, output_image_overlay_data,
+                            meta='copy_to_base'):
+                            # This wrapper explicitly calls the trigger with meta='copy_to_base'
                             return on_base_image_upload_trigger(
-                                uploaded_image_data, output_image_overlay_data, meta=True)
+                                uploaded_image_data, output_image_overlay_data,)
 
                         copy_base.click(
                             edit.copy_to_base,
@@ -1384,7 +1398,8 @@ with common.GRADIO_ROOT:
                         with gr.Row():
                             with gr.Column():
                                 enhance_checkbox = gr.Checkbox(label='Enhance',
-                                value=config.default_enhance_checkbox, container=False)
+                                value=config.default_enhance_checkbox, container=False,
+                                info='If enabled, Enhance will remain active when the tab is closed.')
                                 enhance_input_image = grh.Image(label='Use with Enhance, Skips Image Generation',
                                 source='upload', type='numpy')
                                 gr.HTML('<a href="https://github.com/lllyasviel/Fooocus/discussions/3281" target="_blank">\U0001F4DA Documentation</a>')

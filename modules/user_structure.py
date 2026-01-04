@@ -113,19 +113,25 @@ def find_file_path(search_dir, filename, excluding_dir = ''):
         return Path(file_path).resolve()
     return '' # empty string for search fail
 
-def list_files_by_patterns(search_dir, arg_pattern1='', arg_pattern2=''):
+def list_files_by_patterns(search_dir,
+    pattern1='', pattern2='', names_only=False):
     # looks in search_dir and its subdirectories
-    # returns a list corresponding to the patterns
+    # returns a list of complete pathlib objects
+    # corresponding to the patterns
+    # or if names_only, just the filenames & extensions
     # a pattern could be a file extension such as "*.jpg"
     file_list = []
-    file_list2 = []
     search_path = Path(search_dir)
-    if arg_pattern1:
-        file_list = list(search_path.rglob(arg_pattern1))
-    if arg_pattern2:
-        file_list2 = list(search_path.rglob(arg_pattern2))
-    file_list.extend(file_list2)
-    return file_list # empty list if no qualifying files found
+    if pattern1:
+        file_list.extend(search_path.rglob(pattern1))
+    if pattern2:
+        file_list.extend(search_path.rglob(pattern2))
+    if names_only:
+        # return only filenames+extensions as strings:
+        return [f.name for f in file_list]
+    # or return list of pathlib objects with full paths
+    # empty list if no qualifying files found
+    return file_list
 
 def list_files_excluding(file_list, excluding_list):
     # file_list must be a list of pathlib objects
@@ -228,7 +234,11 @@ def move_files_excluding(arg_source_dir, arg_dest_dir,
     # moves files to a new directory,
     # deleting the originals
     # ignoring files in excluding_list
+    # if arg_source_dir does not exist, exits quietly
+    # if arg_dest_dir does not exist it is created
     source_directory_path = Path(arg_source_dir)
+    if not source_directory_path.is_dir():
+        return 0
     destination_directory_path = Path(arg_dest_dir)
     all_files = [f for f in source_directory_path.iterdir() if f.is_file()]
     files_to_move = list_files_excluding(all_files, excluding_list)
@@ -534,7 +544,6 @@ def create_user_structure(user_dir):
     # the available languages, if desired
     user_language_path = Path(user_dir_path/'user_language')
     make_dir(user_language_path)
-    copy_dir_structure(master_language_path, user_language_path)
     copy_dirs(user_language_path, working_language_path)
     interpret('Verified the working language directory:', working_language_path)
 
@@ -585,6 +594,7 @@ def create_user_structure(user_dir):
     print(f' {working_topics_path.resolve()}')
 
 
+    # initialize the welcome images
     working_welcome_path = Path(user_dir_path/'welcome_images')
     copy_dirs(Path(masters_path/'master_control_images'), Path(user_dir_path/'control_images'))
     copy_dirs(Path(masters_path/'master_welcome_images'), working_welcome_path)
@@ -593,8 +603,28 @@ def create_user_structure(user_dir):
     delete_file(Path(working_welcome_path/'welcome.png'))
     interpret('Verified the working welcome directory:', working_welcome_path)
 
-    working_wildcards_path = Path(user_dir_path/'wildcards')
-    copy_dirs(Path(masters_path/'master_wildcards'), working_wildcards_path)
+
+    # initialize the Wildcards structure
+    master_wildcards_path = Path(masters_path/'master_wildcards')
+    ref_master_wildcards_path = Path(user_dir_path/'master_wildcards')
+    remove_dirs(ref_master_wildcards_path)
+    copy_dirs(master_language_path, ref_master_language_path)
+
+    working_wildcards_path = Path('wildcards').resolve()
+    remove_dirs(working_wildcards_path)
+    copy_dirs(master_wildcards_path, working_wildcards_path)
+    user_wildcards_path = Path(user_dir_path/'user_wildcards')
+    make_dir(user_wildcards_path)
+
+    # upgrade from the old wildcard structure to the new
+    # preserving any custom wildcards from old_user_wildcards_path
+    old_user_wildcards_path = Path(user_dir_path/'wildcards')
+    excluding_list = list_files_by_patterns(master_wildcards_path,
+        pattern1="*.txt", names_only=True)
+    move_files_excluding(old_user_wildcards_path, user_wildcards_path, excluding_list)
+    remove_dirs(old_user_wildcards_path)
+
+    copy_dirs(user_wildcards_path, working_wildcards_path)
     interpret('Verified the working wildcards directory:', working_wildcards_path)
 
     return

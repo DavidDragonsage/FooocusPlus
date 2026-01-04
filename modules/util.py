@@ -183,20 +183,15 @@ def remove_image_grid():
 
 def cleanup_temp_files():
     # called by ui_util.generate_clicked()
-    if config.temp_path_cleanup_on_launch:
-        print()
-        interpret('Cleaning up the temporary directory:')
-        print(Path(config.temp_path).resolve())
-        success = US.empty_dir(config.temp_path)
-        if success:
-            interpret("Cleanup successful")
-        else:
-            interpret("Could not cleanup the content of the temporary directory")
-        print()
-    elif config.default_generate_image_grid:
-        success = remove_image_grid()
-        if success:
-            interpret("Image grid cleanup successful")
+    print()
+    interpret('Cleaning up the temporary directory:')
+    print(Path(config.temp_path).resolve())
+    success = US.empty_dir(config.temp_path)
+    if success:
+        interpret("Cleanup successful")
+    else:
+        interpret("Could not cleanup the content of the temporary directory")
+    print()
     return
 
 def save_image_grid(recover=False):
@@ -225,7 +220,7 @@ def save_image_grid(recover=False):
 def recover_images():
     success = save_image_grid(True)
     file_list = US.list_files_by_patterns(config.temp_path,
-        arg_pattern1='*.*', arg_pattern2='')
+        pattern1='*.*', pattern2='')
     image_list = US.list_files_excluding(file_list, ['image.png'])
     if image_list:
         date_string, file_dest, only_name = generate_temp_filename(f'{config.path_outputs}/', '')

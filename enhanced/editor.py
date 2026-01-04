@@ -258,19 +258,24 @@ def erase_logic(edit_image, erase_bool):
         output_image = edit_image
     return output_image
 
-def remove_transparency_logic(edit_image):
+def remove_transparency_logic(edit_image, composite_image_display):
     if edit_image.mode == "RGBA":
         edit_image = edit_image.convert("RGB")
         output_image = edit_image.convert("RGBA")
         interpret('Removed all transparency')
     else:
         output_image = edit_image
+    if composite_image_display is not None:
+        if composite_image_display.mode == "RGBA":
+            composite_image_display = composite_image_display.convert("RGB")
+            composite_image_display = composite_image_display.convert("RGBA")
     # background_chk, erase_chk, transparency_slider
     return  (output_image,
             output_image, output_image,
             gr.update(value=False),
             gr.update(value=False),
-            gr.update(value=0.0))
+            gr.update(value=0.0),
+            composite_image_display)
 
 def save_metadata_logic(save_metadata_bool):
     config.edit_save_metadata_to_images = save_metadata_bool
@@ -578,15 +583,15 @@ def update_composite_image(
     return composite_image
 
 
-def on_save_composite_click(output_image_state, current_save_format_value):
-    if output_image_state is None:
+def on_save_composite_click(composite_image_display, current_save_format_value):
+    if composite_image_display is None:
         interpret("No image to save.")
         # return None if nothing was saved
         return None
     # Uses edit.py save_image function,
     # which returns the temporary
     # filename/path
-    filename = save_image(output_image_state,
+    filename = save_image(composite_image_display,
         current_save_format_value, common.base_meta)
     # returns the path string e.g. "my_output_image.png"
     return filename

@@ -24,7 +24,13 @@ user_dir = Path(args.user_dir).resolve()
 config_dict = {}
 always_save_keys = []
 visited_keys = []
+path_wildcards = Path(current_dir/'wildcards')
 wildcards_max_bfs_depth = 64
+
+model_filenames = []
+lora_filenames = []
+vae_filenames = []
+wildcard_filenames = []
 
 
 def get_dir_or_set_default(key, default_value, as_array=False, make_directory=False):
@@ -147,7 +153,6 @@ path_rembg = get_dir_or_set_default('path_rembg', Path(path_models_root/'rembg')
 path_layer_model = get_dir_or_set_default('path_layer_model', Path(path_models_root/'layer_model').resolve())
 paths_diffusers = get_dir_or_set_default('path_diffusers', [Path(path_models_root/'diffusers').resolve()], True, False)
 path_outputs = get_path_output()
-path_wildcards = get_dir_or_set_default('path_wildcards', Path(user_dir/'wildcards').resolve())
 
 
 from enhanced.backend import init_modelsinfo
@@ -228,12 +233,6 @@ temp_path = init_temp_path(get_config_item_or_set_default(
     default_value=default_temp_path,
     validator=lambda x: isinstance(x, str),
     expected_type=str), default_temp_path)
-temp_path_cleanup_on_launch = get_config_item_or_set_default(
-    key='temp_path_cleanup_on_launch',
-    default_value=True,
-    validator=lambda x: isinstance(x, bool),
-    expected_type=bool
-)
 
 enable_preset_bar = get_config_item_or_set_default(
     key='enable_preset_bar',
@@ -246,12 +245,6 @@ default_bar_category = get_config_item_or_set_default(
     default_value='Favorite',
     validator=lambda x: isinstance(x, str),
     expected_type=str
-)
-preset_bar_category_tracking = get_config_item_or_set_default(
-    key='preset_bar_category_tracking',
-    default_value=True,
-    validator=lambda x: isinstance(x, bool),
-    expected_type=bool
 )
 preset_bar_length = get_config_item_or_set_default(
     key='preset_bar_length',
@@ -1059,10 +1052,6 @@ config_comfy_text = config_comfy_formatted_text.format(models_root=path_models_r
 with open(config_comfy_path, "w", encoding="utf-8") as comfy_file:
     comfy_file.write(config_comfy_text)
 
-model_filenames = []
-lora_filenames = []
-vae_filenames = []
-wildcard_filenames = []
 
 def get_model_filenames(folder_paths, extensions=None, name_filter=None):
     if extensions is None:
@@ -1095,7 +1084,7 @@ def update_files(engine='Fooocus', task_method=None):    # called by the webui u
     model_filenames = get_base_model_list(engine, task_method)
     lora_filenames = modelsinfo.get_model_names('loras')
     vae_filenames = modelsinfo.get_model_names('vae')
-    wildcard_filenames = get_files_from_folder(path_wildcards, ['.txt'])
+    wildcard_filenames = US.list_files_by_patterns(path_wildcards, '*.txt')
     available_presets = PR.get_preset_list()
     return model_filenames, lora_filenames, vae_filenames
 
