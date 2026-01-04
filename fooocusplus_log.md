@@ -91,7 +91,7 @@
   * removed the Gradio footer as it was conveying no useful information
 * Tech Note: "special" enhanced.toolbox CSS moved to standard style.css file
 * Release Date: December 23rd, 2025<br/>
-* Hotfix8: UserDir "master_' dirs. are now called "reference_"
+* Hotfix8: UserDir "master_" dirs. are now called "reference_"
   * these directories were not real masters, only for reference
 * Hotfix7: introduced UserDir/user_wildcards directory
   * UserDir/user_wildcards can override built-in wildcards
