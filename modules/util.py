@@ -7,6 +7,7 @@ import random
 import math
 import os
 import re
+import sys
 from pathlib import Path
 from PIL import Image
 from typing import List, Tuple, AnyStr, NamedTuple
@@ -241,6 +242,10 @@ def get_files_from_folder(folder_path, extensions=None, name_filter=None, variat
     global folder_variation
 
     if not os.path.isdir(folder_path):
+        print()
+        interpret('Please restart FooocusPlus to complete the update')
+        print()
+        sys.exit()
         return
 
     filenames = []
