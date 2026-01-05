@@ -91,6 +91,8 @@
   * removed the Gradio footer as it was conveying no useful information
 * Tech Note: "special" enhanced.toolbox CSS moved to standard style.css file
 * Release Date: December 23rd, 2025<br/>
+* Hotfix9: upgraded rembg to 2.0.69: no more console errors!
+  * also upgraded the Pillow graphics library to 11.0.0
 * Hotfix8: UserDir "master_" dirs. are now called "reference_"
   * these directories were not real masters, only for reference
 * Hotfix7: introduced UserDir/user_wildcards directory

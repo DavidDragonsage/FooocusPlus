@@ -75,7 +75,7 @@ orjson==3.10.13
 packaging==24.1
 pathos==0.3.3
 peft==0.10.0
-pillow==10.4.0
+pillow==11.0.0
 pixeloe
 platformdirs==4.3.8
 polygraphy==0.47.1
@@ -92,7 +92,7 @@ pyyaml==6.0.1
 pytz==2025.2
 pyzbar
 qrcode==8.2
-rembg==2.0.58
+rembg==2.0.69
 rich==14.0.0
 reportlab==4.4.1
 rpds-py==0.25.1
