@@ -373,6 +373,26 @@ div:has(> #positive_prompt) {
     min-height: 100px !important;
     max-width: 190px !important;
 }
+
+.left_align_check {
+    flex: 0 1 auto !important;
+    width: fit-content !important;
+    min-width: 0 !important;
+}
+.left_align_check span{
+    font-size: 1.05em !important;
+    font-weight: bold !important;
+    white-space: nowrap !important;
+}
+.left_align_check input[type="checkbox"] {
+    margin-right: -3px;
+    /* simulate a thicker border */
+    outline: 1px solid #888 !important; /* Change #555 to your desired color */
+    outline-offset: -1px !important;
+}
+.link_trim{
+    max-width: 120px !important;
+}
 .min_check {
     min-width: min(1px, 100%) !important;
 }

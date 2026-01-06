@@ -452,7 +452,8 @@ with common.GRADIO_ROOT:
                                     interactive=True,
                                     info='Inverting the Aspect Ratio swaps the width and height dimensions.')
 
-                        with gr.Accordion(label='Transparency & Composition', visible=True, open=False):
+                        with gr.Accordion(
+                            label='Transparency & Composition', visible=True, open=False):
                             with gr.Row():
                                 remove_transparency_btn = gr.Button(
                                     value = "Remove All Transparency",
@@ -1564,8 +1565,16 @@ with common.GRADIO_ROOT:
                     label='Wildcard Filenames',
                     samples=wildcards.get_wildcards_samples(),
                     visible=True, samples_per_page=35)
-                read_wildcards_in_order = gr.Checkbox(label="Generate Wildcard Contents in Order",
-                    value=False, visible=True)
+                with gr.Row(equal_height=False):
+                    gr.HTML(
+                        '<font size="3"><a href="https://github.com/DavidDragonsage/FooocusPlus/wiki/Wildcards" target="_blank">\U0001F4DA Wildcards</a>',
+                        elem_classes='link_trim')
+                    read_wildcards_in_order = gr.Checkbox(
+                        label="Generate Wildcard Contents in Order",
+                        value = False, container=False,
+                        elem_classes='left_align_check',
+                        interactive=True)
+
                 with gr.Accordion(label='Wildcard Contents',
                     visible=True, open=False) as words_in_wildcard:
                     wildcard_tag_name_selection = gr.Dataset(components=[prompt],

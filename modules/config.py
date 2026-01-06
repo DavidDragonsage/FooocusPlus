@@ -14,7 +14,8 @@ from pathlib import Path
 from args_manager import args
 from enhanced.translator import interpret
 from modules.extra_utils import get_files_from_folder, try_eval_env_var
-from modules.flags import OutputFormat, Performance, MetadataScheme
+from modules.flags import EditFormat, OutputFormat, \
+    Performance, MetadataScheme
 from modules.model_loader import load_file_from_url
 from modules.ui_features import control_notification
 

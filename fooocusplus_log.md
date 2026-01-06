@@ -77,7 +77,6 @@
 * added the Rossetti Steampunk, Science Fiction and World styles
 * added 36 new TaffyCarl (Carl Bratcher) styles(!) and updated the Stylesheet
 * fixed the Styles menu so that it properly displays acronyms & initials
-* there is now a console note that UserDir/wildcards is the working directory
 * moved four functions from webui to modules.ui_util to reduce module bloat:
   * sort_enhance_images(), generate_clicked()
   * inpaint_mode_change(), enhance_inpaint_mode_change()
@@ -91,7 +90,10 @@
   * removed the Gradio footer as it was conveying no useful information
 * Tech Note: "special" enhanced.toolbox CSS moved to standard style.css file
 * Release Date: December 23rd, 2025<br/>
-* Hotfix9: upgraded rembg to 2.0.69: no more console errors!
+* Hotfix10: Bugfix for EditFormat config parameters
+  * introduced Wildcards Wiki link
+  * reformatted Generate Wildcard Contents in Order
+* Hotfix9: Upgraded rembg to 2.0.69: no more console errors!
   * also upgraded the Pillow graphics library to 11.0.0
 * Hotfix8: UserDir "master_" dirs. are now called "reference_"
   * these directories were not real masters, only for reference
