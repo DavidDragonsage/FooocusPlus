@@ -455,30 +455,37 @@ with common.GRADIO_ROOT:
                         with gr.Accordion(
                             label='Transparency & Composition', visible=True, open=False):
                             with gr.Row():
+                                background_chk = gr.Checkbox(
+                                    label="Remove Background",
+                                    value = False, container=True,
+                                    elem_classes='edit_check',
+                                    interactive=True,
+                                    info='Make the background invisible')
+                                bg_model_str = gr.Dropdown(label='Background Masking Model',
+                                    choices=flags.edit_bg_mask_models, allow_custom_value=True,
+                                    value=config.edit_background_mask_model)
+                                alpha_mat_chk = gr.Checkbox(
+                                    label="Use Alpha Matting",
+                                    value = False, container=True,
+                                    elem_classes='edit_check',
+                                    interactive=True,
+                                    info='Apply advanced edge detection during background removal')
+                                erase_chk = gr.Checkbox(
+                                    label="Erase Image",
+                                    value = False, container=True,
+                                    elem_classes='edit_check',
+                                    interactive=True,
+                                    info='Create a blank transparent image')
+                            with gr.Row():
                                 remove_transparency_btn = gr.Button(
                                     value = "Remove All Transparency",
                                     elem_classes='button_edit')
-                                with gr.Column():
-                                    with gr.Row():
-                                        background_chk = gr.Checkbox(
-                                            label="Remove Background",
-                                            value = False, container=True,
-                                            elem_classes='edit_check',
-                                            interactive=True,
-                                            info='Make the background invisible')
-                                        erase_chk = gr.Checkbox(
-                                            label="Erase Image",
-                                            value = False, container=True,
-                                            elem_classes='edit_check',
-                                            interactive=True,
-                                            info='Create a blank transparent image')
-                                    with gr.Row():
-                                        transparency_slider = gr.Slider(
-                                            label="Percent Transparency",
-                                            minimum=0, maximum=100,
-                                            value=0.0, step=0.5,
-                                            interactive=True,
-                                            info='At 100% the whole image is invisible')
+                                transparency_slider = gr.Slider(
+                                    label="Percent Transparency",
+                                    minimum=0, maximum=100,
+                                    value=0.0, step=0.5,
+                                    interactive=True,
+                                    info='At 100% the whole image is invisible')
                                 apply_transparency_btn = gr.Button(
                                     value = "Apply Percent Transparency",
                                     elem_classes='button_edit')
@@ -640,6 +647,8 @@ with common.GRADIO_ROOT:
                             mirror_bool: bool,
                             flip_vertical_bool: bool,
                             background_bool: bool,
+                            bg_model_str: str,
+                            alpha_mat_bool: bool,
                             erase_bool: bool,
                             transparency_f: float,
                             box_blur_int: int,
@@ -675,6 +684,8 @@ with common.GRADIO_ROOT:
                                 mirror_bool,
                                 flip_vertical_bool,
                                 background_bool,
+                                bg_model_str,
+                                alpha_mat_bool,
                                 erase_bool,
                                 transparency_f,
                                 box_blur_int,
@@ -756,6 +767,8 @@ with common.GRADIO_ROOT:
                             flip_vertical_chk,
                             flip_AR_chk,
                             background_chk,
+                            bg_model_str,
+                            alpha_mat_chk,
                             erase_chk,
                             transparency_slider,
                             box_blur_slider,
@@ -786,6 +799,8 @@ with common.GRADIO_ROOT:
                             mirror_chk,
                             flip_vertical_chk,
                             background_chk,
+                            bg_model_str,
+                            alpha_mat_chk,
                             erase_chk,
                             transparency_slider,
                             box_blur_slider,
@@ -826,6 +841,8 @@ with common.GRADIO_ROOT:
                             mirror_chk,
                             flip_vertical_chk,
                             background_chk,
+                            bg_model_str,
+                            alpha_mat_chk,
                             erase_chk,
                             # transparency_slider is
                             # handled manually via button
@@ -1311,10 +1328,10 @@ with common.GRADIO_ROOT:
 
                             with gr.Column(visible=config.default_inpaint_advanced_masking_checkbox) as inpaint_mask_generation_col:
                                 inpaint_mask_image = grh.Image(label='Mask Upload', source='upload', type='numpy', tool='sketch', height=350, brush_color="#FFFFFF", mask_opacity=1, elem_id='inpaint_mask_canvas')
-                                inpaint_mask_model = gr.Dropdown(label='Mask generation model',
+                                inpaint_mask_model = gr.Dropdown(label='Mask Generation Model',
                                     choices=flags.inpaint_mask_models, allow_custom_value=True,
                                     value=config.default_inpaint_mask_model)
-                                inpaint_mask_cloth_category = gr.Dropdown(label='Cloth category',
+                                inpaint_mask_cloth_category = gr.Dropdown(label='Cloth Category',
                                     choices=flags.inpaint_mask_cloth_category,
                                     value=config.default_inpaint_mask_cloth_category,
                                     visible=False, allow_custom_value=True)

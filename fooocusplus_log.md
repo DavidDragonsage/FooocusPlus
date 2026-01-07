@@ -90,6 +90,10 @@
   * removed the Gradio footer as it was conveying no useful information
 * Tech Note: "special" enhanced.toolbox CSS moved to standard style.css file
 * Release Date: December 23rd, 2025<br/>
+* Hotfix11: Added Masking Model selector to Remove Background
+  * Remove Background now defaults to isnet-general-use
+  * added the birefnet-general masking model for Inpaint/RemBG
+  * on first use of birefnet-general there will be a download delay
 * Hotfix10: Bugfix for EditFormat config parameters
   * introduced Wildcards Wiki link
   * reformatted Generate Wildcard Contents in Order

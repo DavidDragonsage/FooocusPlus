@@ -85,7 +85,12 @@ default_parameters = {
 
 output_formats = ['png', 'jpeg', 'webp']
 
-inpaint_mask_models = ['u2net', 'u2netp', 'u2net_human_seg', 'u2net_cloth_seg', 'silueta', 'isnet-general-use', 'isnet-anime', 'sam']
+inpaint_mask_models = ['u2net', 'u2netp', 'u2net_human_seg',
+    'u2net_cloth_seg', 'silueta', 'isnet-general-use',
+    'isnet-anime', 'sam', 'birefnet-general']
+edit_bg_mask_models = ['u2net', 'u2netp', 'u2net_human_seg',
+    'silueta', 'isnet-general-use', 'isnet-anime',
+    'birefnet-general']
 inpaint_mask_cloth_category = ['full', 'upper', 'lower']
 inpaint_mask_sam_model = ['vit_b', 'vit_l', 'vit_h']
 

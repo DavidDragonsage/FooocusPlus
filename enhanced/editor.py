@@ -11,7 +11,8 @@ import numpy as np
 import modules.config as config
 
 # renamed rembg.remove to avoid confusion with function name:
-from rembg import remove as remove_background_lib
+from rembg import remove as remove_bg
+from rembg import new_session
 from enhanced.translator import interpret, interpret_info, interpret_warn
 import common
 import modules.user_structure as US
@@ -94,6 +95,7 @@ def reset_to_defaults(arg_image):
     lower_update = gr.Slider.update(maximum=height, value = height)
     width_update = gr.Slider.update(maximum=width*2, value = width)
     height_update = gr.Slider.update(maximum=height*2, value = height)
+    bg_model_str = config.edit_background_mask_model
 
     return (
         0,              # brighten_slider default
@@ -117,6 +119,8 @@ def reset_to_defaults(arg_image):
         False,          # flip_vertical_chk default
         False,          # flip_AR_chk default
         False,          # background_chk default
+        bg_model_str,   # Background Masking Model default
+        False,          # alpha_mat_chk default
         False,          # erase_chk default
         0.0,            # transparency percentage default
         0,              # box_blur_slider default
@@ -232,18 +236,27 @@ def flip_vertical_image_logic(edit_image, flip_vertical_bool):
     return output_image
 
 
-def remove_background_logic(edit_image, background_bool):
+def remove_background_logic(edit_image, background_bool,
+    bg_model_str, alpha_mat_chk):
     if background_bool:
-        # Call the external library function
-        print()
-        output_image = remove_background_lib(edit_image)
-        if output_image.mode == 'RGBA':
-            interpret('A transparent layer was added to the image and the background has been removed')
+        if edit_image.mode == 'RGBA':
+            session = new_session(bg_model_str)
+            output_image = remove_bg(
+                edit_image, session=session,
+                alpha_matting=alpha_mat_chk,
+                # pixels above this are "definitely FG":
+                alpha_matting_foreground_threshold=240,
+                # pixels below this are "definitely BG":
+                alpha_matting_background_threshold=10,
+                # how much to erode the initial mask:
+                alpha_matting_erode_size=10)
         else:
-            interpret_warn('Could not add transparent layer')
+            print()
+            interpret('Could not add a transparent layer and remove the background')
     else:
         output_image = edit_image
     return output_image
+
 
 def erase_logic(edit_image, erase_bool):
     if erase_bool:
@@ -328,6 +341,8 @@ def apply_enhancements(
     mirror_bool: bool,
     flip_vertical_bool: bool,
     background_bool: bool,
+    bg_model_str: str,
+    alpha_mat_bool: bool,
     erase_bool: bool,
     transparency_f: float,
     box_blur_int: int,
@@ -370,7 +385,7 @@ def apply_enhancements(
     processed_image = ImageEnhance.Sharpness(processed_image).enhance((sharpness_int/100)+1)
 
     # --- Step 4: Final Composition and Transparency Logic ---
-    processed_image = remove_background_logic(processed_image, background_bool)
+    processed_image = remove_background_logic(processed_image, background_bool, bg_model_str, alpha_mat_bool)
 
     processed_image = erase_logic(processed_image, erase_bool)
 
