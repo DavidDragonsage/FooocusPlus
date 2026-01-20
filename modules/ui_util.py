@@ -1,5 +1,6 @@
 import os
 import gradio as gr
+import sys
 import time
 import common
 import ldm_patched.modules.model_management as model_management
@@ -192,10 +193,16 @@ def security_warn():
     return
 
 def security_alert():
-    if (args.listen == "127.0.0.1") and (args.port == 7860):
-        alert = False
-    else:
-        alert = True
+    try:
+        if (args.listen == "127.0.0.1") and (args.port == 7860):
+            alert = False
+        else:
+            alert = True
+    except:
+        # trap partial upgrade error for FooocusPlus 1.0.9.13
+        interpret('Please restart FooocusPlus to complete the security upgrade')
+        print()
+        sys.exit()
     return alert
 
 def security_check():
