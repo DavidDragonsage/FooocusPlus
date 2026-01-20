@@ -343,7 +343,28 @@ def verify_dictionary(arg_source):
     return verified_dictionary
 
 
+
 # file structure section
+def init_batch_structure(user_dir_path):
+    # Ensure that all reference batch files
+    # are current and correctly named.
+    # Copy the contents of
+    # masters/master_batch_startups
+    # to user_dir/batch_startups.
+    # The user must copy the batch file they
+    # want from "FooocusPlus\UserDir\batch_startups"
+    # to the parent directory, "FooocusPlus" to use it
+    try:
+        masters_path = Path('masters').resolve()
+        master_batch_path = Path(masters_path/'master_batch_startups')
+        ref_batch_path = Path(user_dir_path/'batch_startups')
+        remove_dirs(ref_batch_path)
+        copy_dirs(master_batch_path, ref_batch_path)
+    except:
+        ref_batch_path = ''
+    return ref_batch_path
+
+
 def cleanup_structure(directml=False, user_dir = '',
     python_embedded_path='', win32_root=''):
     # cleanup an error condition from version 1.0.0
@@ -375,6 +396,12 @@ def cleanup_structure(directml=False, user_dir = '',
     # removed obsolete logo & default image from welcome_images, 1.08
     delete_file(Path(user_dir_path/'welcome_images/FooocusPlusLogo.png'))
 
+    # initialize the batch file startup directory, 1.0.9
+    # this is of great assistance for initial installations
+    ref_batch_path = init_batch_structure(user_dir_path)
+    if ref_batch_path == '':
+        print()
+        print('Could not install the batch startup files to the user directory')
     return
 
 
@@ -508,19 +535,12 @@ def create_user_structure(user_dir):
     interpret('Verified the working notification audio directory:', user_audio_path)
 
 
-    # Ensure that all reference batch files
-    # are current and correctly named.
-    # Copy the contents of
-    # masters/master_batch_startups
-    # to user_dir/batch_startups.
-    # The user must copy the batch file they
-    # want from "FooocusPlus\UserDir\batch_startups"
-    # to the parent directory, "FooocusPlus" to use it
-    master_batch_path = Path(masters_path/'master_batch_startups')
-    ref_batch_path = Path(user_dir_path/'batch_startups')
-    remove_dirs(ref_batch_path)
-    copy_dirs(master_batch_path, ref_batch_path)
-    interpret('Verified the batch file startup directory:', ref_batch_path)
+    # initialize the batch file startup directory
+    ref_batch_path = init_batch_structure(user_dir_path)
+    if ref_batch_path:
+        interpret('Verified the batch file startup directory:', ref_batch_path)
+    else:
+        interpret('Could not verify the batch file startup directory')
 
 
     # initialize the Language structure delete

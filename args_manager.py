@@ -41,6 +41,14 @@ parser.set_defaults(
     port=None
 )
 
+parser.add_argument("--listen",
+    type=str, default="127.0.0.1",
+    metavar="IP", nargs="?", const="0.0.0.0",
+    help="Specify network listening parameters")
+
+parser.add_argument("--port",
+    type=int, default=7860,
+    help="Specify the network listening port number")
 
 parser.add_argument("--user-dir", type=str,
     default = Path(current_dir.resolve().parent/'UserDir'),

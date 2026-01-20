@@ -43,46 +43,6 @@ else:
     config_ext.update({'fooocus_line': '# 2.1.852'})
 
 
-def get_system_message():
-    global config_ext
-    fooocus_log = os.path.abspath(f'./fooocusplus_log.md')
-    update_msg_f = ''
-    first_line_f = None
-    if os.path.exists(fooocus_log):
-        with open(fooocus_log, "r", encoding="utf-8") as log_file:
-            line = log_file.readline()
-            while line:
-                if line == '\n':
-                    line = log_file.readline()
-                    continue
-                if line.startswith("# ") and first_line_f is None:
-                    first_line_f = line.strip()
-                if line.strip() == config_ext['fooocus_line']:
-                    break
-                if first_line_f:
-                    update_msg_f += line
-                line = log_file.readline()
-    update_msg_f = update_msg_f.replace("\n","  ")
-
-    f_log_path = os.path.abspath("./fooocusplus_log.md")
-    if len(update_msg_f)>0:
-        body_f = f'<b id="update_f">[FooocusPlus]</b>: {update_msg_f}<a href="file={f_log_path}">>></a>   '
-    else:
-        body_f = '<b id="update_f"> </b>'
-    import mistune
-    body = mistune.html(body_f)
-    if first_line_f and (first_line_f != config_ext['fooocus_line']):
-        config_ext['fooocus_line']=first_line_f
-        with open(enhanced_config, "w", encoding="utf-8") as config_file:
-            json.dump(config_ext, config_file)
-    return body if body else ''
-
-def preset_no_instruction():
-    head = "<div style='max-width:0px; max-height:0px; overflow:hidden'>"
-    foot = "</div>"
-    body = ''
-    return head + body + foot
-
 get_system_params_js = '''
 function(system_params) {
     const params = new URLSearchParams(window.location.search);
@@ -150,6 +110,48 @@ function(system_params) {
 }
 '''
 
+def get_system_message():
+    global config_ext
+    fooocus_log = os.path.abspath(f'./fooocusplus_log.md')
+    update_msg_f = ''
+    first_line_f = None
+    if os.path.exists(fooocus_log):
+        with open(fooocus_log, "r", encoding="utf-8") as log_file:
+            line = log_file.readline()
+            while line:
+                if line == '\n':
+                    line = log_file.readline()
+                    continue
+                if line.startswith("# ") and first_line_f is None:
+                    first_line_f = line.strip()
+                if line.strip() == config_ext['fooocus_line']:
+                    break
+                if first_line_f:
+                    update_msg_f += line
+                line = log_file.readline()
+    update_msg_f = update_msg_f.replace("\n","  ")
+
+    f_log_path = os.path.abspath("./fooocusplus_log.md")
+    if len(update_msg_f)>0:
+        body_f = f'<b id="update_f">[FooocusPlus]</b>: {update_msg_f}<a href="file={f_log_path}">>></a>   '
+    else:
+        body_f = '<b id="update_f"> </b>'
+    import mistune
+    body = mistune.html(body_f)
+    if first_line_f and (first_line_f != config_ext['fooocus_line']):
+        config_ext['fooocus_line']=first_line_f
+        with open(enhanced_config, "w", encoding="utf-8") as config_file:
+            json.dump(config_ext, config_file)
+    return body if body else ''
+
+
+def preset_no_instruction():
+    head = "<div style='max-width:0px; max-height:0px; overflow:hidden'>"
+    body = ''
+    foot = "</div>"
+    return head + body + foot
+
+
 def init_nav_bars(state_params, request: gr.Request):
 #   print(f'request.headers:{request.headers}')
     if "__lang" not in state_params.keys():
@@ -204,6 +206,7 @@ def init_nav_bars(state_params, request: gr.Request):
         announce_version()
     print()
     return results
+
 
 def get_preset_inc_url(preset_name='blank'):
     preset_name = f'{preset_name}.inc'

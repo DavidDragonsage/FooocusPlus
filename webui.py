@@ -67,8 +67,6 @@ reload_javascript()
 
 fooocusplus_ver, hotfix, hotfix_title = version.get_fooocusplus_ver()
 title = f'FooocusPlus {fooocusplus_ver}.{hotfix_title}'
-#common.GRADIO_ROOT = gr.Blocks(gr.themes.Soft(),
-#    title=title, css=toolbox.css).queue()
 common.GRADIO_ROOT = gr.Blocks(title=title).queue()
 
 with common.GRADIO_ROOT:
@@ -76,6 +74,7 @@ with common.GRADIO_ROOT:
     # obsolete parameter
     params_backend = gr.State({'translation_methods': ''})
     currentTask = gr.State(worker.AsyncTask(args=[]))
+
     inpaint_engine_state = gr.State('empty')
     with gr.Row():
         with gr.Column(scale=2):
@@ -2370,6 +2369,20 @@ with common.GRADIO_ROOT:
                 super_prompter_prompt = gr.Textbox(label='', value='',
                     info='', lines=1, visible=False)
 
+                if UIU.security_alert():
+                    with gr.Row():
+                        if args.args.listen != "127.0.0.1":
+                            listen_str = f'The --listen argument has changed the network address from the default "127.0.0.1" to \"{args.args.listen}\"<br>'
+                        else:
+                            listen_str = ''
+                        if args.args.port != 7860:
+                            port_str = f'The --port argument has changed the network listening port number from the default 7860 to {args.args.port}<br>'
+                        else:
+                            port_str = ''
+                        gr.Markdown(value=f'<h3>Security Report</h3>\
+                        One or more command line arguments have adjusted the security settings.<br> \
+                        {listen_str}{port_str}')
+
                 with gr.Row():
                     if args.args.always_offload_from_vram:
                         smart_memory = "Disabled (VRAM unloaded whenever possible)"
@@ -2380,6 +2393,7 @@ with common.GRADIO_ROOT:
                     torch_ver, xformers_ver, cuda_ver = torch_info()
                     if xformers_ver == '':
                         xformers_ver = "not installed"
+
                     fooocusplus_ver, hotfix, hotfix_title = version.get_fooocusplus_ver()
                     gr.Markdown(value=f'<h3>System Information</h3>\
                     System RAM: {int(model_management.get_sysram())} MB,\
@@ -2390,6 +2404,7 @@ with common.GRADIO_ROOT:
                     Comfy {comfy.comfy_version.version}<br>\
                     Gradio {gr.__version__}, Torch {torch_ver}{cuda_ver}, Xformers {xformers_ver}<br>\
                     FooocusPlus {fooocusplus_ver}, Hotfix {hotfix}')
+
 
                 with gr.Row(elem_classes='elem_centre'):
                     gr.HTML('<font size="3"><a href="https://github.com/DavidDragonsage/FooocusPlus/wiki/System-Information" target="_blank">\U0001F4DA System Information</a>')
@@ -3029,16 +3044,17 @@ with common.GRADIO_ROOT:
     common.GRADIO_ROOT.load(fn=lambda x: x, inputs=system_params,
         outputs=state_topbar, _js=UIS.get_system_params_js,
         queue=False, show_progress=False) \
-              .then(UIS.init_nav_bars, inputs=state_topbar, outputs=nav_bars + [progress_window, background_theme, gallery_index, index_radio, inpaint_advanced_masking_checkbox, preset_instruction], show_progress=False) \
-              .then(UIS.reset_layout_params, inputs=reset_preset_inputs, outputs=reset_layout_params, show_progress=False) \
-              .then(fn=lambda x: x, inputs=state_topbar, outputs=system_params, show_progress=False) \
-              .then(fn=lambda x: {}, inputs=system_params, outputs=system_params, _js=UIS.refresh_topbar_status_js) \
+            .then(UIS.init_nav_bars, inputs=state_topbar, outputs=nav_bars + [progress_window, background_theme, gallery_index, index_radio, inpaint_advanced_masking_checkbox, preset_instruction], show_progress=False) \
+            .then(UIS.reset_layout_params, inputs=reset_preset_inputs, outputs=reset_layout_params, show_progress=False) \
+            .then(fn=UIU.security_check, inputs=None, outputs = None, show_progress=False) \
+            .then(fn=lambda x: x, inputs=state_topbar, outputs=system_params, show_progress=False) \
+            .then(fn=lambda x: {}, inputs=system_params, outputs=system_params, _js=UIS.refresh_topbar_status_js) \
               .then(UIS.sync_message, inputs=state_topbar, outputs=[state_topbar]) \
-              .then(lambda x: x, inputs=aspect_ratios_selections[0], outputs=aspect_ratios_selection, queue=False, show_progress=False) \
-              .then(lambda x: None, inputs=aspect_ratios_selections[0], queue=False, show_progress=False, _js='(x)=>{refresh_aspect_ratios_label(x);}') \
-              .then(lambda x: x['__finished_nums_pages'], inputs=state_topbar, outputs=gallery_index_stat, queue=False, show_progress=False) \
-              .then(lambda x: None, inputs=gallery_index_stat, queue=False, show_progress=False, _js='(x)=>{refresh_finished_images_catalog_label(x);}') \
-              .then(fn=lambda: None, _js='refresh_grid_delayed')
+            .then(lambda x: x, inputs=aspect_ratios_selections[0], outputs=aspect_ratios_selection, queue=False, show_progress=False) \
+            .then(lambda x: None, inputs=aspect_ratios_selections[0], queue=False, show_progress=False, _js='(x)=>{refresh_aspect_ratios_label(x);}') \
+            .then(lambda x: x['__finished_nums_pages'], inputs=state_topbar, outputs=gallery_index_stat, queue=False, show_progress=False) \
+            .then(lambda x: None, inputs=gallery_index_stat, queue=False, show_progress=False, _js='(x)=>{refresh_finished_images_catalog_label(x);}') \
+            .then(fn=lambda: None, _js='refresh_grid_delayed')
 
 def dump_default_english_config():
     from modules.localization import dump_english_config
@@ -3066,9 +3082,9 @@ if not args.args.disable_comfyd and comfyd_active_checkbox:
 
 common.GRADIO_ROOT.launch(
     inbrowser=args.args.in_browser,
-    server_name="127.0.0.1", # allow local machine only
+    server_name=args.args.listen,
+    server_port=args.args.port,
     share=False, quiet=True,
     allowed_paths=[config.path_outputs], # allows log viewing
     blocked_paths=[constants.AUTH_FILENAME]
 )
-

@@ -90,6 +90,10 @@
   * removed the Gradio footer as it was conveying no useful information
 * Tech Note: "special" enhanced.toolbox CSS moved to standard style.css file
 * Release Date: December 23rd, 2025<br/>
+* Hotfix13: Restored the --listen and --port arguments for future features
+  * if these arguments are used a warning & Security Report are produced
+  * provided earlier access to UserDir/batch_startups during installation
+  * updated the TorchRuntime installation utility to version 2.1.0
 * Hotfix12: Bugfix for invalid OS names in Linux
 * Hotfix11: Added Masking Model selector to Remove Background
   * Remove Background now defaults to isnet-general-use

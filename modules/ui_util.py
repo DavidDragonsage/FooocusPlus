@@ -7,7 +7,8 @@ import modules.async_worker as worker
 import modules.config as config
 import modules.html
 
-from enhanced.translator import interpret, interpret_info
+from args_manager import args
+from enhanced.translator import interpret, interpret_info, interpret_warn
 from modules.flags import inpaint_option_detail, inpaint_option_modify
 from modules.util import cleanup_temp_files, save_image_grid
 
@@ -183,3 +184,21 @@ def enhance_inpaint_mode_change(mode, inpaint_engine_version):
     return [
         False, inpaint_engine_version, 1.0, 0.618
     ]
+
+
+def security_warn():
+    interpret_warn('Please check the Security Report under the Extras tab!')
+    print()
+    return
+
+def security_alert():
+    if (args.listen == "127.0.0.1") and (args.port == 7860):
+        alert = False
+    else:
+        alert = True
+    return alert
+
+def security_check():
+    if security_alert() == True:
+        security_warn()
+    return
