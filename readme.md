@@ -119,7 +119,6 @@ This software was made possible by integrating open-source technologies from pro
 - Superprompter by sammcj
 - Stable Diffusion 1.5 (SD1.5) support by Irmagon (Thomas Gaud)
 - the "All 276 Styles in Fooocus (Google table)", also by Irmagon (Thomas Gaud)
-- pixabay for the Public Announcement Chime by VoiceBosch (edited)
 - the members of the Pure Fooocus Facebook group for their encouragement, enthusiasm, Beta testing and the Founders Project welcome images
 
 ![2025-05-23_20-21-10_1729](https://github.com/user-attachments/assets/b6217150-7f09-4641-b976-7dab9de4826c)
