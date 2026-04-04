@@ -72,8 +72,8 @@ class StableDiffusionModel:
         if self.unet is None:
             return
 
-        interpret(f'[Core] Request to load LoRAs {str(loras)} for model:')
-        print(f' {self.filename}')
+        interpret('[Core] Request to load', f'LoRAs: {str(loras)}')
+        interpret('for model:', self.filename)
 
         loras_to_load = []
 
@@ -87,7 +87,7 @@ class StableDiffusionModel:
                 lora_filename = get_file_from_folder_list(filename, modules.config.paths_loras)
 
             if not os.path.exists(lora_filename):
-                interpret(f'[Core] Lora file not found: {lora_filename}')
+                interpret('[Core] File not found:', f'LoRA {lora_filename}')
                 continue
 
             loras_to_load.append((lora_filename, weight))
@@ -105,27 +105,27 @@ class StableDiffusionModel:
                 continue
 
             if len(lora_unmatch) > 0:
-                interpret(f'[Core] Loaded LoRA [{lora_filename}]')
-                interpret(f'for model [{self.filename}]')
-                interpret(f'with unmatched keys {list(lora_unmatch.keys())}')
+                interpret('[Core] Loaded', f'LoRA {lora_filename}')
+                interpret('for model', self.filename)
+                interpret('with unmatched keys', list(lora_unmatch.keys()))
 
             if self.unet_with_lora is not None and len(lora_unet) > 0:
                 loaded_keys = self.unet_with_lora.add_patches(lora_unet, weight)
-                interpret('[Core] Loaded LoRA:', [lora_filename])
-                interpret('for UNet:', [self.filename])
+                interpret('[Core] Loaded', f'LoRA: {lora_filename}')
+                interpret('for', f'UNet: {self.filename}')
                 interpret(f'with {len(loaded_keys)} keys at weight {weight}')
                 for item in lora_unet:
                     if item not in loaded_keys:
-                        interpret("[Core] UNet LoRA key skipped: ", item)
+                        interpret('[Core] Skipped key for', f'UNet LoRA: {item}')
 
             if self.clip_with_lora is not None and len(lora_clip) > 0:
                 loaded_keys = self.clip_with_lora.add_patches(lora_clip, weight)
-                interpret('[Core] Loaded LoRA:' [lora_filename])
-                interpret('for CLIP', [self.filename])
+                interpret(f'[Core] Loaded', f'LoRA: {lora_filename}')
+                interpret('for', f'CLIP: {self.filename}')
                 interpret(f'with {len(loaded_keys)} keys at weight {weight}')
                 for item in lora_clip:
                     if item not in loaded_keys:
-                        interpret("[Core] CLIP LoRA key skipped: ", item)
+                        interpret('[Core] Skipped key for', f'CLIP LoRA:  {item}')
 
 
 @torch.no_grad()
@@ -150,8 +150,9 @@ def apply_controlnet(positive, negative, control_net, image, strength, start_per
 @torch.no_grad()
 @torch.inference_mode()
 def load_model(ckpt_filename, vae_filename=None):
-    unet, clip, vae, vae_filename, clip_vision = load_checkpoint_guess_config(ckpt_filename, embedding_directory=path_embeddings,
-                                                                vae_filename_param=vae_filename)
+    unet, clip, vae, vae_filename, clip_vision = load_checkpoint_guess_config(ckpt_filename,
+        embedding_directory=path_embeddings,
+        vae_filename_param=vae_filename)
     return StableDiffusionModel(unet=unet, clip=clip, vae=vae, clip_vision=clip_vision, filename=ckpt_filename, vae_filename=vae_filename)
 
 
@@ -231,7 +232,8 @@ def get_previewer(model):
     global VAE_approx_models
 
     from modules.config import path_vae_approx
-    is_sdxl = isinstance(model.model.latent_format, ldm_patched.modules.latent_formats.SDXL)
+    is_sdxl = isinstance(model.model.latent_format,
+        ldm_patched.modules.latent_formats.SDXL)
     vae_approx_filename = os.path.join(path_vae_approx, 'xlvaeapp.pth' if is_sdxl else 'vaeapp_sd15.pth')
 
     if vae_approx_filename in VAE_approx_models:
@@ -278,7 +280,8 @@ def ksampler(model, positive, negative, latent, seed=None, steps=30, cfg=7.0, sa
     latent_image = latent["samples"]
 
     if disable_noise:
-        noise = torch.zeros(latent_image.size(), dtype=latent_image.dtype,
+        noise = torch.zeros(latent_image.size(),
+            dtype=latent_image.dtype,
             layout=latent_image.layout, device="cpu")
     else:
         batch_inds = latent["batch_index"] if "batch_index" in latent else None
@@ -298,6 +301,7 @@ def ksampler(model, positive, negative, latent, seed=None, steps=30, cfg=7.0, sa
 
     if previewer_end is None:
         previewer_end = steps
+
 
     def callback(step, x0, x, total_steps):
         ldm_patched.modules.model_management.throw_exception_if_processing_interrupted()
