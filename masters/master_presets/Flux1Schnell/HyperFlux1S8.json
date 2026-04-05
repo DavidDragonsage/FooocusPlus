@@ -53,8 +53,8 @@
     },
     "embeddings_downloads": {},
     "lora_downloads": {
-        "Flux/FluxDFaeTasticDetails.safetensors": "https://civitai.com/api/download/models/720252?type=Model&format=SafeTensor",
-        "Flux/Flux_BlackColor_SaMay.safetensors": "https://civitai.com/api/download/models/789575?type=Model&format=SafeTensor"
+        "Flux/FluxDFaeTasticDetails.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/LoRAs/FluxDFaeTasticDetails.safetensors",
+        "Flux/Flux_BlackColor_SaMay.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/LoRAs/Flux_BlackColor_SaMay.safetensors"
     },
     "vae_downloads": {
         "ae.safetensors": "https://huggingface.co/lovis93/testllm/resolve/ed9cf1af7465cebca4649157f118e331cf2a084f/ae.safetensors?download=true"
