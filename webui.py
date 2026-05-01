@@ -1,3 +1,16 @@
+import numpy as np
+# --- NumPy 2.x Compatibility Hotpatch ---
+# Gradio 3.43.2 expects these attributes
+# which were removed in NumPy 2.0.
+# Some newer RTX 50xx users need NumPy 2.x
+# When the upgrade to Gradio 5.5 is
+# complete this patch can be removed.
+if not hasattr(np, "bool8"):
+    np.bool8 = np.bool_
+if not hasattr(np, "int0"):
+    np.int0 = np.intp
+# ----------------------------------------
+
 import gradio as gr
 import os
 import sys

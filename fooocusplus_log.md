@@ -90,6 +90,7 @@
   * removed the Gradio footer as it was conveying no useful information
 * Tech Note: "special" enhanced.toolbox CSS moved to standard style.css file
 * Release Date: December 23rd, 2025<br/>
+* Hotfix16: Introduced a bugfix for the newest RTX 50xx GPUs
 * Hotfix15: To avoid CivitAI problems, all presets download from Hugging Face
 * Hotfix14: Bugfix for multiple LoRAs and LoRA Inpainting
   * also fixed "Click Twice to Generate" bug
