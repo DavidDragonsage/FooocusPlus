@@ -411,9 +411,9 @@ def save_image(output_image, format_str, save_meta):
 
     path_outputs = Path(config.path_outputs)
     date_string, file_dest, only_name = generate_temp_filename(f'{path_outputs}/', '')
-    path_today = Path(config.path_outputs/date_string)
+    path_today = path_outputs / date_string
     US.make_dir(path_today)
-    path_full = Path(path_outputs/date_string/only_name).resolve()
+    path_full = (path_outputs / date_string / only_name).resolve()
     # Save the image using the most appropriate mode
     save_path = f"{path_full}{format_str.lower()}"
     if save_meta and config.edit_save_metadata_to_images:

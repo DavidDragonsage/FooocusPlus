@@ -1,7 +1,39 @@
+import sys
+import common
+
+# --- The 1.1.1 Update Shield ---
+try:
+    # check for the renamed variable
+    # that causes the 1.1.0 update crash:
+    _ = common.resolution
+except AttributeError:
+    print("\n" + "!" * 60)
+    print("  FOOOCUSPLUS UPDATE IN PROGRESS")
+    print("  Please close this window and restart FooocusPlus")
+    print("  to finalize the 1.1.0 installation.")
+    print("!" * 60 + "\n")
+    sys.exit()
+
+import enhanced.version as version
+fooocusplus_ver, hotfix, hotfix_title = version.get_fooocusplus_ver()
+"""
+# For future use:
+# THE GLOBAL TRAP (The Gatekeeper)
+# If we just updated, 'common' might be the new file, but
+# if Python is confused by cached bytecode or a partial load,
+# we check if the code "thinks" it's the right version.
+if getattr(common, 'REQUIRED_VERSION', None) != fooocusplus_ver:
+    print("\n" + "="*60)
+    print(f" FOOOCUSPLUS UPDATE IN PROGRESS: {version_info.current_version}")
+    print(" " + "-"*58)
+    print(" To complete the upgrade")
+    print(" please close this window and restart FooocusPlus")
+    print("="*60 + "\n")
+    import sys
+    sys.exit()
+"""
 import os
 import ssl
-import sys
-import enhanced.version as version
 from pathlib import Path
 from common import ROOT
 

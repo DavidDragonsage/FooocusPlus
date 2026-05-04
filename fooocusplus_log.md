@@ -51,7 +51,8 @@
   * it was inoperative & redundant, use Disable Preview instead
 * the ADM Scaler controls are moved to the end of Expert Tools
 * Release Date: May 4th, 2026<br/>
-* Hotfix0: <br/><br/>
+* Hotfix1: Fixed a bug with with the Image Editor not saving
+  * also added startup version control for major updates<br/><br/>
 
 
 # 1.0.9 Add/Remove to/from Favourites, Batch Generation, Image Editor, Image Grids, Image Recovery, New Styles & UI Popup Messages

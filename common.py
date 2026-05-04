@@ -9,6 +9,10 @@ MODELS_INFO = None
 # is referenced by several modules
 ROOT = str(Path.cwd())
 
+# Version control for major updates
+# read by launch.py
+REQUIRED_VERSION = '1.1.0'
+
 # tracks update events
 # set by entry_with_update, checked by webui
 # and processed by enhanced.version.announce_version()
