@@ -69,10 +69,14 @@ def generate_clicked(task: worker.AsyncTask):
     finished = False
 
     status_msg = interpret('Waiting for task to start...', '', True)
-    yield gr.update(visible=True, value=modules.html.make_progress_html(1, status_msg)), \
-        gr.update(visible=True, value=None), \
-        gr.update(visible=False, value=None), \
-        gr.update(visible=False)
+    yield (  # progress_html
+        gr.update(visible=True,
+            value=modules.html.make_progress_html(
+                1, status_msg)),
+        gr.update(visible=True, value=None),  # progress_window
+        gr.update(visible=False, value=None), # progress_gallery
+        gr.update(visible=False),   # history_gallery
+        gr.update())                # welcome_window
 
     cleanup_temp_files()
     if batch_counter > 0:
@@ -93,30 +97,30 @@ def generate_clicked(task: worker.AsyncTask):
                         continue
 
                 percentage, title, image = product
-                yield gr.update(visible=True, value=modules.html.make_progress_html(percentage, title)), \
-                    gr.update(visible=True, value=image) if image is not None else gr.update(), \
-                    gr.update(), \
-                    gr.update(visible=False)
+                yield (gr.update(visible=True,
+                    value=modules.html.make_progress_html(percentage, title)),
+                    gr.update(visible=True, value=image) if image is not None else gr.update(),
+                    gr.update(),
+                    gr.update(visible=False),
+                    gr.update(visible=False))
+
             if flag == 'results':
-                yield gr.update(visible=True), \
-                    gr.update(visible=True), \
-                    gr.update(visible=True, value=product), \
-                    gr.update(visible=False)
+                yield (gr.update(visible=True),
+                    gr.update(visible=True),
+                    gr.update(visible=True, value=product),
+                    gr.update(visible=False),
+                    gr.update(visible=False))
+
             if flag == 'finish':
                 product = sort_enhance_images(product, task)
 
-                yield gr.update(visible=False), \
-                    gr.update(visible=False), \
-                    gr.update(visible=True, value=product), \
-                    gr.update(visible=False)
+                yield (gr.update(visible=False),
+                    gr.update(visible=False),
+                    gr.update(visible=True, value=product),
+                    gr.update(visible=False),
+                    gr.update(visible=False))
                 update_batch_counter()
                 finished = True
-
-                # delete Fooocus temp images, only keep gradio temp images
-                if config.disable_image_log:
-                    for filepath in product:
-                        if isinstance(filepath, str) and os.path.exists(filepath):
-                            os.remove(filepath)
 
     execution_time = time.perf_counter() - execution_start_time
     interpret('Total time in seconds:', f'{execution_time:.2f}')

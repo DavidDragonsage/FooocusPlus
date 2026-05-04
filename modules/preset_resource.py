@@ -6,6 +6,7 @@ import time
 import gradio as gr
 import args_manager as args
 import common
+import modules.config as config
 import modules.user_structure as US
 from ldm_patched.modules import model_management
 from enhanced.translator import interpret
@@ -193,11 +194,17 @@ def select_data_from_preset(preset_content):
 
     # for presets that do not have a default prompt or negative prompt
     # and almost all presets do not have an image quantity
-    items.setdefault("default_prompt", common.positive)
-    items.setdefault("default_prompt_negative", common.negative)
-    items.setdefault("default_image_quantity", common.image_quantity)
-    items.setdefault("default_sampler", common.sampler_name)
-    items.setdefault("default_scheduler", common.scheduler_name)
+    items.setdefault("default_prompt",
+        config.default_prompt)
+    items.setdefault("default_prompt_negative",
+        config.default_prompt_negative)
+    items.setdefault("default_image_quantity",
+        config.default_image_quantity)
+    items.setdefault("default_sampler",
+        config.default_sampler)
+    items.setdefault("default_scheduler",
+        config.default_scheduler)
+    items.setdefault("default_overwrite_step", -1)
 
     if common.metadata_loading:
         try:
@@ -207,27 +214,37 @@ def select_data_from_preset(preset_content):
     else:
         preset_prompt = items.get("default_prompt")
         if preset_prompt != "":
-            common.positive = preset_prompt
+            config.default_prompt = preset_prompt
 
         preset_negative = items.get("default_prompt_negative")
         if preset_negative != "":
-            common.negative = preset_negative
+            default_prompt_negative = preset_negative
 
         preset_quantity = items.get("default_image_quantity")
-        if preset_quantity != common.image_quantity:
-            common.image_quantity = preset_quantity
-            interpret('[Preset] Set the Image Quantity to:', common.image_quantity)
+        if preset_quantity != config.default_image_quantity:
+            config.default_image_quantity = preset_quantity
+            interpret('[Preset] Set the Image Quantity to:',
+                config.default_image_quantity)
 
         preset_sampler = items.get("default_sampler")
-        if preset_sampler != common.sampler_name:
-            common.sampler_name = preset_sampler
+        if preset_sampler != config.default_sampler:
+            config.default_sampler = preset_sampler
             print()
-            interpret('[Preset] Set the Sampler to:', common.sampler_name)
+            interpret('[Preset] Set the Sampler to:',
+                config.default_sampler)
 
         preset_scheduler = items.get("default_scheduler")
-        if preset_scheduler != common.scheduler_name:
-            common.scheduler_name = preset_scheduler
-            interpret('[Preset] Set the Scheduler to:', common.scheduler_name)
+        if preset_scheduler != config.default_scheduler:
+            config.default_scheduler = preset_scheduler
+            interpret('[Preset] Set the Scheduler to:',
+                config.default_scheduler)
+
+        preset_overwrite_step = items.get("default_overwrite_step")
+        if preset_overwrite_step != config.default_overwrite_step:
+            config.default_overwrite_step = preset_overwrite_step
+            interpret('[Preset] Set Overwrite Steps to:',
+                config.default_overwrite_step)
+
     return items
 
 
@@ -299,18 +316,18 @@ def set_preset_selection(arg_preset_selection, state_params):
         preset_content = get_preset_content(current_preset, quiet = True)
     preset_content = select_data_from_preset(preset_content)
 
-    return gr.update(value=current_preset), \
-        gr.update(value=state_params), \
-        gr.update(value=current_preset), \
-        gr.update(value=common.current_AR), \
-        gr.update(value=category_selection), \
-        gr.update(value=common.positive), \
-        gr.update(value=common.negative), \
-        gr.update(value=common.image_quantity), \
-        gr.update(value=common.sampler_name), \
-        gr.update(value=common.scheduler_name), \
-        gr.update(interactive=current_preset != 'Default'), \
-        gr.update(value=preset_favorite_value())
+    return (gr.update(value=current_preset),
+        gr.update(value=state_params),
+        gr.update(value=current_preset),
+        gr.update(value=common.resolution),
+        gr.update(value=category_selection),
+        gr.update(value=config.default_prompt),
+        gr.update(value=config.default_prompt_negative),
+        gr.update(value=config.default_image_quantity),
+        gr.update(value=config.default_sampler),
+        gr.update(value=config.default_scheduler),
+        gr.update(interactive=current_preset != 'Default'),
+        gr.update(value=preset_favorite_value()))
 
 def bar_button_change(bar_button, state_params):
     global category_selection, current_preset
@@ -349,13 +366,16 @@ def get_lowVRAM_preset_content():
     global current_preset, category_selection
     json_content = ''
     if find_preset_file('4GB_Default'):
-        common.is_low_vram_preset = True
+        config.default_low_vram_presets = True
         category_selection = 'LowVRAM'
-        common.default_bar_category = category_selection
+        config.default_bar_category = category_selection
         args.args.preset = '4GB_Default'
         current_preset = args.args.preset
         json_content = get_preset_content(current_preset, quiet=False)
         interpret('[Preset] The 4GB_Default preset is optimized for low VRAM systems')
+    else:
+        config.default_low_vram_presets = False
+        interpret('[Preset] The low VRAM 4GB_Default preset is is not available')
     return json_content
 
 
@@ -419,7 +439,7 @@ def pad_list(arg_list, arg_length, arg_value):
         return padded_list
 
 def preset_bar_count():
-    preset_bar_list = get_presets_in_folder(common.default_bar_category)
+    preset_bar_list = get_presets_in_folder(config.default_bar_category)
     preset_bar_count = len(preset_bar_list)
     return preset_bar_count
 

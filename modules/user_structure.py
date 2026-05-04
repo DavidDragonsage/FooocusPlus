@@ -5,10 +5,12 @@ from pathlib import Path
 from enhanced.translator import interpret
 
 
-# default user_dir_path
-# it is set to the actual path by create_user_structure(user_dir)
-current_dir = Path.cwd()
-user_dir_path = Path(current_dir.resolve().parent/'UserDir')
+# default user_path
+# it is set to the actual path by
+# create_user_structure(config_user_dir)
+current_dir = Path.cwd().resolve()
+masters_dir = Path(current_dir / "masters").resolve()
+user_path = Path(current_dir.parent/'UserDir').resolve()
 
 # these are platform independent functions, for universal use:
 
@@ -114,7 +116,7 @@ def find_file_path(search_dir, filename, excluding_dir = ''):
     return '' # empty string for search fail
 
 def list_files_by_patterns(search_dir,
-    pattern1='', pattern2='', names_only=False):
+    patterns=None, names_only=False):
     # looks in search_dir and its subdirectories
     # returns a list of complete pathlib objects
     # corresponding to the patterns
@@ -122,13 +124,12 @@ def list_files_by_patterns(search_dir,
     # a pattern could be a file extension such as "*.jpg"
     file_list = []
     search_path = Path(search_dir)
-    if pattern1:
-        file_list.extend(search_path.rglob(pattern1))
-    if pattern2:
-        file_list.extend(search_path.rglob(pattern2))
-    if names_only:
-        # return only filenames+extensions as strings:
-        return [f.name for f in file_list]
+    if search_path.exists() and patterns:
+        for p in patterns:
+            file_list.extend(search_path.rglob(p))
+        if names_only:
+            # return only filenames+extensions as strings:
+            return [f.name for f in file_list]
     # or return list of pathlib objects with full paths
     # empty list if no qualifying files found
     return file_list
@@ -253,7 +254,7 @@ def move_files_excluding(arg_source_dir, arg_dest_dir,
     return moved_count
 
 def random_file_copy(from_dir, to_dir, as_file):
-    file_list = list_files_by_patterns(from_dir, "*.mp3", "")
+    file_list = list_files_by_patterns(from_dir, ["*.mp3"])
     if len(file_list) >0:
         random_index = random.randint(0, (len(file_list)-1))
         random_path = Path(file_list[random_index])
@@ -275,10 +276,20 @@ def rename_path_name(arg_full_path, path_name):
     return new_path
 
 def remove_dirs(arg_dir):
-    # remove directory tree, including contents
+    # remove the directory, including all its contents
     remove_path = Path(arg_dir)
     if remove_path.is_dir():
         shutil.rmtree(remove_path, ignore_errors=True)
+    return
+
+def remove_subdirs(arg_dir):
+    # delete all subdirectories within arg_dir
+    # but leavee any files in arg_dir untouched
+    base_path = Path(arg_dir)
+    if base_path.is_dir():
+        for item in base_path.iterdir():
+            if item.is_dir():
+                shutil.rmtree(item, ignore_errors=True)
     return
 
 def remove_empty_dir(arg_dir):
@@ -345,7 +356,7 @@ def verify_dictionary(arg_source):
 
 
 # file structure section
-def init_batch_structure(user_dir_path):
+def init_batch_structure(user_dir):
     # Ensure that all reference batch files
     # are current and correctly named.
     # Copy the contents of
@@ -354,10 +365,10 @@ def init_batch_structure(user_dir_path):
     # The user must copy the batch file they
     # want from "FooocusPlus\UserDir\batch_startups"
     # to the parent directory, "FooocusPlus" to use it
+    global masters_dir
     try:
-        masters_path = Path('masters').resolve()
-        master_batch_path = Path(masters_path/'master_batch_startups')
-        ref_batch_path = Path(user_dir_path/'batch_startups')
+        master_batch_path = Path(masters_dir/'master_batch_startups')
+        ref_batch_path = Path(user_dir/'batch_startups')
         remove_dirs(ref_batch_path)
         copy_dirs(master_batch_path, ref_batch_path)
     except:
@@ -365,7 +376,7 @@ def init_batch_structure(user_dir_path):
     return ref_batch_path
 
 
-def cleanup_structure(directml=False, user_dir = '',
+def cleanup_structure(directml=False, arg_user_dir = '',
     python_embedded_path='', win32_root=''):
     # cleanup an error condition from version 1.0.0
     remove_dirs('python_embedded')
@@ -390,15 +401,15 @@ def cleanup_structure(directml=False, user_dir = '',
     delete_file(Path(win32_root/'run_FooocusPlus_dev.bat'))
 
     # remove unused translator dir, from 1.0.7
-    user_dir_path = Path(user_dir).resolve()
-    remove_dirs(Path(user_dir_path/'translator_packs'))
+    user_dir = Path(arg_user_dir).resolve()
+    remove_dirs(Path(user_dir/'translator_packs'))
 
     # removed obsolete logo & default image from welcome_images, 1.08
-    delete_file(Path(user_dir_path/'welcome_images/FooocusPlusLogo.png'))
+    delete_file(Path(user_dir/'welcome_images/FooocusPlusLogo.png'))
 
     # initialize the batch file startup directory, 1.0.9
     # this is of great assistance for initial installations
-    ref_batch_path = init_batch_structure(user_dir_path)
+    ref_batch_path = init_batch_structure(user_dir)
     if ref_batch_path == '':
         print()
         print('Could not install the batch startup files to the user directory')
@@ -476,17 +487,17 @@ def init_starter_presets(user_presets_path, restore=False):
     return
 
 def clear_user_favorites(user_presets_path):
-    source_dir = Path(user_dir_path/f'user_presets/Favorite/')
-    dest_dir = Path(user_dir_path/f'user_presets/Old Favorites')
+    source_dir = Path(user_path/f'user_presets/Favorite/')
+    dest_dir = Path(user_path/f'user_presets/Old Favorites')
     success = move_files_excluding(source_dir, dest_dir, '')
     return success
 
 def init_preset_structure(init=False, restore_favorites=False,
         clear_favorites=False):
     master_presets_path = Path('masters/master_presets')
-    old_presets_path = Path(user_dir_path/'master_presets')
+    old_presets_path = Path(user_path/'master_presets')
     remove_dirs(old_presets_path)
-    ref_presets_path = Path(user_dir_path/'reference_presets')
+    ref_presets_path = Path(user_path/'reference_presets')
     remove_dirs(ref_presets_path)
     copy_dirs(master_presets_path, ref_presets_path)
 
@@ -494,7 +505,7 @@ def init_preset_structure(init=False, restore_favorites=False,
     remove_dirs(working_presets_path)
     copy_dirs(master_presets_path, working_presets_path)
 
-    user_presets_path = Path(user_dir_path/'user_presets')
+    user_presets_path = Path(user_path/'user_presets')
     make_dir(user_presets_path)
     if init:
         replace_obsolete_categories(user_presets_path)
@@ -503,7 +514,7 @@ def init_preset_structure(init=False, restore_favorites=False,
         clear_user_favorites(user_presets_path)
 
     # if count>0 then clear_favorites_button is Interactive:
-    count=count_files(Path(user_dir_path/f'user_presets/Favorite/'))
+    count=count_files(Path(user_path/f'user_presets/Favorite/'))
 
     copy_dir_structure(master_presets_path, user_presets_path)
     copy_dirs(user_presets_path, working_presets_path)
@@ -515,28 +526,27 @@ def init_preset_structure(init=False, restore_favorites=False,
     return count
 
 
-def create_user_structure(user_dir):
-    global user_dir_path
-    # initialize the user directory, user_dir
-    masters_path = Path('masters').resolve()
-    user_dir_path = Path(user_dir).resolve()
-    interpret('Initialized the user directory at:', user_dir_path)
+def create_user_structure(config_user_dir):
+    global masters_dir, user_path
+    # initialize the user directory, user_path
+    user_path = Path(config_user_dir).resolve()
+    interpret('[Structure] Initialized the user directory at:', user_path)
 
     # initialize the user mp3 audio directory
     # which hold notification audio file options
-    master_audio_path = Path(masters_path/'master_audio')
-    old_audio_path = Path(user_dir_path/'master_audio')
+    master_audio_path = Path(masters_dir/'master_audio')
+    old_audio_path = Path(user_path/'master_audio')
     remove_dirs(old_audio_path)
-    ref_audio_path = Path(user_dir_path/'reference_audio')
+    ref_audio_path = Path(user_path/'reference_audio')
     remove_dirs(ref_audio_path)
     copy_dirs(master_audio_path, ref_audio_path)
-    user_audio_path = Path(user_dir_path/'user_audio')
+    user_audio_path = Path(user_path/'user_audio')
     make_dir(user_audio_path)
     interpret('Verified the working notification audio directory:', user_audio_path)
 
 
     # initialize the batch file startup directory
-    ref_batch_path = init_batch_structure(user_dir_path)
+    ref_batch_path = init_batch_structure(user_path)
     if ref_batch_path:
         interpret('Verified the batch file startup directory:', ref_batch_path)
     else:
@@ -544,14 +554,14 @@ def create_user_structure(user_dir):
 
 
     # initialize the Language structure delete
-    # the contents of user_dir/master_language
+    # the contents of user_path/master_language
     # to get a clean start copy the contents of
     # '.masters/master_language' to UserDir
     # for the user's reference only
     master_language_path = Path('masters/master_language')
-    old_language_path = Path(user_dir_path/'master_language')
+    old_language_path = Path(user_path/'master_language')
     remove_dirs(old_language_path)
-    ref_language_path = Path(user_dir_path/'reference_language')
+    ref_language_path = Path(user_path/'reference_language')
     remove_dirs(ref_language_path)
     copy_dirs(master_language_path, ref_language_path)
 
@@ -564,10 +574,10 @@ def create_user_structure(user_dir):
     copy_dirs(master_language_path, working_language_path)
 
     # overwrite '.language' with the contents
-    # of user_dir './user_language'.
+    # of user_path './user_language'.
     # This allows a user to completely customize
     # the available languages, if desired
-    user_language_path = Path(user_dir_path/'user_language')
+    user_language_path = Path(user_path/'user_language')
     make_dir(user_language_path)
     copy_dirs(user_language_path, working_language_path)
     interpret('Verified the working language directory:', working_language_path)
@@ -579,9 +589,9 @@ def create_user_structure(user_dir):
 
     # initialize the Styles structure
     master_styles_path = Path('masters/master_styles')
-    old_styles_path = Path(user_dir_path/'master_styles')
+    old_styles_path = Path(user_path/'master_styles')
     remove_dirs(old_styles_path)
-    ref_styles_path = Path(user_dir_path/'reference_styles')
+    ref_styles_path = Path(user_path/'reference_styles')
     remove_dirs(ref_styles_path)
     copy_dirs(master_styles_path, ref_styles_path)
 
@@ -589,7 +599,7 @@ def create_user_structure(user_dir):
     remove_dirs(working_styles_path)
     copy_dirs(master_styles_path, working_styles_path)
 
-    user_styles_path = Path(user_dir_path/'user_styles')
+    user_styles_path = Path(user_path/'user_styles')
     make_dir(user_styles_path)
     samples_path = Path(user_styles_path/'samples')
     make_dir(samples_path)
@@ -597,13 +607,13 @@ def create_user_structure(user_dir):
     interpret('Verified the working styles directory:', working_styles_path)
 
 
-    # delete the contents of user_dir/master_topics to get a clean start
-    # copy the contents of '.masters/master_topics' to user_dir
+    # delete the contents of user_path/master_topics to get a clean start
+    # copy the contents of '.masters/master_topics' to user_path
     # for the user's reference only
     master_topics_path = Path('masters/master_topics')
-    old_topics_path = Path(user_dir_path/'master_topics')
+    old_topics_path = Path(user_path/'master_topics')
     remove_dirs(old_topics_path)
-    ref_topics_path = Path(user_dir_path/'reference_topics')
+    ref_topics_path = Path(user_path/'reference_topics')
     remove_dirs(ref_topics_path)
     copy_dirs(master_topics_path, ref_topics_path)
 
@@ -615,10 +625,10 @@ def create_user_structure(user_dir):
     copy_dirs(master_topics_path, working_topics_path)
 
     # overwrite 'userfiles' with the contents
-    # of user_dir './user_topics'
+    # of user_path './user_topics'
     # this allows a user to completely customize
     # the available topics, if desired
-    user_topics_path = Path(user_dir_path/'user_topics')
+    user_topics_path = Path(user_path/'user_topics')
     make_dir(user_topics_path)
     copy_dirs(user_topics_path, working_topics_path)
     interpret('Verfied the working Random Prompt (OneButtonPrompt) topics directory:')
@@ -626,34 +636,32 @@ def create_user_structure(user_dir):
 
 
     # initialize the welcome images
-    working_welcome_path = Path(user_dir_path/'welcome_images')
-    copy_dirs(Path(masters_path/'master_control_images'), Path(user_dir_path/'control_images'))
-    copy_dirs(Path(masters_path/'master_welcome_images'), working_welcome_path)
-    # welcome.png is required in masters
-    # but must not available to the random png selector:
-    delete_file(Path(working_welcome_path/'welcome.png'))
+    working_welcome_path = Path(user_path/'welcome_images')
+    remove_dirs(Path(user_path/'control_images'))
+    copy_dirs(Path(masters_dir/'master_control_images'), Path(user_path/'control_images'))
+    copy_dirs(Path(masters_dir/'master_welcome_images'), working_welcome_path)
     interpret('Verified the working welcome directory:', working_welcome_path)
 
 
     # initialize the Wildcards structure
     # we do not need to delete UserDir/master_wildcards
     # because it never existed
-    master_wildcards_path = Path(masters_path/'master_wildcards')
-    ref_wildcards_path = Path(user_dir_path/'reference_wildcards')
+    master_wildcards_path = Path(masters_dir/'master_wildcards')
+    ref_wildcards_path = Path(user_path/'reference_wildcards')
     remove_dirs(ref_wildcards_path)
     copy_dirs(master_wildcards_path, ref_wildcards_path)
 
     working_wildcards_path = Path('wildcards').resolve()
     remove_dirs(working_wildcards_path)
     copy_dirs(master_wildcards_path, working_wildcards_path)
-    user_wildcards_path = Path(user_dir_path/'user_wildcards')
+    user_wildcards_path = Path(user_path/'user_wildcards')
     make_dir(user_wildcards_path)
 
     # upgrade from the old wildcard structure to the new
     # preserving any custom wildcards from old_user_wildcards_path
-    old_user_wildcards_path = Path(user_dir_path/'wildcards')
+    old_user_wildcards_path = Path(user_path/'wildcards')
     excluding_list = list_files_by_patterns(master_wildcards_path,
-        pattern1="*.txt", names_only=True)
+        patterns=["*.txt"], names_only=True)
     move_files_excluding(old_user_wildcards_path, user_wildcards_path, excluding_list)
     remove_dirs(old_user_wildcards_path)
 

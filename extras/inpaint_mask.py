@@ -43,8 +43,11 @@ def optimize_masks(masks: torch.Tensor) -> torch.Tensor:
     return torch.from_numpy(masks)
 
 
-def generate_mask_from_image(image: np.ndarray, mask_model: str = 'sam', extras=None,
-                             sam_options: SAMOptions | None = SAMOptions) -> tuple[np.ndarray | None, int | None, int | None, int | None]:
+def generate_mask_from_image(
+    image: np.ndarray,
+    mask_model: str = 'sam',
+    extras=None,
+    sam_options: SAMOptions | None = SAMOptions) -> tuple[np.ndarray | None, int | None, int | None, int | None]:
     dino_detection_count = 0
     sam_detection_count = 0
     sam_detection_on_mask_count = 0
@@ -61,9 +64,9 @@ def generate_mask_from_image(image: np.ndarray, mask_model: str = 'sam', extras=
     if mask_model != 'sam' or sam_options is None:
         result = remove(
             image,
-            session=new_session(mask_model, providers=["CPUExecutionProvider"], **extras),
-            only_mask=True,
-            **extras
+            session=new_session(mask_model,
+            providers=["CPUExecutionProvider"], **extras),
+            only_mask=True, **extras
         )
         return result, dino_detection_count, sam_detection_count, sam_detection_on_mask_count
 

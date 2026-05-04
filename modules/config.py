@@ -6,7 +6,6 @@ import common
 import string # required by prompt_array_separator verification
 import modules.constants as constants
 import modules.flags
-import modules.preset_resource as PR
 import modules.user_structure as US
 import tempfile
 
@@ -28,6 +27,7 @@ visited_keys = []
 path_wildcards = Path(current_dir/'wildcards')
 wildcards_max_bfs_depth = 64
 
+available_presets = []
 model_filenames = []
 lora_filenames = []
 vae_filenames = []
@@ -104,7 +104,7 @@ def get_config_path(config_file):
     config_path = os.path.abspath(f'{config_path}/{config_file}')
     return config_path
 
-config_dict.update(PR.get_initial_preset_content())
+# config_dict.update(PR.get_initial_preset_content())
 theme = args.theme
 
 config_path = get_config_path('/config.txt')
@@ -154,7 +154,6 @@ path_rembg = get_dir_or_set_default('path_rembg', Path(path_models_root/'rembg')
 path_layer_model = get_dir_or_set_default('path_layer_model', Path(path_models_root/'layer_model').resolve())
 paths_diffusers = get_dir_or_set_default('path_diffusers', [Path(path_models_root/'diffusers').resolve()], True, False)
 path_outputs = get_path_output()
-
 
 from enhanced.backend import init_modelsinfo
 modelsinfo = init_modelsinfo(path_models_root, dict(
@@ -476,7 +475,7 @@ previous_default_models = get_config_item_or_set_default(
     expected_type=list
 )
 
-default_refiner_model_name = default_refiner = get_config_item_or_set_default(
+default_refiner = get_config_item_or_set_default(
     key='default_refiner',
     default_value='None',
     validator=lambda x: isinstance(x, str),
@@ -524,7 +523,7 @@ default_loras = get_config_item_or_set_default(
         or len(y) == 2 and isinstance(y[0], str) and isinstance(y[1], numbers.Number)
         for y in x)
 )
-default_loras = [(y[0], y[1].replace('\\', os.sep).replace('/', os.sep), y[2]) if len(y) == 3 else (True, y[0].replace('\\', os.sep).replace('/', os.sep), y[1]) for y in default_loras]
+default_loras = [[y[0], y[1].replace('\\', os.sep).replace('/', os.sep), y[2]] if len(y) == 3 else [True, y[0].replace('\\', os.sep).replace('/', os.sep), y[1]] for y in default_loras]
 
 default_max_lora_number = get_config_item_or_set_default(
     key='default_max_lora_number',
@@ -633,6 +632,37 @@ default_save_only_final_enhanced_image = get_config_item_or_set_default(
     expected_type=bool
 )
 
+
+default_image_catalog_checkbox = get_config_item_or_set_default(
+    key='default_image_catalog_checkbox',
+    default_value=True,
+    validator=lambda x: isinstance(x, bool)
+)
+default_image_catalog_max_number = get_config_item_or_set_default(
+    key='default_image_catalog_max_number',
+    default_value=50,
+    validator=lambda x: isinstance(x, int),
+    expected_type=int
+)
+default_image_catalog_max_per_page = get_config_item_or_set_default(
+    key='default_image_catalog_max_per_page',
+    default_value=35,
+    validator=lambda x: isinstance(x, int),
+    expected_type=int
+)
+show_newest_catalog_first = get_config_item_or_set_default(
+    key='show_newest_catalog_first',
+    default_value=True,
+    validator=lambda x: isinstance(x, bool),
+    expected_type=bool
+)
+default_backfill_prompt = get_config_item_or_set_default(
+    key='default_backfill_prompt',
+    default_value=False,
+    validator=lambda x: isinstance(x, bool)
+)
+
+
 default_sampler = get_config_item_or_set_default(
     key='default_sampler',
     default_value='dpmpp_2m_sde_gpu',
@@ -724,6 +754,8 @@ default_ip_images = {}
 default_ip_stop_ats = {}
 default_ip_weights = {}
 default_ip_types = {}
+# updated by webui, read by aysnc_worker:
+ip_slots = []
 
 for image_count in range(default_controlnet_image_count):
     image_count += 1
@@ -758,6 +790,13 @@ for image_count in range(default_controlnet_image_count):
         validator=lambda x: isinstance(x, float) and 0 <= x <= 2,
         expected_type=float
     )
+    ip_slots.append({
+        "image": default_ip_images[image_count],
+        "stop": default_ip_stop_ats[image_count],
+        "weight": default_ip_weights[image_count],
+        "type": default_ip_types[image_count]
+    })
+
 
 default_inpaint_advanced_masking_checkbox = get_config_item_or_set_default(
     key='default_inpaint_advanced_masking_checkbox',
@@ -765,12 +804,23 @@ default_inpaint_advanced_masking_checkbox = get_config_item_or_set_default(
     validator=lambda x: isinstance(x, bool),
     expected_type=bool
 )
+
+# define the Inpaint mode translation map
+inpaint_translation_map = {
+    'Inpaint or Outpaint (default)': 'Inpaint Default (blend) or Outpaint (extend)',
+    'Modify Content (add objects, change background, etc.)': 'Modify Content (add objects, replace background, etc.)'
+}
+# retrieve and validate the Inpaint mode
 default_inpaint_method = get_config_item_or_set_default(
     key='default_inpaint_method',
     default_value=modules.flags.inpaint_option_default,
-    validator=lambda x: x in modules.flags.inpaint_options,
+    # the validator now checks BOTH new and old lists:
+    validator=lambda x: x in (modules.flags.inpaint_options + modules.flags.legacy_inpaint_options),
     expected_type=str
 )
+# if the string is an old one, swap it for the new one immediately
+default_inpaint_method = inpaint_translation_map.get(default_inpaint_method, default_inpaint_method)
+
 
 default_overwrite_upscale = get_config_item_or_set_default(
     key='default_overwrite_upscale',
@@ -839,22 +889,7 @@ audio_notification = get_config_item_or_set_default(
     default_value=False,
     validator=lambda x: isinstance(x, bool)
 )
-default_image_catalog_checkbox = get_config_item_or_set_default(
-    key='default_image_catalog_checkbox',
-    default_value=True,
-    validator=lambda x: isinstance(x, bool)
-)
-default_image_catalog_max_number = get_config_item_or_set_default(
-    key='default_image_catalog_max_number',
-    default_value=100,
-    validator=lambda x: isinstance(x, int),
-    expected_type=int
-)
-default_backfill_prompt = get_config_item_or_set_default(
-    key='default_backfill_prompt',
-    default_value=False,
-    validator=lambda x: isinstance(x, bool)
-)
+
 default_prompt_translator_enable = get_config_item_or_set_default(
     key='default_prompt_translator_enable',
     default_value=True,
@@ -938,8 +973,11 @@ reference = ''
 
 config_dict["default_loras"] = default_loras = default_loras[:default_max_lora_number] + [[True, 'None', 1.0] for _ in range(default_max_lora_number - len(default_loras))]
 
+# updated by webui, read by aysnc_worker:
+lora_data = default_loras
 
-# mapping config to meta parameter
+
+# maps config and preset parameters to metadata standards
 possible_preset_keys = {
     "default_engine": "engine",
     "default_model": "base_model",
@@ -1085,15 +1123,17 @@ def get_base_model_list(engine='Fooocus', task_method=None):
         base_model_list = [f for f in base_model_list if ("hyp8" in f or "hyp16" in f or "flux" in f or "schnell" in f) and f.endswith("gguf")]
     return base_model_list
 
-def update_files(engine='Fooocus', task_method=None):    # called by the webui update button & by launch.py
+
+def update_files(engine='Fooocus', task_method=None):
+    # called by the webui update button & by launch.py
     global modelsinfo, model_filenames, lora_filenames, vae_filenames, wildcard_filenames
     modelsinfo.refresh_from_path()
     model_filenames = get_base_model_list(engine, task_method)
     lora_filenames = modelsinfo.get_model_names('loras')
     vae_filenames = modelsinfo.get_model_names('vae')
-    wildcard_filenames = US.list_files_by_patterns(path_wildcards, '*.txt')
-    available_presets = PR.get_preset_list()
+    wildcard_filenames = US.list_files_by_patterns(path_wildcards, ['*.txt'])
     return model_filenames, lora_filenames, vae_filenames
+
 
 def downloading_inpaint_models(v):
     if not v:
@@ -1336,7 +1376,6 @@ def downloading_sd35_large_model():
     )
     return os.path.join(paths_checkpoints[0] + '\SD3x', 'stableDiffusion35_large.safetensors')
 
-update_files()
 
 # initialize notification file status
 control_notification(audio_notification)
@@ -1346,7 +1385,7 @@ if args.disable_comfyd:
     default_comfy_active_checkbox = False
 
 default_aspect_ratio_values = []
-# Aspect Ratio support
+# Resolution support
 def set_default_aspect_ratio_values():
     global default_aspect_ratio_values
     default_aspect_ratio_values = [default_standard_aspect_ratio,
@@ -1360,25 +1399,24 @@ config_aspect_ratios = [available_standard_aspect_ratios,
     available_sd1_5_aspect_ratios,
     available_pixart_aspect_ratios]
 
-# Common support for prompt & image quantity preservation
-# during preset switching
-common.positive = default_prompt
-common.negative = default_prompt_negative
-common.image_quantity = default_image_quantity
+# Common support for black_out_nsfw
+# if the config setting is False,
+# the UI cannot override it
+common.default_black_out_nsfw = default_black_out_nsfw
 
-# Common support, typically for Gradio errors in updating system dictionary
-common.refiner_slider = default_refiner_switch
-common.sampler_name = default_sampler
-common.scheduler_name = default_scheduler
+# Common Input Image tab control:
+# the full name is simplified to a working name
+common.current_tab_name = default_selected_image_input_tab_id.split('_')[0]
+
+# Common FreeU defaults
+common.freeu_settings = [False] + list(default_freeu)
+
+# Common support for performance
+common.performance_selection = default_performance
 
 # Common support for Translator & Wildcards
 common.prompt_translator = default_prompt_translator_enable
 common.wildcard_lines_to_interpret = wildcard_lines_to_interpret
-
-# Preset support in neutral (common) ground
-common.default_bar_category = default_bar_category
-common.preset_bar_length = preset_bar_length
-common.is_low_vram_preset = default_low_vram_presets
 
 # Flags support
 modules.flags.custom_performance = custom_performance_steps

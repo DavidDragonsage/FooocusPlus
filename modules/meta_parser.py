@@ -117,8 +117,8 @@ def process_dictionary(loaded_parameter_dict, is_generating, inpaint_mode, resul
     if arg_resolution:
         arg_resolution = normalize_AR(arg_resolution)
         if arg_resolution != '0*0' and not ',' in arg_resolution:
-            common.current_AR = arg_resolution
-            interpret('[MetaParser] Aspect Ratio set by metadata or preset:', arg_resolution)
+            common.resolution = arg_resolution
+            interpret('[MetaParser] Resolution set by preset or metadata:', arg_resolution)
     get_number('guidance_scale', 'Guidance Scale', loaded_parameter_dict, results)
     get_number('sharpness', 'Sharpness', loaded_parameter_dict, results)
     get_adm_guidance('adm_guidance', 'ADM Guidance', loaded_parameter_dict, results)
@@ -263,6 +263,7 @@ def get_steps(key: str, fallback: str | None, source_dict: dict, results: list, 
 
 
 def get_resolution(key: str, fallback: str | None, source_dict: dict, results: list, default=None):
+    preset_filename = Path(common.preset_file_path).name
     try:
         width, height = 0, 0
         h = source_dict.get(key, source_dict.get(fallback, default))
@@ -277,7 +278,7 @@ def get_resolution(key: str, fallback: str | None, source_dict: dict, results: l
             template = default_class_params[engine].get('available_aspect_ratios_selection',\
                 default_class_params['Fooocus']['available_aspect_ratios_selection'])
 
-        if 'SD1.5' in str(common.preset_file_path) and template!='SD1.5':
+        if preset_filename.startswith('SD1.5') and template!='SD1.5':
             template = 'SD1.5'
             interpret(f'Selected the SD1.5 template for the {common.preset_file_path} file')
 
@@ -290,16 +291,16 @@ def get_resolution(key: str, fallback: str | None, source_dict: dict, results: l
             width, height = eval(h)
 
         if AR.AR_template != template:    # i.e. the template has changed
-            common.current_AR = AR.validate_AR(common.current_AR, template)
+            common.resolution = AR.validate_AR(common.resolution, template)
             h = ''
         AR.AR_template = template
 
         if (width == '0') or (height == '0') or (h == ''):
-            if common.current_AR == '':
-                common.current_AR = AR.assign_default_by_template(template)
-            h = common.current_AR
+            if common.resolution == '':
+                common.resolution = AR.assign_default_by_template(template)
+            h = common.resolution
             width, height = AR.AR_split(h)
-        common.current_AR = h
+        common.resolution = h
 
         formatted = AR.add_ratio(f'{width}*{height}')
         if formatted in common.full_AR_labels[template]:

@@ -27,13 +27,6 @@ def convert_to_rgba(img: _Image.Image) -> _Image.Image:
         img = img.convert('RGBA')
     return img
 
-def copy_to_base(output_image_data):
-    base_image_data = copy.deepcopy(output_image_data)
-    return base_image_data
-
-def copy_to_source(output_image_data):
-    input_image_data = copy.deepcopy(output_image_data)
-    return input_image_data
 
 def on_upload_trigger(input_image: _Image.Image, meta=False):
     if input_image is None:
@@ -55,20 +48,34 @@ def on_upload_trigger(input_image: _Image.Image, meta=False):
         interpret('Loaded input image metadata')
     else:
         interpret('Could not find metadata in the input image')
-    return rgba_img, rgba_img
+
+    # deepcopy each returned image:
+    return (rgba_img.copy(),    # original_image_state
+            rgba_img.copy(),    # update output_image_display
+            rgba_img.copy(),    # output_image_state
+            rgba_img.copy())    # output_transparency_state
+
 
 def call_upload_trigger(input_image: _Image.Image):
     return on_upload_trigger(input_image, meta=True)
 
+def get_transparency_defaults():
+    return (
+        False,  # background_chk default
+        False,  # erase_chk default
+        0.0     # transparency percentage default
+    )
+
 def reset_transforms(arg_image):
     # return default values for all transformation components
     width, height = arg_image.size
-    left_update = gr.Slider.update(maximum=width, value = 0)
-    right_update = gr.Slider.update(maximum=width, value = width)
-    upper_update = gr.Slider.update(maximum=height, value = 0)
-    lower_update = gr.Slider.update(maximum=height, value = height)
-    width_update = gr.Slider.update(maximum=width*2, value = width)
-    height_update = gr.Slider.update(maximum=height*2, value = height)
+
+    left_update = gr.update(maximum=width, value = 0)
+    right_update = gr.update(maximum=width, value = width)
+    upper_update = gr.update(maximum=height, value = 0)
+    lower_update = gr.update(maximum=height, value = height)
+    width_update = gr.update(maximum=width*2, value = width)
+    height_update = gr.update(maximum=height*2, value = height)
 
     return (
         100,            # percent_resize_slider default
@@ -81,7 +88,8 @@ def reset_transforms(arg_image):
         height_update,  # original image height
         False,          # mirror_chk default
         False,          # flip_vertical_chk default
-        False           # flip_AR_chk default
+        False,          # flip_AR_chk default
+        *get_transparency_defaults() # reset transparency
     )
 
 
@@ -89,13 +97,14 @@ def reset_to_defaults(arg_image):
     # return default values for all editing components
     width, height = arg_image.size
 
-    left_update = gr.Slider.update(maximum=width, value = 0)
-    right_update = gr.Slider.update(maximum=width, value = width)
-    upper_update = gr.Slider.update(maximum=height, value = 0)
-    lower_update = gr.Slider.update(maximum=height, value = height)
-    width_update = gr.Slider.update(maximum=width*2, value = width)
-    height_update = gr.Slider.update(maximum=height*2, value = height)
-    bg_model_str = config.edit_background_mask_model
+    left_update = gr.update(maximum=width, value = 0)
+    right_update = gr.update(maximum=width, value = width)
+    upper_update = gr.update(maximum=height, value = 0)
+    lower_update = gr.update(maximum=height, value = height)
+    width_update = gr.update(maximum=width*2, value = width)
+    height_update = gr.update(maximum=height*2, value = height)
+
+    trans_defaults = get_transparency_defaults()
 
     return (
         0,              # brighten_slider default
@@ -118,16 +127,12 @@ def reset_to_defaults(arg_image):
         False,          # mirror_chk default
         False,          # flip_vertical_chk default
         False,          # flip_AR_chk default
-        False,          # background_chk default
-        bg_model_str,   # Background Masking Model default
-        False,          # alpha_mat_chk default
-        False,          # erase_chk default
-        0.0,            # transparency percentage default
         0,              # box_blur_slider default
         0,              # gaussian_blur_slider default
         False,          # edge_more_bool default
         8,              # posterize_slider default
-        -1              # solarize_int default
+        -1,             # solarize_int default
+        *trans_defaults # insert using tuple unpacking
     )
 
 
@@ -173,6 +178,7 @@ def percent_resize_logic(input_image_data, percent_val, current_w_val, current_h
         new_max_h, # height_slider value
         gr.update(maximum=new_max_w, value=new_val_w), # right_slider update
         gr.update(maximum=new_max_h, value=new_val_h), # lower_slider update
+        *get_transparency_defaults()
     )
 
 
@@ -236,89 +242,7 @@ def flip_vertical_image_logic(edit_image, flip_vertical_bool):
     return output_image
 
 
-def remove_background_logic(edit_image, background_bool,
-    bg_model_str, alpha_mat_chk):
-    if background_bool:
-        if edit_image.mode == 'RGBA':
-            session = new_session(bg_model_str)
-            output_image = remove_bg(
-                edit_image, session=session,
-                alpha_matting=alpha_mat_chk,
-                # pixels above this are "definitely FG":
-                alpha_matting_foreground_threshold=240,
-                # pixels below this are "definitely BG":
-                alpha_matting_background_threshold=10,
-                # how much to erode the initial mask:
-                alpha_matting_erode_size=10)
-        else:
-            print()
-            interpret('Could not add a transparent layer and remove the background')
-    else:
-        output_image = edit_image
-    return output_image
-
-
-def erase_logic(edit_image, erase_bool):
-    if erase_bool:
-        if edit_image.mode != "RGBA":
-            edit_image = edit_image.convert("RGBA")
-        r, g, b, a = edit_image.split()
-        black = r.point(lambda _: 0)
-        clear = r.point(lambda _: 0)
-        output_image = _Image.merge("RGBA", (black, black, black, clear))
-        interpret('The image has been deleted and replaced with pure transparency')
-    else:
-        output_image = edit_image
-    return output_image
-
-def remove_transparency_logic(edit_image, composite_image_display):
-    if edit_image.mode == "RGBA":
-        edit_image = edit_image.convert("RGB")
-        output_image = edit_image.convert("RGBA")
-        interpret('Removed all transparency')
-    else:
-        output_image = edit_image
-    if composite_image_display is not None:
-        if composite_image_display.mode == "RGBA":
-            composite_image_display = composite_image_display.convert("RGB")
-            composite_image_display = composite_image_display.convert("RGBA")
-    # background_chk, erase_chk, transparency_slider
-    return  (output_image,
-            output_image, output_image,
-            gr.update(value=False),
-            gr.update(value=False),
-            gr.update(value=0.0),
-            composite_image_display)
-
-def save_metadata_logic(save_metadata_bool):
-    config.edit_save_metadata_to_images = save_metadata_bool
-    return save_metadata_bool
-
-def display_transparency_percentage(transparency_f):
-    interpret_info('Image transparency', f'= {transparency_f}%')
-    return
-
-def transparency_logic(edit_image, transparency_f):
-    # alpha_value = 0 is fully transparent, 255 is fully opaque
-    # ensure the image has an alpha channel:
-
-    if edit_image.mode != "RGBA":
-        output_image = edit_image.convert("RGBA")
-    else:
-        output_image = edit_image
-
-    # convert the 0-100% transparency to 0-255 opacity:
-    opacity_value = 255 - int((transparency_f / 100.0) * 255.0)
-    # get existing alpha channel:
-    alpha = output_image.getchannel('A')
-
-    # prevent data loss by ensuring a minimum value of 1
-    # this prevents the 'clean transparent pixels to black' optimization
-    alpha = alpha.point(lambda i: max(1, int(i * (opacity_value / 255))))
-
-    output_image.putalpha(alpha)
-    return output_image
-
+# --- Editing Dispatch Section ---
 
 def apply_enhancements(
     input_image: _Image.Image,
@@ -340,11 +264,6 @@ def apply_enhancements(
     height_int: int,
     mirror_bool: bool,
     flip_vertical_bool: bool,
-    background_bool: bool,
-    bg_model_str: str,
-    alpha_mat_bool: bool,
-    erase_bool: bool,
-    transparency_f: float,
     box_blur_int: int,
     gaussian_blur_int: int,
     edge_more_bool: bool,
@@ -384,14 +303,7 @@ def apply_enhancements(
     # --- Step 3: Detail Adjustments ---
     processed_image = ImageEnhance.Sharpness(processed_image).enhance((sharpness_int/100)+1)
 
-    # --- Step 4: Final Composition and Transparency Logic ---
-    processed_image = remove_background_logic(processed_image, background_bool, bg_model_str, alpha_mat_bool)
-
-    processed_image = erase_logic(processed_image, erase_bool)
-
-    processed_image = transparency_logic(processed_image, transparency_f)
-
-    # --- Step 5: Effects & Filters ---
+    # --- Step 4: Effects & Filters ---
     if processed_image.mode == 'RGBA':
         # split the image into individual bands (R, G, B, A)
         # then recombine without the alpha
@@ -434,6 +346,20 @@ def apply_enhancements(
 
     return processed_image, width_int, height_int
 
+
+# --- Save Image Section ---
+
+def copy_to_base(output_image_data):
+    base_image_data = output_image_data.copy()
+    return base_image_data
+
+def copy_to_source(image_data):
+    input_image_data = image_data.copy()
+    return input_image_data
+
+def save_metadata_logic(save_metadata_bool):
+    config.edit_save_metadata_to_images = save_metadata_bool
+    return save_metadata_bool
 
 def if_alpha_required(src_image):
     # determine if we actually use the alpha channel
@@ -485,7 +411,7 @@ def save_image(output_image, format_str, save_meta):
 
     path_outputs = Path(config.path_outputs)
     date_string, file_dest, only_name = generate_temp_filename(f'{path_outputs}/', '')
-    path_today = Path(path_outputs/date_string)
+    path_today = Path(config.path_outputs/date_string)
     US.make_dir(path_today)
     path_full = Path(path_outputs/date_string/only_name).resolve()
     # Save the image using the most appropriate mode
@@ -515,6 +441,95 @@ def on_save_output_click(output_image_state, current_save_format_value):
         current_save_format_value, common.input_meta)
     # returns the path string e.g. "my_output_image.png"
     return filename
+
+
+# --- Transparency Section ---
+
+def remove_background_logic(edit_image, background_bool,
+    bg_model_str, alpha_mat_chk):
+    if background_bool:
+        if edit_image.mode == 'RGBA':
+            session = new_session(bg_model_str)
+            output_image = remove_bg(
+                edit_image, session=session,
+                alpha_matting=alpha_mat_chk,
+                # pixels above this are "definitely FG":
+                alpha_matting_foreground_threshold=240,
+                # pixels below this are "definitely BG":
+                alpha_matting_background_threshold=10,
+                # how much to erode the initial mask:
+                alpha_matting_erode_size=10)
+        else:
+            print()
+            interpret('Could not add a transparent layer and remove the background')
+    else:
+        output_image = edit_image
+    return output_image, background_bool
+
+
+def erase_logic(arg_image, erase_bool):
+    edit_image = arg_image.copy()
+    if not erase_bool:
+        # If unchecked, return the unmodified image
+        return edit_image, erase_bool
+
+    if edit_image.mode != "RGBA":
+        edit_image = edit_image.convert("RGBA")
+    r, g, b, a = edit_image.split()
+    black = r.point(lambda _: 0)
+    clear = r.point(lambda _: 0)
+    output_image = _Image.merge("RGBA", (black, black, black, clear))
+    interpret('The image has been deleted and replaced with pure transparency')
+    return output_image, erase_bool
+
+
+def remove_transparency_logic(edit_image, composite_image_display):
+    if edit_image.mode == "RGBA":
+        edit_image = edit_image.convert("RGB")
+        output_image = edit_image.convert("RGBA")
+        interpret('Removed all transparency')
+    else:
+        output_image = edit_image
+    if composite_image_display is not None:
+        if composite_image_display.mode == "RGBA":
+            composite_image_display = composite_image_display.convert("RGB")
+            composite_image_display = composite_image_display.convert("RGBA")
+
+    return (output_image,            # input_image_display
+            output_image,            # output_image_display
+            output_image,            # output_image_state
+            output_image,            # output_transparency_state
+            gr.update(value=False),  # background_chk
+            gr.update(value=False),  # erase_chk
+            gr.update(value=0.0),    # transparency_slider
+            composite_image_display) # composite_image_display
+
+
+def display_transparency_percentage(transparency_f):
+    interpret_info('Image transparency', f'= {transparency_f}%')
+    return
+
+def transparency_logic(edit_image, transparency_f):
+    # alpha_value = 0 is fully transparent, 255 is fully opaque
+    # ensure the image has an alpha channel:
+
+    if edit_image.mode != "RGBA":
+        output_image = edit_image.convert("RGBA")
+    else:
+        output_image = edit_image
+
+    # convert the 0-100% transparency to 0-255 opacity:
+    opacity_value = 255 - int((transparency_f / 100.0) * 255.0)
+    # get existing alpha channel:
+    alpha = output_image.getchannel('A')
+
+    # prevent data loss by ensuring a minimum value of 1
+    # this prevents the 'clean transparent pixels to black' optimization
+    alpha = alpha.point(lambda i: max(1, int(i * (opacity_value / 255))))
+
+    output_image.putalpha(alpha)
+    return output_image, transparency_f
+
 
 # --- Overlay Section ---
 

@@ -22,6 +22,19 @@ images_ads = {}
 image_types = ['.png', '.jpg', '.jpeg', '.webp']
 output_images_regex = re.compile(r'\d{4}-\d{2}-\d{2}')
 
+last_selected_full_path = None
+last_selected_folder_choice = None
+target_index_lock = None
+
+
+def gallery_report(total_image_count, actual_total_pages, viewable_pages):
+    print()
+    interpret(f'[Gallery] The image catalogue contains a total of {total_image_count} images and {actual_total_pages} pages,')
+    interpret(f'of which the last {viewable_pages} pages are available for viewing within', 'FooocusPlus.')
+    print()
+    return
+
+
 def refresh_output_list(max_per_page, max_catalog):
     global image_types
 
@@ -40,25 +53,26 @@ def refresh_output_list(max_per_page, max_catalog):
                 listdirs1.append("{}/{}".format(index, str(i).zfill(len(str(max_page_no)))))
             listdirs1.remove(index)
     output_list = sorted([f[2:] for f in listdirs1], reverse=True)
-    pages = len(output_list)
+    actual_total_pages = len(output_list)
     display_max_pages = max_catalog
-    print()
-    interpret(f'The image gallery contains a total of {total_nums} images and {pages} pages,')
-    interpret(f'of which the last {pages if pages<display_max_pages else display_max_pages} pages are available for viewing within', 'FooocusPlus.')
-    print()
     output_list = output_list[:display_max_pages]
-    return output_list, total_nums, pages
+    viewable_pages = len(output_list)
+    gallery_report(total_nums, actual_total_pages, viewable_pages)
+    return output_list, total_nums, actual_total_pages
 
 
 def images_list_update(choice, state_params):
     if "__output_list" not in state_params.keys():
-        return  gr.update(), gr.update(), state_params
+        return  gr.update(), gr.update(), state_params, gr.update()
     output_list = state_params["__output_list"]
     if choice is None and len(output_list) > 0:
         choice = output_list[0]
     images_gallery = get_images_from_gallery_index(choice, state_params["__max_per_page"])
     state_params.update({"prompt_info": [choice, 0]})
-    return gr.update(value=images_gallery), gr.update(open=False, visible=len(output_list)>0), state_params
+    return (gr.update(value=images_gallery),
+            gr.update(open=False, visible=len(output_list)>0),
+            state_params,
+            gr.update(visible=False)) # turn off welcome_window
 
 
 def select_index(choice, image_tools_checkbox, state_params, evt: gr.SelectData):
@@ -70,7 +84,7 @@ def select_index(choice, image_tools_checkbox, state_params, evt: gr.SelectData)
     return [gr.update(visible=True)] + [gr.update(visible=image_tools_checkbox)] + [gr.update(visible=False)] * 8 + [state_params]
 
 
-def select_gallery(choice, state_params, backfill_prompt, evt: gr.SelectData):
+def select_history_gallery(choice, state_params, backfill_prompt, evt: gr.SelectData):
     if "__output_list" not in state_params.keys():
         return  [gr.update()] * 7 + [state_params]
     state_params.update({"note_box_state": ['',0,0]})
@@ -140,6 +154,38 @@ def refresh_images_catalog(choice: str, passthrough = False):
     parse_html_log(choice, passthrough)
     print(f'[Gallery] Refresh_images_catalog: loaded {len(images_list[choice])} image_items of {choice}.')
     return images_list[choice]
+
+
+def get_gallery_label(state_params):
+    global last_selected_full_path
+
+    # 1. Run the scan to get current counts
+    new_output_list, total_count, total_pages = refresh_output_list(
+        config.default_image_catalog_max_per_page,
+        config.default_image_catalog_max_number
+    )
+
+    # 2. MAGIC: Calculate the new address if we have a selected image
+    target_folder, target_index = None, None
+    if last_selected_full_path:
+        target_folder, target_index = get_new_virtual_address(last_selected_full_path, config.default_image_catalog_max_per_page)
+
+    # 3. Calculate viewable pages logic
+    viewable = total_pages if total_pages < config.default_image_catalog_max_number else config.default_image_catalog_max_number
+
+    # 4. Create the localized string via Argos/Interpret
+    label_text = interpret(
+        f"Generated Images Catalog: {total_count} images and {total_pages} pages ({viewable} pages viewable)",
+        "",
+        silent=True
+    )
+
+    return (
+        gr.update(choices=new_output_list,
+            value=target_folder), # Update Radio
+        label_text,               # Update Textbox
+        gr.update(visible=False)  # Update Gallery (Remove selected_index)
+    )
 
 
 def get_images_prompt(choice, selected, max_per_page, display_index=False):

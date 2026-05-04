@@ -32,7 +32,23 @@ toolbox_note_regenerate_title='Extract parameters to backfill for regeneration. 
 toolbox_note_embed_title='Embed parameters into images for easy identification of image sources and communication and learning.'
 toolbox_note_missing_muid='The model in the params and configuration is missing MUID. And the system will spend some time calculating the hash of model files and synchronizing information to obtain the muid for usability and transferability.'
 
-def make_infobox_markdown(info, theme):
+
+def catalogue_close(current_selection):
+    if not current_selection or current_selection == 'None':
+        gallery_update = gr.update(visible=False, value=[])
+    else:
+        # keep the current images so they are there when the user returns
+        gallery_update = gr.update(visible=False)
+    return (gr.update(visible=True),    # welcome_window
+            gallery_update,             # history_gallery
+            gr.update(visible=False),   # image_toolbox
+            gr.update(open=False),      # history_accordion
+            gr.update(autofocus=True),  # prompt
+            gr.update(visible=False)    # toolbox_info_box
+    )
+
+
+def make_infobox_HTML(info, theme):
     bgcolor = '#ddd'
     if theme == "dark":
         bgcolor = '#444'
@@ -48,14 +64,7 @@ def make_infobox_markdown(info, theme):
     return html
 
 
-def toggle_toolbox(state, state_params):
-    if "gallery_state" in state_params and state_params["gallery_state"] == 'finished_index':
-        return [gr.update(visible=state)]
-    else:
-        return [gr.update(visible=False)]
-
-
-def toggle_prompt_info(state_params):
+def toggle_toolbox_info(state_params):
     infobox_state = state_params["infobox_state"]
     infobox_state = not infobox_state
     state_params.update({"infobox_state": infobox_state})
@@ -302,11 +311,11 @@ def save_preset(*args):
     base_model = args.pop()
     refiner_model = args.pop()
     refiner_switch = args.pop()
-    refiner_switch = common.refiner_slider
+    refiner_switch = config.default_refiner_switch
     sampler_name = args.pop()
-    sampler_name = common.sampler_name
+    sampler_name = config.default_sampler
     scheduler_name = args.pop()
-    scheduler_name = common.scheduler_name
+    scheduler_name = config.default_scheduler
     vae_name = args.pop()
     seed_random = args.pop()
     image_seed = args.pop()
@@ -349,7 +358,7 @@ def save_preset(*args):
         preset["default_prompt_negative"] = negative_prompt
         preset["default_styles"] = style_selections
         if common.AR_preset_save:
-            preset["default_aspect_ratio"] = common.current_AR.split(' | ')[0].replace('×', '*')
+            preset["default_aspect_ratio"] = common.resolution.split(' | ')[0].replace('×', '*')
         else:
             preset["default_aspect_ratio"] = "0*0"
         preset["default_overwrite_step"] = overwrite_step

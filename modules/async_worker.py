@@ -2,6 +2,8 @@ import threading
 import args_manager
 import common
 import modules.config as config
+import modules.util as util
+from enhanced.translator import interpret
 from extras.inpaint_mask import generate_mask_from_image, SAMOptions
 from modules.patch import PatchSettings, patch_settings, patch_all
 
@@ -10,7 +12,7 @@ patch_all()
 class AsyncTask:
     def __init__(self, args):
         from modules.flags import Performance, MetadataScheme, ip_list, disabled, task_class_mapping
-        from modules.util import get_enabled_loras
+        from modules.util import get_enabled_loras, is_valid_image
         from modules.config import default_max_lora_number
         import re
 
@@ -29,76 +31,89 @@ class AsyncTask:
         if len(args) == 0:
             return
 
+#        print()
+#        print(f"Args Stack Length: {len(args)}")
+#        print()
+#        print(f'Args List: {args}')
+#        print()
+
         args.reverse()
-        self.generate_image_grid = args.pop()
-        self.prompt = normalize_lines(args.pop())
-        self.negative_prompt = args.pop()
+        self.generate_image_grid = config.default_generate_image_grid
+        self.prompt = normalize_lines(config.default_prompt)
+        self.negative_prompt = config.default_prompt_negative
         self.style_selections = args.pop()
 
-        self.performance_selection = Performance(args.pop())
+        self.performance_selection = Performance(common.performance_selection)
         self.steps = self.performance_selection.steps()
         self.original_steps = self.steps
 
-        self.aspect_ratios_selection = args.pop()
-        self.aspect_ratios_selection = common.current_AR
-        self.image_quantity = args.pop()
-        self.output_format = args.pop()
-        self.seed = int(args.pop())
-        self.read_wildcards_in_order = args.pop()
-        self.sharpness = args.pop()
-        self.cfg_scale = args.pop()
-        self.base_model_name = args.pop()
-        self.refiner_model_name = args.pop()
-        self.refiner_switch = args.pop()
-        self.refiner_switch = common.refiner_slider
+        self.aspect_ratios_selection = common.resolution
+        self.image_quantity = config.default_image_quantity
+        self.output_format = config.default_output_format
+        self.seed = int(common.saved_seed)
+        self.read_wildcards_in_order = common.read_wildcards_in_order
+        self.sharpness = config.default_sample_sharpness
+        self.cfg_scale = config.default_cfg_scale
+        self.base_model_name = config.default_base_model_name
+        self.refiner_model_name = config.default_refiner
+        self.refiner_switch = config.default_refiner_switch
 
-#        self.loras = get_enabled_loras([(bool(args.pop()), str(args.pop()),
-#             float(args.pop())) for _ in range(default_max_lora_number)])
-        self.loras = []
-        for _ in range(default_max_lora_number):
-            lora_enable = bool(args.pop())
-            lora_name = str(args.pop())
-            try:
-                lora_strength = float(args.pop())
-            except:
-                lora_strength = 1.0
-                print()
-                print(f'Fallback to LoRA Strength = 1.0, {lora_name}')
-                print()
-            self.loras.append([lora_enable, lora_name, lora_strength])
-        self.loras = get_enabled_loras(self.loras)
+        self.loras = get_enabled_loras(config.lora_data)
 
-        self.input_image_checkbox = args.pop()
-        self.current_tab = args.pop()
-        self.uov_method = args.pop()
-        self.uov_input_image = args.pop()
-        self.outpaint_selections = args.pop()
-        self.inpaint_input_image = args.pop()
-        self.inpaint_additional_prompt = args.pop()
-        self.inpaint_mask_image_upload = args.pop()
+        self.input_image_checkbox = config.default_image_prompt_checkbox
+        self.current_tab = common.current_tab_name
+        self.uov_method = config.default_uov_method
+        self.uov_input_image = common.uov_image_buffer
+        self.outpaint_selections = getattr(common,
+            'outpaint_selections', [])
+        self.inpaint_input_image = common.inpaint_image_buffer.copy() if common.inpaint_image_buffer else None
+        self.inpaint_additional_prompt = getattr(common,
+            'inpaint_additional_prompt', '')
+        self.inpaint_mask_image_upload = common.inpaint_mask_buffer.copy() if common.inpaint_mask_buffer else None
 
-        self.layer_method = args.pop()
-        self.layer_input_image = args.pop()
-        self.iclight_enable = args.pop()
-        self.iclight_source_radio = args.pop()
+#        print(f'Image Prompt Checkbox: {self.input_image_checkbox}')
+#        print(f'Features Checkbox: {self.input_image_checkbox}')
+#        print(f'Current Tab {self.current_tab}')
+#        print(f'Features Tab Name {common.features_tab_name}')
+#        print(f'Outpaint Selections {self.outpaint_selections}')
+#        print(f'self.aspect_ratios_selection {self.aspect_ratios_selection}')
+#        print(f'self.style_selections {self.style_selections}')
+#        print(f'IC-Light Buffer Status: {common.layer_image_buffer is not None}')
 
-        self.disable_preview = args.pop()
-        self.disable_intermediate_results = args.pop()
-        self.disable_seed_increment = args.pop()
-        self.black_out_nsfw = args.pop()
-        self.adm_scaler_positive = args.pop()
-        self.adm_scaler_negative = args.pop()
-        self.adm_scaler_end = args.pop()
-        self.adaptive_cfg = args.pop()
-        self.clip_skip = args.pop()
-        if type(self.clip_skip) != int:
-            self.clip_skip = config.default_clip_skip
-        self.sampler_name = args.pop()
-        self.sampler_name = common.sampler_name
-        self.scheduler_name = args.pop()
-        self.scheduler_name = common.scheduler_name
-        self.vae_name = args.pop()
-        self.overwrite_step = args.pop()
+        if config.default_image_prompt_checkbox and common.current_tab_name=='inpaint':
+            interpret(f'[Worker] Inpaint Image Status:', util.is_valid_image(self.inpaint_input_image))
+            mask_status = util.is_valid_image(self.inpaint_mask_image_upload)
+            interpret(f'[Worker] Inpaint Mask Status:', mask_status)
+            if not mask_status and common.is_auto_masking:
+                interpret('Inpaint Auto-Masking failed!')
+                interpret('Please try restarting', 'FooocusPlus')
+                interpret('but also make a bug report at GitHub or the Pure Fooocus Facebook group.')
+
+        self.layer_method = 'Blend the Foreground with IC-Light'
+        self.layer_input_image = common.layer_image_buffer
+
+        self.iclight_enable = common.features_tab_name == 'layer' and common.features_checkbox and is_valid_image( common.layer_image_buffer)
+        if self.iclight_enable:
+            interpret('[Worker] IC-Light enabled')
+
+        self.iclight_source_radio = common.iclight_source_radio
+
+        self.disable_preview = common.disable_preview
+        self.disable_seed_increment = common.disable_seed_increment
+        self.black_out_nsfw = common.black_out_nsfw
+
+        self.adm_scaler_positive = common.adm_scaler_positive
+        self.adm_scaler_negative = common.adm_scaler_negative
+        self.adm_scaler_end = common.adm_scaler_end
+        self.adaptive_cfg = config.default_cfg_tsnr
+
+        self.clip_skip = config.default_clip_skip
+
+        self.sampler_name = config.default_sampler
+        self.scheduler_name = config.default_scheduler
+        self.vae_name = config.default_vae
+
+        self.overwrite_step = config.default_overwrite_step
         self.overwrite_switch = args.pop()
         self.overwrite_width = args.pop()
         self.overwrite_height = args.pop()
@@ -112,11 +127,7 @@ class AsyncTask:
         self.canny_high_threshold = args.pop()
         self.refiner_swap_method = args.pop()
         self.controlnet_softness = args.pop()
-        self.freeu_enabled = args.pop()
-        self.freeu_b1 = args.pop()
-        self.freeu_b2 = args.pop()
-        self.freeu_s1 = args.pop()
-        self.freeu_s2 = args.pop()
+        self.freeu_enabled, self.freeu_b1, self.freeu_b2, self.freeu_s1, self.freeu_s2 = common.freeu_settings
         self.debugging_inpaint_preprocessor = args.pop()
         self.inpaint_disable_initial_latent = args.pop()
         self.inpaint_engine = args.pop()
@@ -131,19 +142,27 @@ class AsyncTask:
         self.translation_methods = self.params_backend.pop('translation_methods')
         self.comfyd_active_checkbox = self.params_backend.pop('comfyd_active_checkbox')
 
-        self.save_final_enhanced_image_only = args.pop() if not config.disable_image_log else False
-        self.save_metadata_to_images = args.pop() if not args_manager.args.disable_metadata else False
-        meta_scheme = args.pop()
-        if meta_scheme != 'a1111':
-            meta_scheme = 'simple'
-        self.metadata_scheme = MetadataScheme(meta_scheme)
+        self.save_final_enhanced_image_only = config.default_save_only_final_enhanced_image
+
+        if args_manager.args.disable_metadata:
+            self.save_metadata_to_images = False
+            self.metadata_scheme = MetadataScheme('simple')
+        else:
+            self.save_metadata_to_images = config.default_save_metadata_to_images
+
+            # Use the specific logic for the scheme
+            scheme_name = getattr(config, 'default_metadata_scheme', 'simple')
+            if scheme_name != 'a1111':
+                scheme_name = 'simple'
+            self.metadata_scheme = MetadataScheme(scheme_name)
 
         self.cn_tasks = {x: [] for x in ip_list}
-        for _ in range(config.default_controlnet_image_count):
-            cn_img = args.pop()
-            cn_stop = args.pop()
-            cn_weight = args.pop()
-            cn_type = args.pop()
+        for slot in config.ip_slots:
+            cn_img = slot['image']
+            cn_stop = slot['stop']
+            cn_weight = slot['weight']
+            cn_type = slot['type']
+
             if cn_img is not None:
                 self.cn_tasks[cn_type].append([cn_img, cn_stop, cn_weight])
 
@@ -151,7 +170,7 @@ class AsyncTask:
         self.dino_erode_or_dilate = args.pop()
         self.debugging_enhance_masks_checkbox = args.pop()
 
-        self.enhance_input_image = args.pop()
+        self.enhance_input_image = common.enhance_image_buffer
         self.enhance_checkbox = args.pop()
         self.enhance_uov_method = args.pop()
         self.enhance_uov_processing_order = args.pop()
@@ -204,7 +223,7 @@ class AsyncTask:
             self.task_class = common.default_engine.get("backend_engine")
             self.task_method = common.default_engine.get("backend_params", {}).get("task_method")
         #print(f'task_class={self.task_class}, task_name={self.task_name}, task_method={self.task_method}')
-        if 'layer' in self.current_tab and self.task_class == 'Fooocus' and self.input_image_checkbox:
+        if self.iclight_enable:
             self.task_class = 'Comfy'
             self.task_name = 'default'
             self.task_method = self.layer_method
@@ -263,7 +282,6 @@ def worker():
     import enhanced.version as version
 
     from datetime import datetime
-    from enhanced.translator import interpret
     from extras.censor import default_censor
     from modules.ar_util import AR_split
     from modules.sdxl_styles import apply_style, get_random_style, fooocus_expansion, apply_arrays, random_style_name
@@ -427,7 +445,7 @@ def worker():
                 imgs = empty_path
                 current_progress = int(base_progress + (100 - preparation_steps) / float(all_steps) * steps)
                 yield_result(async_task, empty_path, current_progress, async_task.black_out_nsfw, False,
-                     do_not_show_finished_images=not show_intermediate_results or async_task.disable_intermediate_results)
+                    do_not_show_finished_images=not show_intermediate_results)
                 return imgs, [], current_progress
 
         else:
@@ -468,7 +486,7 @@ def worker():
         progressbar(async_task, current_progress, interpret(f'Saving image {current_task_id + 1}/{total_count} to system...', '', True))
         img_paths = save_and_log(async_task, height, imgs, task, use_expansion, width, loras, persist_image)
         yield_result(async_task, img_paths, current_progress, async_task.black_out_nsfw, False,
-            do_not_show_finished_images=not show_intermediate_results or async_task.disable_intermediate_results)
+            do_not_show_finished_images=not show_intermediate_results)
         return imgs, img_paths, current_progress
 
     def apply_patch_settings(async_task):
@@ -796,8 +814,9 @@ def worker():
         prompts = remove_empty_str([safe_str(p) for p in prompt.splitlines()], default='')
         negative_prompts = remove_empty_str([safe_str(p) for p in negative_prompt.splitlines()], default='')
         prompt = prompts[0]
-        if (prompt == '') and (async_task.current_tab == 'ip'):
-            # disable Fooocus V2 expansion when the prompt is empty and Image Prompt is in use
+        # disable Fooocus V2 expansion when the prompt
+        # is empty and Image Prompt is in use
+        if (prompt == '') and (async_task.current_tab == 'ip') and async_task.input_image_checkbox:
             use_expansion = False
 
         extra_positive_prompts = prompts[1:] if len(prompts) > 1 else []
@@ -1179,7 +1198,7 @@ def worker():
                 uov_image_path = log(img, d, output_format=async_task.output_format, persist_image=persist_image)
                 yield_result(async_task, uov_image_path, current_progress,
                     async_task.black_out_nsfw, False,
-                    do_not_show_finished_images=not show_intermediate_results or async_task.disable_intermediate_results)
+                    do_not_show_finished_images=not show_intermediate_results)
                 return current_progress, img, prompt, negative_prompt
 
         if 'inpaint' in goals and inpaint_parameterized:
@@ -1300,7 +1319,7 @@ def worker():
         elif async_task.performance_selection == Performance.Hyper_SD:
             set_hyper_sd_defaults(async_task, current_progress, advance_progress=True)
 
-        interpret('[Worker] Aspect Ratio =', async_task.aspect_ratios_selection)
+        interpret('[Worker] Resolution =', async_task.aspect_ratios_selection)
         interpret('[Worker] Adaptive CFG =', async_task.adaptive_cfg)
         interpret('[Worker] CLIP Skip =', async_task.clip_skip)
         interpret('[Worker] Sharpness =', async_task.sharpness)
@@ -1427,8 +1446,7 @@ def worker():
             height, width, _ = async_task.enhance_input_image.shape
             # input image already provided, processing is skipped
             steps = 0
-            yield_result(async_task, async_task.enhance_input_image, current_progress, async_task.black_out_nsfw, False,
-                         async_task.disable_intermediate_results)
+            yield_result(async_task, async_task.enhance_input_image, current_progress, async_task.black_out_nsfw, False)
 
         all_steps = steps * async_task.image_quantity
 
@@ -1459,7 +1477,7 @@ def worker():
         interpret('[Worker] Initial Latent shape =', log_shape)
 
         preparation_time = time.perf_counter() - preparation_start_time
-        interpret('Preparation time in seconds:', f'{preparation_time}:.2f')
+        interpret('Preparation time in seconds:', f'{preparation_time:.2f}')
 
         final_scheduler_name = patch_samplers(async_task)
         interpret('Using scheduler:', final_scheduler_name)
@@ -1525,6 +1543,7 @@ def worker():
 
         show_intermediate_results = len(tasks) > 1 or async_task.should_enhance
         persist_image = not async_task.should_enhance or not async_task.save_final_enhanced_image_only
+
 
         for current_task_id, task in enumerate(tasks):
             print()
@@ -1597,6 +1616,7 @@ def worker():
             if enhance_uov_before:
                 current_task_id += 1
                 persist_image = not async_task.save_final_enhanced_image_only or active_enhance_tabs == 0
+
                 current_task_id, done_steps_inpainting, done_steps_upscaling, img, exception_result = enhance_upscale(
                     all_steps, async_task, base_progress, callback, controlnet_canny_path, controlnet_cpds_path,
                     current_task_id, denoising_strength, done_steps_inpainting, done_steps_upscaling, enhance_steps,
@@ -1617,6 +1637,7 @@ def worker():
                 enhancement_task_start_time = time.perf_counter()
                 is_last_enhance_for_image = (current_task_id + 1) % active_enhance_tabs == 0 and not enhance_uov_after
                 persist_image = not async_task.save_final_enhanced_image_only or is_last_enhance_for_image
+
 
                 enhance_mask_dino_prompt_text = translator.translate(enhance_mask_dino_prompt_text, True)
                 enhance_prompt = translator.translate(enhance_prompt, True)
@@ -1649,8 +1670,7 @@ def worker():
 
                 if async_task.debugging_enhance_masks_checkbox:
                     async_task.yields.append(['preview', (current_progress, 'Loading...', mask)])
-                    yield_result(async_task, mask, current_progress, async_task.black_out_nsfw, False,
-                                 async_task.disable_intermediate_results)
+                    yield_result(async_task, mask, current_progress, async_task.black_out_nsfw, False)
                     async_task.enhance_stats[index] += 1
 
                 interpret('Enhance boxes detected;', dino_detection_count)

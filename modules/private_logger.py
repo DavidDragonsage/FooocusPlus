@@ -22,7 +22,7 @@ def get_current_html_path(output_format=None):
 
 
 def log(img, metadata, metadata_parser: MetadataParser | None = None, output_format=None, task=None, persist_image=True) -> str:
-    path_outputs = config.temp_path if config.disable_image_log or not persist_image else config.path_outputs
+    path_outputs = config.temp_path if not persist_image else config.path_outputs
     output_format = output_format if output_format else config.default_output_format
     date_string, local_temp_filename, only_name = generate_temp_filename(folder=path_outputs, extension=output_format)
     os.makedirs(os.path.dirname(local_temp_filename), exist_ok=True)

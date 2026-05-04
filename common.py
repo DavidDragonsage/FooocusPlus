@@ -5,48 +5,75 @@ from pathlib import Path
 GRADIO_ROOT = None
 MODELS_INFO = None
 
+# ROOT is used as a constant that
+# is referenced by several modules
+ROOT = str(Path.cwd())
+
 # tracks update events
 # set by entry_with_update, checked by webui
 # and processed by enhanced.version.announce_version()
 # 0 = no change, 1 = hotfix, 2 = new version
 version_update = 0
 
-# Store the current prompts and image quantity
-# used to restore prompts after a preset change clears them
-# Both prompts are initialized by config.txt via modules.config
-# The positive prompt is set by UIS.prompt_token_prediction()
-# via webui.calculateTokenCounter()
-# The negative prompt is set by webui.set_negative_prompt()
-# UIS.reset_layout_params() preserves both values
-# PR.parse_prompts_from_preset() and preset_support.parse_meta_from_preset()
-# updates the prompts with preset values, if any
-# and PR.set_preset_selection() updates the UI with the preset values
-positive = ''
-negative = ''
-image_quantity = 4
+# set in UIS.process_before_generation() and
+# clear it in UIS.process_after_generation()
+# currently used to prevent audio randomization
+is_generating = False
 
-# ROOT is used as a constant that
-# is referenced by several modules
-ROOT = str(Path.cwd())
+# Common support for black_out_nsfw
+# if the config setting is False,
+# the UI cannot override it.
+# Initialized by config,
+# may be set to False by webui,
+# read by async_worker
+black_out_nsfw = False
 
+# Monitor the Input Image tabs:
+# initialized by config,
+# updated by webui,
+# read by ui_support and async_worker
+current_tab_name = 'uov'
 
-# Additional parameters recovered from errors in the system dictionary
-# likely caused by malfunctioning Gradio functions, especially "state"
-# Set by modules.config
-# Updated by preset_support.parse_meta_from_preset(preset_content)
-# and also by preset_resource, webui set_slider_switch(x) and dropdowns
-# Used by modules.async_worker and enhanced.toolbox
-sampler_name = 'dpmpp_2m_sde_gpu'
-scheduler_name = 'karras'
-refiner_slider = 0.6
+# Monitor the Features tabs:
+# updated by webui
+# read by ui_support and async_worker
+# The first tab, Image Editor, is the default
+features_tab_name = 'edit'
+# updated by webui, read by async_worker:
+features_checkbox = False
+
+# The image buffer collection:
+# stored and cleared by webui
+# and/or ui_support,
+# read by aysnc_worker
+uov_image_buffer = None
+inpaint_image_buffer = None
+inpaint_mask_buffer = None
+enhance_image_buffer = None
+layer_image_buffer = None
+
+# Inpainting controls
+# set by webui, read by async_worker
+inpaint_additional_prompt = ""
+outpaint_selections = []
+
+# Inpainting masking mode
+# set by ui_support, read by async_worker
+# True = Auto-Masking, False = Manual
+is_auto_masking = False
+
+# Common support for miscellaneous controls
+# set by webui, read by async_worker
+iclight_source_radio = 'Top Left Light'
+disable_preview = False
 
 # Common support for Translator & Wildcards
 prompt_translator = True
+read_wildcards_in_order = False
 wildcard_lines_to_interpret = 50
 
-# Aspect Ratio support in neutral (common) ground
-# set by modules.aspect_ratios
-current_AR = '0*0'
+# the current resolution is set by modules.aspect_ratios
+resolution = '0*0'
 full_AR_labels = []
 
 # Used with webui "Make New Preset"
@@ -55,11 +82,11 @@ full_AR_labels = []
 # used by enhanced.toolbox.save_preset()
 AR_preset_save = False
 
-# Preset support in neutral (common) ground
-# set by modules.config
-default_bar_category = 'Favorite'
-preset_bar_length = 8
-is_low_vram_preset = False
+# set by webui to control
+# UIS.reset_layout_parameters
+len_preset_layout = 0
+len_preset_func = 0
+len_data_outputs = 0
 
 # used to ensure template update to SD1.5 in meta_parser.get_resolution()
 # this value is updated by PR.find_preset_file()
@@ -90,3 +117,25 @@ base_meta = ''
 # batch_count is set by webui.set_batch_count() to determine
 # how many times to run the generative cycle
 batch_count = 1
+
+# FreeU controls initialized by config,
+# updated by webui and read by async_worker
+freeu_settings = [False, 1.01, 1.02, 0.99, 0.95]
+
+# performance selection initialized by config,
+# updated by webui and read by async_worker
+performance_selection = 'Speed'
+
+# seed controls set by webui
+# disable_seed_increment and saved_seed are read by async_worker
+disable_seed_increment = False # alias Freeze Seed
+image_seed = '0'        # initialize working seed
+saved_seed = '0'        # initialize seed saver
+
+# Expert Tool settings
+# set by webui, read by async_worker
+adm_scaler_positive = 1.5
+adm_scaler_negative = 0.8
+adm_scaler_end = 0.3
+
+

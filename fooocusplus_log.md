@@ -1,3 +1,59 @@
+# 1.1.0 Improved Image Catalog Control, Logo Welcome Option & Reliability Upgrades
+
+* contains some features retrofitted from the Gradio 5.5 project
+* introduced a Catalog Control accordion, under the Advanced tab
+  * including:
+  * Enable the Images Catalog
+  * Quantity of Catalog Pages
+  * Quantity of Images per Page
+  * Copy Prompts While Switching Images
+  * Enable Catalog Toolbox
+* a dynamic Logo can be used as the Welcome image
+  * under Extras, select "Use Logo Welcome Image" to enable
+  * uses file manipulation, so a config.txt option is not needed
+* simplified webui/async_worker data transfers
+  * 156 items, including lists, were involved in stack transfers
+  * the stack transfers has been reduced by 50% to 78 items
+  * config and common shared variables replaced stack transfers
+  * improves maintainability, readability, reliability & efficiency
+  * in the worst case, images were transferred through the stack
+  * stack image transfers created two extra duplicates in memory
+  * both system RAM and VRAM (indirectly) were consumed unnecessarily
+* improved UI stability by enforcing rational Python indentation
+  * most event handlers and helpers were moved out of UI inline coding
+* debugged and improved Image Editor controls, especially transparency
+  * transparency controls preview immediately
+  * transparency only activates when Apply Transparency is selected
+  * the new Restore Original button returns your input image
+* if appropriate, used release event handlers to improve stability
+* fixed bug with disable_image_log preventing image generation
+* re-enabled the Metadata Scheme selector
+* restored jpeg and webp file save formats
+* debugged and improved Preset loading, especially during startup
+* in the Inpainter, Mask Erode or Dilate is now always available
+* fixed bug with IC-Light not working and causing Input Image errors
+* simplified and improved the IC-Light user interface
+  * removed the Layer Method and Enable options from the UI
+  * improved prompt formatting
+  * enabling IC-Light no longer forces 1024x1024 resolution
+* introduced the Refiners preset category for refiner based presets
+  * moved SDXL from the General category to Refiners
+* introduced the Elsewhere-J9 preset for more realistic faces
+  * uses the Elsewhere base model with Juggernaut9 as the refiner
+  * the Elsewhere-J9 preset is located in the Refiners category
+* similarly, the Magick-J9 provides realistic fantasy
+  * it uses the Magick base model with Juggernaut9 as the refiner
+* and lastly, Elsewhere-SD1.5 provides SD1.5 access without Comfy
+  * ElsewhereXL is the base model with RealisticVision as refiner
+* replaced "Aspect Ratio" label with "Resolution | Aspect Ratio"
+* clarified Inpaint mode descriptions
+* deleted the Remove the Disable Intermediate Results option
+  * it was inoperative & redundant, use Disable Preview instead
+* the ADM Scaler controls are moved to the end of Expert Tools
+* Release Date: May 4th, 2026<br/>
+* Hotfix0: <br/><br/>
+
+
 # 1.0.9 Add/Remove to/from Favourites, Batch Generation, Image Editor, Image Grids, Image Recovery, New Styles & UI Popup Messages
 
 * introduced Add/Remove Current Preset to/from Favorites
@@ -90,6 +146,7 @@
   * removed the Gradio footer as it was conveying no useful information
 * Tech Note: "special" enhanced.toolbox CSS moved to standard style.css file
 * Release Date: December 23rd, 2025<br/>
+* Hotfix16: Introduced a bugfix for the newest RTX 50xx GPUs
 * Hotfix15: To avoid CivitAI problems, all presets download from Hugging Face
 * Hotfix14: Bugfix for multiple LoRAs and LoRA Inpainting
   * also fixed "Click Twice to Generate" bug

@@ -5,7 +5,7 @@ import modules.constants as constants
 from enhanced.translator import interpret
 
 
-# Initialize the the current aspect ratio template
+# Initialize the the current resolution template
 def AR_template_init():
     global AR_template
     if common.task_method == 'SD_SIMPLE':
@@ -29,7 +29,7 @@ def assign_default_by_template(template):
 def do_the_split(x):
     try:
         x = x.replace("x","*") # entries in config.txt that use "x" instead of "*"
-        x = x.replace("×","*") # webui aspect ratio selector uses the raised "×"
+        x = x.replace("×","*") # webui resolution selector uses the raised "×"
         width, height = x.replace('*', ' ').split(' ')[:2]
         test_width = int(width)
         test_height = int(height)
@@ -66,8 +66,8 @@ def find_the_height(arg_width):
             AR_pair = '1152*864'    # 4:3
         elif AR_pair == '1344*768': # 7:4
             AR_pair = '1344*756'    # 16:9
-        interpret('[AR Util] Restoring the aspect ratio:', AR_pair)
-        common.current_AR = AR_pair
+        interpret('[AR Util] Restoring the resolution:', AR_pair)
+        common.resolution = AR_pair
         split_value = AR_pair.split('*')
         width = split_value[0]
         height = split_value[1]
@@ -83,13 +83,13 @@ def AR_split(x):
         if height != '':
             return width, height
     if (width == '') or (height == ''):
-        width, height = do_the_split(common.current_AR)
+        width, height = do_the_split(common.resolution)
         if (width == '') or (height == ''):
-            common.current_AR = assign_default_by_template(AR_template)
-            width, height = do_the_split(common.current_AR)
+            common.resolution = assign_default_by_template(AR_template)
+            width, height = do_the_split(common.resolution)
             print()
-            interpret('[AR Util] Reverting to the default aspect ratio:', common.current_AR)
+            interpret('[AR Util] Reverting to the default resolution and aspect ratio:', common.resolution)
         else:
             print()
-            interpret('[AR Util] Adjusting the aspect ratio value to:', common.current_AR)
+            interpret('[AR Util] Adjusting the resolution and aspect ratio value to:', common.resolution)
     return width, height

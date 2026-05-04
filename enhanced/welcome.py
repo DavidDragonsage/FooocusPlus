@@ -1,51 +1,21 @@
 import os
-import modules.config
 import glob
-import modules.user_structure as US
-import modules.util as util
 import numpy as np
 import random
 import time
-from args_manager import args
-from enhanced.translator import interpret
+import uuid
+
 from pathlib import Path
-from PIL import Image
+from PIL import Image, ImageFilter, ImageOps
 
-user_dir = Path(args.user_dir).resolve()
-
-def get_welcome_image():
-    path_welcome = Path(user_dir/'welcome_images').resolve()
-    path_logo = Path(path_welcome/'FooocusPlus_logo.png').resolve()
-    path_default_welcome = Path(path_welcome/'control_images/welcome.png').resolve()
-
-    welcomes = US.list_files_by_patterns(path_welcome,
-        pattern1='*.png', pattern2='')
-    if welcomes:
-        if path_logo.is_file():
-            # when the fill_background code is ready, activate this line:
-            # path_logo = fill_background_png(path_logo, 1344, 756)
-            return path_logo
-        else:
-            file_welcome = Path(path_welcome/random.choice(welcomes)).resolve()
-            return file_welcome
-
-    welcomes = US.list_files_by_patterns(path_welcome,
-        pattern1='*.jpg', pattern2='*.jpeg')
-    if welcomes:
-        file_welcome = Path(path_welcome/random.choice(welcomes)).resolve()
-        return file_welcome
-
-    if path_default_welcome.is_file():
-        return path_default_welcome
-    else:
-        print()
-        interpret('[Welcome] ERROR: Cannot find', path_default_welcome)
-        interpret('in', Path(user_dir/'control_images').resolve())
-        print()
-    return ''
+import modules.config as config
+import modules.user_structure as US
+import modules.util as util
+from enhanced.translator import interpret
+from modules.config import user_dir
 
 
-# color database
+# colour database
 def get_colors():
     rgb_values = (
         [0,0,0],
@@ -73,102 +43,161 @@ def get_colors():
 def generate_background(width, height):
     (colorA, colorB) = get_colors()
 
-    # we always generate square to avoid tensor errors
-    # size increases to improve output quality on resize
-    size_width = width * 2
-    size_height = size_width
-    axis = size_width
+    # create the 1D gradient line for each channel
+    # use np.linspace to interpolate between
+    # colorA and colorB
+    r_line = np.linspace(colorA[0], colorB[0], width, dtype=np.uint8)
+    g_line = np.linspace(colorA[1], colorB[1], width, dtype=np.uint8)
+    b_line = np.linspace(colorA[2], colorB[2], width, dtype=np.uint8)
 
-    gradient = np.zeros((size_height, size_width, 3), np.uint8)
-    randomizer = random.sample(range(0, 100), 1)
-    if (randomizer[0] % 2) == 0:
-        axis = size_height
-    else:
-        axis = size_width
+    # stack the 1D lines to fill the height
+    # np.tile repeats the gradient for each row
+    r_2d = np.tile(r_line, (height, 1))
+    g_2d = np.tile(g_line, (height, 1))
+    b_2d = np.tile(b_line, (height, 1))
 
-    # Fill R, G and B channels with linear gradient between two end colours
-    gradient[:,:,0] = np.linspace(colorA[0], colorB[0], axis, dtype=np.uint8)
-    gradient[:,:,1] = np.linspace(colorA[1], colorB[1], axis, dtype=np.uint8)
-    gradient[:,:,2] = np.linspace(colorA[2], colorB[2], axis, dtype=np.uint8)
+    # Combine the three 2D channels into a single RGB array
+    gradient = np.stack([r_2d, g_2d, b_2d], axis=-1)
+
     background_rgb = Image.fromarray(gradient, 'RGB')
 
-    # different gradient direction on some generations
-    randomizer = random.sample(range(0, 100), 1)
-    if (randomizer[0] % 2) == 0:
-        background_rgb = background_rgb.rotate(90)
+    # randomly rotate to vary the gradient direction
+    # (Horizontal vs Vertical)
+    if random.choice([True, False]):
+        background_rgb = background_rgb.rotate(90, expand=True).resize((width, height))
 
-    # resize to requested resolution
-    background_rgb = background_rgb.resize((width, height), Image.LANCZOS)
     return background_rgb
+
 
 # pil image paste
 def add_foreground(background, foreground):
     foreground_file = Path(foreground).resolve()
-    foreground_rgb = Image.open(foreground_file).convert("RGBA")
+    foreground_rgba = Image.open(foreground_file).convert("RGBA")
 
     composite = background.convert("RGBA")
-    bg_width, bg_height = composite.size
-    foreground_width, foreground_height = foreground_rgb.size
+    bg_w, bg_h = composite.size
 
-    width_max = bg_width / 3
-    height_max = bg_height / 2.25
+    # --- resizing ---
+    width_max = bg_w / 3
+    fg_w, fg_h = foreground_rgba.size
 
-    if bg_height > bg_width:
-        test_width = bg_height
-        test_max = height_max
-    else:
-        test_width = bg_width
-        test_max = width_max
+    if fg_w > width_max:
+        scale = fg_w / width_max
+        foreground_rgba = foreground_rgba.resize((int(fg_w / scale), int(fg_h / scale)), Image.LANCZOS)
+        fg_w, fg_h = foreground_rgba.size
 
-    if test_width > test_max:
-        resize_scale = foreground_width / test_max
-        resize_width = int(foreground_width / resize_scale)
-        resize_height = int(foreground_height / resize_scale)
-        foreground_rgb = foreground_rgb.resize((resize_width, resize_height), Image.LANCZOS)
-        foreground_width, foreground_height = foreground_rgb.size
+    # --- random rotation & shadow variables ---
+    is_rotated = False
+    shadow_opacity = 160  # Default subtle shadow
+    shadow_offset = 5     # Default close-to-surface offset
 
-    if bg_height > bg_width:
-        # put the foreground in the centre
-        margin_horizontal = int((bg_width - foreground_width) / 2)
-        margin_vertical = int(height_max / 5)
-    else:
-        # put the foreground on the right hand side
-        margin_horizontal = int(width_max / 10)
-        margin_vertical = int(height_max / 10)
+    if random.random() < 0.25:
+        is_rotated = True
+        angle = random.uniform(-30, 30)
+        foreground_rgba = foreground_rgba.rotate(angle, resample=Image.BICUBIC, expand=True)
+        fg_w, fg_h = foreground_rgba.size
 
-    paste_horizontal = bg_width - foreground_width - margin_horizontal
-    paste_vertical = bg_height - foreground_height - margin_vertical
+        # Refine shadow for "lifted sticker" effect
+        shadow_opacity = 210  # Darker
+        shadow_offset = 8     # Deeper lift
 
-    composite.paste(foreground_rgb, (paste_horizontal, paste_vertical), mask=foreground_rgb)
+    # --- random placement ---
+    limit_x = max(0, bg_w - fg_w)
+    limit_y = max(0, bg_h - fg_h)
+
+    paste_x = random.randint(0, limit_x)
+    paste_y = random.randint(0, limit_y)
+
+    # --- shadow logic ---
+    alpha = foreground_rgba.split()[-1]
+
+    # make shadow with opacity based on rotation
+    # (0,0,0, shadow_opacity) sets the darkness level
+    shadow = ImageOps.colorize(alpha, black="black", white="black")
+
+    # adjust shadow transparency using point logic
+    shadow_alpha = alpha.point(lambda p: p * (shadow_opacity / 255))
+    shadow.putalpha(shadow_alpha)
+
+    shadow = shadow.filter(ImageFilter.GaussianBlur(radius=8))
+
+    # paste shadow (with offset) then Logo
+    composite.paste(shadow, (paste_x + shadow_offset, paste_y + shadow_offset), mask=shadow)
+    composite.paste(foreground_rgba, (paste_x, paste_y), mask=foreground_rgba)
+
     return composite
 
-def fill_background_png(filename, width, height):
-    splash_bg = generate_background(width, height)
-    splash_full = add_foreground(splash_bg, filename)
-    return splash_full
 
-def test_splash(width, height):
-    test_image = splashscreen(width, height, 'foreground.png')
-    test_timestamp = time.strftime("%Y%m%d-%H%M%S")
-    test_filename = (test_timestamp + '_' + str(width) + '_' + str(height) + '.png')
-    test_image.save(test_filename, format="png", quality=100)
+def process_dynamic_logo(logo_file, width, height):
+    try:
+        # 1. generate the gradient background
+        splash_bg = generate_background(width, height)
 
-def test_desktop_splash():
-    test_splash(1344, 752)
+        # 2. add the foreground logo
+        # add_foreground handles the Image.open
+        # and the pasting logic
+        composite = add_foreground(splash_bg, logo_file)
 
-def test_welcome_image(is_mobile=False):
-    # define the size
-    width = 1152
-    height = 896
-    # get the foreground file ready
-    path_foreground = os.path.join(root, 'foreground.png') # need to put the foreground png someplace
-    # generate the temporary filename
-    splash_timestamp = time.strftime("%Y%m%d-%H%M%S")
-    splash_filename = (splash_timestamp + '_' + str(width) + '_' + str(height) + '.png')
-    path_splash = os.path.join(args.temp_path, splash_filename)
-    # generate and save the temporary file
-    splash_image = splashscreen(width, height, path_foreground)
-    splash_image.save(path_splash, format="png", quality=100)
-    # return the path to the ui
-    return path_splash
+        # 3. define the save path
+        # This creates a name like dynamic_welcome_7a1b.png
+        unique_suffix = str(uuid.uuid4())[:4]
+        save_path = Path(user_dir) / 'control_images' / f'dynamic_welcome_{unique_suffix}.png'
 
+        # 4. Cleanup: Delete any OLD dynamic_welcome
+        # images before saving the new one
+        for old_file in (Path(user_dir) / 'control_images').glob('dynamic_welcome_*.png'):
+            try:
+                old_file.unlink(missing_ok=True)
+            except:
+                pass # avoid errors if file is currently being read by Gradio
+
+        # 4. save & return the posix path for Gradio 5
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        composite.save(save_path, format="PNG")
+        return save_path.resolve().as_posix()
+
+    except Exception as e:
+        interpret(f'[Welcome] Logo Error: {str(e)}')
+        # if the dynamic generation fails,
+        # return the raw logo as a backup
+        # or return an empty string as the
+        # final UIS fallback.
+        if Path(logo_file).is_file():
+            return Path(logo_file).resolve().as_posix()
+        return ''
+
+
+def get_welcome_image():
+    path_welcome = Path(user_dir/'welcome_images').resolve()
+    path_logo = (path_welcome/'FooocusPlus_logo.png').resolve()
+    path_default_welcome = (path_welcome/'control_images/invisible_welcome.png').resolve()
+
+    # check PNGs
+    welcomes = US.list_files_by_patterns(path_welcome, ['*.png'])
+    if welcomes:
+        if path_logo.is_file():
+            # This returns the .as_posix() path of the composite image
+            return process_dynamic_logo(path_logo, 1400, 900)
+        else:
+            return (path_welcome / random.choice(welcomes)).resolve().as_posix()
+
+    # check JPEGs
+    welcomes = US.list_files_by_patterns(path_welcome, patterns=['*.jpg', '*.jpeg'])
+    if welcomes:
+        return (path_welcome / random.choice(welcomes)).resolve()
+
+    # default fallback
+    if path_default_welcome.is_file():
+        return path_default_welcome
+
+    # error report
+    print(f"\n[Welcome] ERROR: Cannot find {path_default_welcome}\n")
+    return ''
+
+
+def check_active_logo():
+    logo_bool = False
+    logo_path = Path(config.user_dir / 'welcome_images' / 'FooocusPlus_logo.png')
+    if US.exists_file(logo_path):
+        logo_bool = True
+    return logo_bool

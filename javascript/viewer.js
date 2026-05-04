@@ -1,5 +1,41 @@
 window.main_viewer_height = 512;
 
+
+refresh_finished_images_catalog_label = function(translated_string) {
+    if (!translated_string || translated_string === "") return;
+
+    var attemptUpdate = function() {
+        var accordion = document.querySelector('#finished_images_catalog');
+        if (!accordion) return false;
+
+        // Gradio 3 specifically likes to hide label text in .label or the first span
+        var label = accordion.querySelector('.label span') ||
+                    accordion.querySelector('.label') ||
+                    accordion.querySelector('span');
+
+        if (label && label.textContent !== translated_string) {
+            label.textContent = translated_string;
+            console.log("[UI Support] Startup Label Success: " + translated_string);
+            return true;
+        }
+        return false;
+    };
+
+    // Run immediately
+    if (attemptUpdate()) return;
+
+    // If it fails (DOM not ready), try again every 500ms for 3 seconds
+    var count = 0;
+    var interval = setInterval(function() {
+        count++;
+        if (attemptUpdate() || count > 6) {
+            clearInterval(interval);
+        }
+    }, 500);
+};
+window.refresh_finished_images_catalog_label = refresh_finished_images_catalog_label;
+
+
 function refresh_grid() {
     let gridContainer = document.querySelector('#final_gallery .grid-container');
     let final_gallery = document.getElementById('final_gallery');

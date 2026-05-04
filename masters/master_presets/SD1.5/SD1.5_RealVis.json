@@ -46,7 +46,7 @@
 	"Fooocus Enhance"
 ],
 "default_aspect_ratio": "0*0",
-"checkpoint_downloads": {"SD1.5/realisticVisionV60B1_v51VAE.safetensors": "https://civitai.com/api/download/models/245598?type=Model&format=SafeTensor&size=pruned&fp=fp16"},
+"checkpoint_downloads": {"SD1.5/realisticVisionV60B1_v51VAE.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/realisticVisionV60B1_v51VAE.safetensors"},
 "embeddings_downloads": {},
 "lora_downloads": {}
 }

@@ -195,6 +195,7 @@ def cleanup_temp_files():
     print()
     return
 
+
 def save_image_grid(recover=False):
     print()
     success = False
@@ -218,10 +219,39 @@ def save_image_grid(recover=False):
             print()
     return success
 
+
+def is_valid_image(image_data):
+    """
+    Checks if an image (NumPy array or Gradio dictionary)
+    contains any non-black pixels.
+    """
+    if image_data is None:
+        return False
+
+    # Handle Gradio Sketch/Image Dictionary
+    if isinstance(image_data, dict):
+        # We iterate through potential data keys.
+        # If a key exists but is all zeros, we keep looking!
+        for key in ['composite', 'mask', 'image']:
+            val = image_data.get(key)
+            if val is not None and isinstance(val, np.ndarray):
+                if np.any(val > 0):
+                    return True
+
+        # If we checked all keys and found only None or Zeros
+        return False
+
+    # Handle raw NumPy array
+    if isinstance(image_data, np.ndarray):
+        return np.any(image_data > 0)
+
+    return False
+
+
 def recover_images():
     success = save_image_grid(True)
     file_list = US.list_files_by_patterns(config.temp_path,
-        pattern1='*.*', pattern2='')
+        ['*.*'])
     image_list = US.list_files_excluding(file_list, ['image.png'])
     if image_list:
         date_string, file_dest, only_name = generate_temp_filename(f'{config.path_outputs}/', '')

@@ -69,7 +69,7 @@ default_vae = 'Default (model)'
 refiner_swap_method = 'joint'
 
 default_input_image_tab = 'uov_tab'
-input_image_tab_ids = ['uov_tab', 'ip_tab', 'inpaint_tab', 'enhance_tab', 'layer_tab']
+input_image_tab_ids = ['uov_tab', 'ip_tab', 'inpaint_tab', 'enhance_tab']
 
 cn_ip = "ImagePrompt"
 cn_ip_face = "FaceSwap"
@@ -95,10 +95,16 @@ inpaint_mask_cloth_category = ['full', 'upper', 'lower']
 inpaint_mask_sam_model = ['vit_b', 'vit_l', 'vit_h']
 
 inpaint_engine_versions = ['None', 'v2.5', 'v2.6']
-inpaint_option_default = 'Inpaint or Outpaint (default)'
+inpaint_option_default = 'Inpaint Default (blend) or Outpaint (extend)'
 inpaint_option_detail = 'Improve Detail (face, hand, eyes, etc.)'
-inpaint_option_modify = 'Modify Content (add objects, change background, etc.)'
+inpaint_option_modify = 'Modify Content (add objects, replace background, etc.)'
 inpaint_options = [inpaint_option_default, inpaint_option_detail, inpaint_option_modify]
+
+# legacy options for backward compatibility:
+legacy_inpaint_options = [
+    'Inpaint or Outpaint (default)',
+    'Modify Content (add objects, change background, etc.)'
+]
 
 describe_type_photo = 'Photograph'
 describe_type_anime = 'Art/Anime'

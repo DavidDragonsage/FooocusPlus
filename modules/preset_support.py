@@ -10,34 +10,57 @@ from modules.flags import scheduler_list, sampler_list
 
 
 def verify_sampler(arg_sampler):
+    # arg_sampler is valid
     if arg_sampler in sampler_list:
-        common.sampler_name = arg_sampler
-        return common.sampler_name
-    elif common.sampler_name in sampler_list:
-        pass
-    else:
-        common.sampler_name = config.default_sampler
+        config.default_sampler = arg_sampler
+        return config.default_sampler
+
+    # arg_sampler failed verification:
     interpret('[Preset Support] Sampler not verified:', arg_sampler)
-    return common.sampler_name
+    if config.default_sampler in sampler_list:
+        # fallback to current config
+        interpret('Using the config default instead:', config.default_sampler)
+    else:
+        # otherwise fallback to the most popular value:
+        config.default_sampler = 'dpmpp_2m_sde_gpu'
+        interpret('The sampler and config default values are invalid.')
+        interpret('Substituting with:', config.default_sampler)
+    print()
+
+    return config.default_sampler
+
 
 def verify_scheduler(arg_scheduler):
+    # arg_scheduler is valid
     if arg_scheduler in scheduler_list:
-        common.scheduler_name = arg_scheduler
-        return common.scheduler_name
-    elif common.scheduler_name in scheduler_list:
-        pass
-    else:
-        common.scheduler_name = config.scheduler_name
+        config.default_scheduler = arg_scheduler
+        return config.default_scheduler
+
+    # arg_scheduler failed verification:
     interpret('[Preset Support] Scheduler not verified:', arg_scheduler)
-    return common.scheduler_name
+    if config.default_scheduler in scheduler_list:
+        # fallback to current config
+        interpret('Using the config default instead:', config.default_scheduler)
+    else:
+        # otherwise fallback to the most popular value:
+        config.default_scheduler = 'karras'
+        interpret('The scheduler and config default values are invalid.')
+        interpret('Substituting with:', config.default_scheduler)
+    print()
+
+    return config.default_scheduler
 
 
 def parse_meta_from_preset(preset_content):
     preset_prepared = {}
     if not preset_content:
-        preset_content = common.load_metadata
-        print
-        print('Reloading log metadata')
+        print()
+        if common.log_metadata:
+            preset_content = common.log_metadata
+            interpret('[Preset Support] Reloading', common.log_metadata)
+        else:
+            interpret('[Preset Support] Could not find', 'metadata!')
+            return ''
 
     if common.metadata_loading:
         preset_content = common.log_metadata
@@ -46,9 +69,12 @@ def parse_meta_from_preset(preset_content):
     for settings_key, meta_key in config.possible_preset_keys.items():
         # for presets that do not have a default prompt or negative prompt
         # and almost all presets do not have an image quantity:
-        items.setdefault("default_prompt", common.positive)
-        items.setdefault("default_prompt_negative", common.negative)
-        items.setdefault("default_image_quantity", common.image_quantity)
+        items.setdefault("default_prompt",
+            config.default_prompt)
+        items.setdefault("default_prompt_negative",
+            config.default_prompt_negative)
+        items.setdefault("default_image_quantity",
+            config.default_image_quantity)
 
         if settings_key == "default_engine":
             try:
@@ -68,59 +94,70 @@ def parse_meta_from_preset(preset_content):
             loras = getattr(config, settings_key)
             if settings_key in items:
                 loras = items[settings_key]
+
             for index, lora in enumerate(loras[:config.default_max_lora_number]):
+                lora = list(lora)
+
                 if len(lora) == 2:
-                    lora[0] = lora[0].replace('\\', os.sep).replace('/', os.sep)
+                    lora[0] = str(lora[0]).replace('\\', os.sep).replace('/', os.sep)
                 elif len(lora) == 3:
-                    lora[1] = lora[1].replace('\\', os.sep).replace('/', os.sep)
+                    lora[1] = str(lora[1]).replace('\\', os.sep).replace('/', os.sep)
+
                 preset_prepared[f'lora_combined_{index + 1}'] = ' : '.join(map(str, lora))
 
         elif settings_key == "default_prompt":
             if items[settings_key]:
-                common.positive = items[settings_key]
+                config.default_prompt = items[settings_key]
                 interpret('[Preset Support] Positive prompt set by preset or metadata')
             else:
-                items[settings_key] = common.positive
+                items[settings_key] = config.default_prompt
+            preset_prepared[meta_key] = config.default_prompt
 
         elif settings_key == "default_prompt_negative":
             if items[settings_key]:
-                common.negative = items[settings_key]
+                config.default_prompt_negative = items[settings_key]
                 interpret(f'[Preset Support] Negative prompt set by preset or metadata')
             else:
-                items[settings_key] = common.negative
+                items[settings_key] = config.default_prompt_negative
+            preset_prepared[meta_key] = config.default_prompt_negative
 
         # do not do this during startup,
         # when called by init_config_preset()
         # only when switching presets,
         # when called by UIS.reset_layout_params()
-        elif settings_key == "default_aspect_ratio" and common.current_AR != '0*0':
+        elif settings_key == "default_aspect_ratio" and common.resolution != '0*0':
             if settings_key in items and (items[settings_key] is not None or items[settings_key] != '0*0'):
                 default_aspect_ratio = items[settings_key]
                 width, height = AR_split(default_aspect_ratio)
             else:
-                if common.current_AR:
-                    default_aspect_ratio = common.current_AR
+                if common.resolution:
+                    default_aspect_ratio = common.resolution
                 else:
                     if config.enable_shortlist_aspect_ratios:
                         default_aspect_ratio = config.default_shortlist_aspect_ratio
                     else:
                         default_aspect_ratio = config.default_standard_AR
-                    interpret('[Preset Support] Fallback to default aspect ratio:', default_aspect_ratio)
+                    interpret('[Preset Support] Fallback to the default resolution and aspect ratio:', default_aspect_ratio)
                 width, height = AR_split(default_aspect_ratio)
             preset_prepared[meta_key] = (width, height)
 
         elif settings_key == "default_refiner_switch":
             try:
-                common.refiner_slider = items[settings_key]
-            except:
-                if type(common.refiner_slider) != 'float':
-                    common.refiner_slider = config.default_refiner_switch
+                val = float(items[settings_key])
+                config.default_refiner_switch = val
+                preset_prepared[meta_key] = val
+            except (KeyError, ValueError, TypeError):
+                pass
 
         elif settings_key == "default_sampler" and not common.metadata_loading:
-            verify_sampler(items[settings_key])
+            val = items.get(settings_key, getattr(config, settings_key))
+            verify_sampler(val)
+            preset_prepared[meta_key] = val
 
         elif settings_key == "default_scheduler" and not common.metadata_loading:
-            verify_scheduler(items[settings_key])
+            val = items.get(settings_key, getattr(config, settings_key))
+            verify_scheduler(val)
+            preset_prepared[meta_key] = val
 
         elif settings_key not in items and settings_key in config.allow_missing_preset_key:
             continue
@@ -159,7 +196,7 @@ def init_config_preset():
         preset_prepared = parse_meta_from_preset(common.preset_content)
         default_model = preset_prepared.get('base_model')
         config.default_base_model_name = default_model
-        config.default_refiner_model_name = preset_prepared.get('refiner_model')
+        config.default_refiner = preset_prepared.get('refiner_model')
         config.default_loras = [get_lora_values(preset_prepared.get("lora_combined_1")),
             get_lora_values(preset_prepared.get("lora_combined_2")),
             get_lora_values(preset_prepared.get("lora_combined_3")),
@@ -167,8 +204,10 @@ def init_config_preset():
             get_lora_values(preset_prepared.get("lora_combined_5"))]
         config.default_cfg_scale = preset_prepared.get('guidance_scale')
         config.default_sample_sharpness = preset_prepared.get('sharpness')
-        config.default_sampler = common.sampler_name
-        config.default_scheduler = common.scheduler_name
+        config.default_sampler = preset_prepared.get(
+            'sampler', config.default_sampler)
+        config.default_scheduler = preset_prepared.get(
+            'scheduler', config.default_scheduler)
         config.default_cfg_tsnr = preset_prepared.get('adaptive_cfg')
         config.default_clip_skip = preset_prepared.get('clip_skip')
         config.default_overwrite_step = preset_prepared.get('steps')
@@ -200,26 +239,26 @@ def init_config_preset():
         if common.task_method == 'SD_SIMPLE':
             if config.default_aspect_ratio != '0*0':
                 config.default_sd1_5_aspect_ratio = config.default_aspect_ratio
-                common.current_AR = config.default_aspect_ratio
+                common.resolution = config.default_aspect_ratio
             else:
                 config.default_aspect_ratio = config.default_sd1_5_aspect_ratio
-                common.current_AR = config.default_sd1_5_aspect_ratio
+                common.resolution = config.default_sd1_5_aspect_ratio
         elif config.default_aspect_ratio != '0*0':
-            if common.current_AR == '0*0':
+            if common.resolution == '0*0':
                 if config.enable_shortlist_aspect_ratios:
                     config.default_shortlist_aspect_ratio = config.default_aspect_ratio
                 else:
                     config.default_standard_aspect_ratio = config.default_aspect_ratio
-            common.current_AR = config.default_aspect_ratio
+            common.resolution = config.default_aspect_ratio
         else:
             if config.enable_shortlist_aspect_ratios:
                 config.default_aspect_ratio = config.default_shortlist_aspect_ratio
             else:
                 config.default_aspect_ratio = config.default_standard_aspect_ratio
-            common.current_AR = config.default_aspect_ratio
+            common.resolution = config.default_aspect_ratio
 
         if flag_AR_default:
-            interpret('Using the default aspect ratio from', f'config.txt: {common.current_AR}')
+            interpret('Using the default resolution from', f'config.txt: {common.resolution}')
 
         config.default_aspect_ratio_values = [config.default_standard_aspect_ratio,
             config.default_shortlist_aspect_ratio,
@@ -231,6 +270,6 @@ def init_config_preset():
         import modules.aspect_ratios as AR
         AR.get_aspect_ratio_title(config.default_aspect_ratio_values)
     else:
-        common.is_low_vram_preset = False
+        config.default_low_vram_presets = False
         args.preset = 'Default'
     return

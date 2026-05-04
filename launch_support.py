@@ -204,11 +204,11 @@ def delete_torch_dependencies():
 def get_torch_base_path():
     global win32_root
     try:
-        user_dir_path = Path(args.user_dir)
+        user_path = Path(args.user_dir)
     except:
-        user_dir_path = Path(win32_root/'UserDir')
-        args.user_dir = user_dir_path
-    torch_base_path = Path(user_dir_path/'torch_base.txt')
+        user_path = Path(win32_root/'UserDir')
+        args.user_dir = user_path
+    torch_base_path = Path(user_path/'torch_base.txt')
     return torch_base_path
 
 def read_torch_base():     # the file auto-closes

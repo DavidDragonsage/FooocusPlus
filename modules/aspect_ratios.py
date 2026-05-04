@@ -11,15 +11,15 @@ from enhanced.translator import interpret
 
 # Used in the webui aspect_info textbox info field
 # Set by get_aspect_info_info()
-aspect_info_help = 'Vertical (9:16), Portrait (4:3), Landscape (3:2), Widescreen (16:9), Ultrawide (12:5)'
-aspect_info_SD1_5 = 'Vertical (9:16), Photo (4:5), Portrait (4:3), Landscape (3:2), Widescreen (16:9)'
-aspect_info_PixArt = 'Vertical (9:16), Photo (4:5), Portrait (4:3), Landscape (3:2), Widescreen (16:9), Ultrawide (12:5)'
+aspect_info_help = 'Popular Aspect Ratios: Vertical (9:16), Portrait (4:3), Square (1:1), Landscape (3:2), Widescreen (16:9), Ultrawide (12:5)'
+aspect_info_SD1_5 = 'Popular Aspect Ratios: Vertical (9:16), Photo (4:5), Portrait (4:3), Square (1:1), Landscape (3:2), Widescreen (16:9)'
+aspect_info_PixArt = 'Popular Aspect Ratios: Vertical (9:16), Photo (4:5), Portrait (4:3), Square (1:1), Landscape (3:2), Widescreen (16:9), Ultrawide (12:5)'
 aspect_info_SDXL = '. For SDXL, 1280*1280 is experimental'
 
 
-# Store the default aspect ratio selection
+# Store the default resolution selection
 # this value is updated by webui & modules.meta_parser
-common.current_AR = assign_default_by_template(AR_template)
+common.resolution = assign_default_by_template(AR_template)
 
 
 def add_ratio(x):
@@ -41,7 +41,7 @@ def add_template_ratio(x):    # only used to initialize the AR Accordion
     a, b = int(a), int(b)
     g = math.gcd(a, b)
     c, d = a // g, b // g
-    return f'Aspect Ratio: {a}×{b} | {c}:{d}'
+    return f'Resolution | Aspect Ratio: {a}×{b} | {c}:{d}'
 
 def get_aspect_ratio_title(arg_default_aspect_ratio_values):
     return {template: add_ratio(ratio)
@@ -62,9 +62,9 @@ def get_aspect_info_info():
 def save_current_aspect(x):
     global AR_template
     if x != '':
-        common.current_AR = f'{x.split(",")[0]}'
-        x = common.current_AR
-    interpret('[AR] Aspect Ratio:', AR_template + ' / ' + common.current_AR)
+        common.resolution = f'{x.split(",")[0]}'
+        x = common.resolution
+    interpret('[AR] Resolution:', AR_template + ' / ' + common.resolution)
     aspect_info_info = get_aspect_info_info()
     aspect_info_value = f'{AR_template} Template'
     return gr.update(), gr.update(value=aspect_info_value),\
@@ -72,8 +72,8 @@ def save_current_aspect(x):
 
 def overwrite_aspect_ratios(width, height):
     if width>0 and height>0:
-        common.current_AR = f'{width}*{height}'
-        return add_ratio(common.current_AR)
+        common.resolution = f'{width}*{height}'
+        return add_ratio(common.resolution)
     return gr.update()
 
 def reset_aspect_ratios(arg_AR):
@@ -87,7 +87,7 @@ def reset_aspect_ratios(arg_AR):
         return results
     aspect_ratios = arg_AR.split(',')[0]
     if aspect_ratios:
-        common.current_AR = aspect_ratios
+        common.resolution = aspect_ratios
     if (config.enable_shortlist_aspect_ratios == True) and (AR_template == 'Standard'):
         AR_template = 'Shortlist'
     elif (config.enable_shortlist_aspect_ratios == False) and (AR_template == 'Shortlist'):
@@ -100,7 +100,7 @@ def reset_aspect_ratios(arg_AR):
         results = [gr.update(visible=False)] * 3 + [gr.update(value=aspect_ratios, visible=True)]
     else:        # Standard template
         results = [gr.update(value=aspect_ratios, visible=True)] + [gr.update(visible=False)] * 3
-    interpret('[AR] Using the Template and Aspect Ratio:', AR_template + ' / ' + common.current_AR)
+    interpret('[AR] Using the Template and Resolution:', AR_template + ' / ' + common.resolution)
     return results
 
 # a preset change is required to enable a reliable switch between Standard & Shortlist templates
@@ -114,7 +114,7 @@ def reset_preset():
         working_preset = '4GB_Default'
     elif args.args.preset == 'Default':
         working_preset = 'Elsewhere'
-    elif common.is_low_vram_preset == True:
+    elif config.default_low_vram_presets == True:
         working_preset = '4GB_Default'
     else:
         working_preset = 'Default'
@@ -147,7 +147,7 @@ def validate_AR(arg_AR, arg_template): # when switching between template
             arg_AR = assign_default_by_template(arg_template)
             if len(split_AR) == 2:
                 interpret(f'[AR] Could not find the same {split_AR[1]} aspect ratio in:', arg_template)
-                interpret('Using the default aspect ratio instead:', arg_AR)
+                interpret('Using the default resolution and aspect ratio instead:', arg_AR)
     return arg_AR
 
 def toggle_shortlist(arg_shortlist):
@@ -157,14 +157,14 @@ def toggle_shortlist(arg_shortlist):
     if AR_template == 'Standard' and config.enable_shortlist_aspect_ratios:
         AR_template = 'Shortlist'
         # this ensures that Shortlist does not start with an invalid value:
-        common.current_AR = validate_AR(common.current_AR, AR_template)
+        common.resolution = validate_AR(common.resolution, AR_template)
         print()
         interpret('[AR] Switching to the Shortlist template requires a preset change:')
         working_preset = reset_preset()
     elif AR_template == 'Shortlist' and not config.enable_shortlist_aspect_ratios:
         AR_template = 'Standard'
         # potentially a user could add a value to Shortlist that Standard does not have:
-        common.current_AR = validate_AR(common.current_AR, AR_template)
+        common.resolution = validate_AR(common.resolution, AR_template)
         print()
         interpret('[AR] Switching to the Standard template requires a preset change:')
         working_preset = reset_preset()

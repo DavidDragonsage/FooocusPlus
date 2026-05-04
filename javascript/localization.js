@@ -83,27 +83,12 @@ function refresh_style_localization() {
 function refresh_aspect_ratios_label(value) {
     label = document.querySelector('#aspect_ratios_accordion div span');
     value = value.split(",")[0];
-    title = "Aspect Ratio";
+    title = "Resolution | Aspect Ratio";
     translation = getTranslation(title);
     if (typeof translation == "undefined") {
         translation = title;
     }
     label.textContent = translation + ": " + htmlDecode(value);
-}
-
-function refresh_finished_images_catalog_label(value) {
-    label = document.querySelector('#finished_images_catalog div span');
-    translation = getTranslation("Generated Images Catalog");
-    if (typeof translation == "undefined") {
-        translation = "Generated Images Catalog";
-    }
-    translation_stat = getTranslation("total: xxx images and yyy pages");
-    if (typeof translation_stat == "undefined") {
-        translation_stat = "total: xxx images and yyy pages";
-    }
-    xxx = value.split(",")[0]
-    yyy = value.split(",")[1]
-    label.textContent = translation + " - " + htmlDecode(translation_stat.replace(/xxx/g, xxx).replace(/yyy/g, yyy));
 }
 
 function localizeWholePage() {
