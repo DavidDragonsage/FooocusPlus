@@ -49,17 +49,66 @@ def catalogue_close(current_selection):
 
 
 def make_infobox_HTML(info, theme):
-    bgcolor = '#ddd'
+    # Standardize the background colors for better contrast
+    bgcolor = '#f3f4f6' # Light mode: Soft gray
+    text_color = '#111'
+    header_border = 'rgba(0,0,0,0.1)'
+
     if theme == "dark":
-        bgcolor = '#444'
-    html = f'<div style="background: {bgcolor}">'
+        bgcolor = '#2d2d2d' # Dark mode: Deep charcoal
+        text_color = '#eee'
+
+    # Container Style
+    # Add padding and a border-radius
+    # so it doesn't look like a raw block.
+    # Use 'display: block' to ensure the
+    # height is calculated correctly:
+    style = (
+        f"background-color: {bgcolor}; "
+        f"color: {text_color}; "
+        f"padding: 15px; "
+        f"border-radius: 8px; "
+        f"min-height: 50px; "
+        f"line-height: 1.5; "
+        f"word-wrap: break-word;"
+    )
+
+    # Header style for the title:
+    header_style = (
+        f"font-weight: bold; "
+        f"font-size: 1.1em; "
+        f"margin-bottom: 10px; "
+        f"padding-bottom: 5px; "
+        f"border-bottom: 1px solid {header_border};"
+    )
+
+    # Initialize the container
+    html = f'<div style="{style}">'
+
+    # Add the Title Header
+    html += f'<div style="{header_style}">Image Log Metadata</div>'
+
     if info:
+        content_added = False
         for key in info:
             if key in ['Filename', 'Advanced_parameters', 'Fooocus V2 Expansion', 'Metadata Scheme', 'Version', 'Upscale (Fast)'] or info[key] in [None, '', 'None']:
                 continue
-            html += f'<b>{key}:</b> {info[key]}<br/>'
+
+            # Using <span> or <div> for the key/value helps with modern HTML parsers
+            html += f'<div><b>{key}:</b> {info[key]}</div>'
+            content_added = True
+
+        if not content_added:
+            html += (
+                f'<div style="font-style: italic; opacity: 0.8; margin-top: 5px;">'
+                f'[Toolbox] Image Log metadata not found. This image may have been saved by the Image Editor '
+                f'or the Image Log file was removed. Use the "Image Metadata" tab for metadata information '
+                f'or regeneration.'
+                f'</div>'
+            )
     else:
-        html += '<p>info</p>'
+        html += '<p>Waiting for image info...</p>'
+
     html += '</div>'
     return html
 
@@ -71,7 +120,7 @@ def toggle_toolbox_info(state_params):
     #interpret(f'[Toolbox] Toggle_image_info: {infobox_state}')
     [choice, selected] = state_params["prompt_info"]
     prompt_info = gallery.get_images_prompt(choice, selected, state_params["__max_per_page"])
-    return gr.update(value=make_infobox_markdown(prompt_info, state_params['__theme']), visible=infobox_state and prompt_info), state_params
+    return gr.update(value=make_infobox_HTML(prompt_info, state_params['__theme']), visible=infobox_state and prompt_info), state_params
 
 
 def check_preset_models(checklist, state_params):

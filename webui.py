@@ -150,7 +150,7 @@ with common.GRADIO_ROOT:
                     elem_classes=['resizable_area', 'main_view', 'final_gallery', 'image_gallery'],
                     elem_id='final_gallery', preview=True )
 
-                toolbox_info_box = gr.Markdown(
+                toolbox_info_box = gr.HTML(
                     toolbox.make_infobox_HTML(None, args.args.theme),
                     visible=False, elem_id='infobox',
                     elem_classes='infobox')
@@ -310,7 +310,7 @@ with common.GRADIO_ROOT:
 
             with gr.Group(visible=False, elem_classes='toolbox') as image_toolbox:
                 image_tools_box_title = gr.Markdown('<b>Toolbox</b>', visible=True)
-                toolbox_info_button = gr.Button(value='View Info', size='sm', visible=True)
+                toolbox_info_button = gr.Button(value='View Log Info', size='sm', visible=True)
                 toolbox_regen_button = gr.Button(value='Regenerate', size='sm', visible=True)
                 toolbox_delete_button = gr.Button(value='Delete Image', size='sm', visible=True)
 
@@ -806,6 +806,15 @@ with common.GRADIO_ROOT:
                                         label='Type',
                                         choices=flags.ip_list,
                                         value=config.default_ip_types[display_index], container=False)
+
+                                    UIU.bind_ip_slot_logic(
+                                        radio_comp=ip_type,
+                                        stop_slider=ip_stop,
+                                        weight_slider=ip_weight,
+                                        slot_idx=image_count,
+                                        update_func=update_ip_slot
+                                    )
+
                                     ip_types.append(ip_type)
 
                                 ip_ad_cols.append(ad_col)
@@ -1345,7 +1354,7 @@ with common.GRADIO_ROOT:
                                     outputs=describe_image_size,
                                     show_progress=False, queue=False)
 
-                    with gr.Tab(label='Metadata', id='metadata_tab', visible=True) as metadata_tab:
+                    with gr.Tab(label='Image Metadata', id='metadata_tab', visible=True) as metadata_tab:
                         with gr.Column():
                             metadata_input_image = grh.Image(
                                 label='Place a Fooocus Image Here',
@@ -2696,24 +2705,38 @@ with common.GRADIO_ROOT:
         fn=lambda x,
         i=image_count: update_ip_slot(i, 'weight', x),
         inputs=ip_weight, queue=False)
+    '''
+    def handle_ip_type_change(x, i):
+        # 1. Update the underlying data structure
+        # i is the image_count index captured at definition
+        print(f'Updating slot {i} to type: {x}')
+        update_ip_slot(i, 'type', x)
+
+        # 2. Get the slider parameters
+        params = flags.default_parameters.get(x)
+        if params:
+            stop, weight = params
+            return gr.update(value=stop), gr.update(value=weight)
+
+        # Fallback
+        return gr.update(), gr.update()
 
     ip_type.change(
-        fn=lambda x,
-        i=image_count: update_ip_slot(i, 'type', x),
-        inputs=ip_type, queue=False)
-
-    # --- UI ORCHESTRATION HANDLER ---
-    # Updates sliders when the Radio type changes
-    ip_type.change(lambda x: flags.default_parameters[x],
+        fn=lambda x: handle_ip_type_change(x, image_count),
         inputs=[ip_type],
         outputs=[ip_stop, ip_weight],
-        queue=False, show_progress=False)
-
+        queue=False,
+        show_progress=False
+    )
+    '''
     def ip_advance_checked(x):
+        # Explicitly update everything using gr.update for reliability
+        default_stop, default_weight = flags.default_parameters[flags.default_ip]
+
         return [gr.update(visible=x)] * len(ip_ad_cols) + \
-            [flags.default_ip] * len(ip_types) + \
-            [flags.default_parameters[flags.default_ip][0]] * len(ip_stops) + \
-            [flags.default_parameters[flags.default_ip][1]] * len(ip_weights)
+               [gr.update(value=flags.default_ip, interactive=True)] * len(ip_types) + \
+               [gr.update(value=default_stop, interactive=True)] * len(ip_stops) + \
+               [gr.update(value=default_weight, interactive=True)] * len(ip_weights)
 
     ip_advanced.change(
         fn=ip_advance_checked,
@@ -2725,7 +2748,7 @@ with common.GRADIO_ROOT:
         fn=lambda: None,
         queue=False,
         show_progress=False,
-        _js=down_js,
+        _js=down_js
     )
 
 

@@ -94,9 +94,9 @@ def select_history_gallery(choice, state_params, backfill_prompt, evt: gr.Select
     result = get_images_prompt(choice, evt.index, state_params["__max_per_page"], True)
     #print(f'[Gallery] Selected_gallery: selected index {evt.index} of {choice} images_list:{result["Filename"]}.')
     if backfill_prompt and 'Prompt' in result:
-        return [gr.update(value=toolbox.make_infobox_markdown(result, state_params['__theme'])), gr.update(value=result["Prompt"]), gr.update(value=result["Negative Prompt"])] + [gr.update(visible=False)] * 4 + [state_params]
+        return [gr.update(value=toolbox.make_infobox_HTML(result, state_params['__theme'])), gr.update(value=result["Prompt"]), gr.update(value=result["Negative Prompt"])] + [gr.update(visible=False)] * 4 + [state_params]
     else:
-        return [gr.update(value=toolbox.make_infobox_markdown(result, state_params['__theme'])), gr.update(), gr.update()] + [gr.update(visible=False)] * 4 + [state_params]
+        return [gr.update(value=toolbox.make_infobox_HTML(result, state_params['__theme'])), gr.update(), gr.update()] + [gr.update(visible=False)] * 4 + [state_params]
 
 def select_gallery_progress(state_params, evt: gr.SelectData):
     #if "__output_list" not in state_params.keys():
@@ -104,7 +104,7 @@ def select_gallery_progress(state_params, evt: gr.SelectData):
     state_params.update({"note_box_state": ['',0,0]})
     state_params.update({"prompt_info": [None, evt.index]})
     result = get_images_prompt(state_params["__output_list"][0], evt.index, state_params["__max_per_page"])
-    return [gr.update(value=toolbox.make_infobox_markdown(result, state_params['__theme']), visible=False)] + [gr.update(visible=False)] * 4 + [state_params]
+    return [gr.update(value=toolbox.make_infobox_HTML(result, state_params['__theme']), visible=False)] + [gr.update(visible=False)] * 4 + [state_params]
 
 
 def get_images_from_gallery_index(choice, max_per_page):
@@ -211,14 +211,27 @@ def get_images_prompt(choice, selected, max_per_page, display_index=False):
             selected = (page-1)*max_per_page + selected
         else:
             selected = nums-max_per_page + selected
-    images_prompt_keys.remove(choice)
-    images_prompt_keys.append(choice)
+
     filename = images_list[choice][selected]
-    metainfo = {"Filename": filename} if filename not in images_prompt[choice].keys() else images_prompt[choice][filename]
+
+    if choice in images_prompt_keys:
+        images_prompt_keys.remove(choice)
+    images_prompt_keys.append(choice)
+
+    # Does the Image Log exist
+    # and does it have metadata for this image?
+    if choice not in images_prompt or filename not in images_prompt[choice]:
+        # Instead of crashing, return a dictionary
+        # that tells the UI what happened:
+        return {"[Gallery]": "No metadata found in the HTML Image Log.", "Filename": filename}
+
+    metainfo = images_prompt[choice][filename]
+
     if display_index:
         print(f'[Gallery] The image selected: catalog={choice}, page={page_choice}, in_page={page_index}, in_catalog={selected}, filename={filename}')
     if choice in images_ads.keys() and filename in images_ads[choice].keys():
         metainfo.update({"Advanced_parameters": images_ads[choice][metainfo['Filename']]})
+
     return metainfo
 
 

@@ -6,6 +6,7 @@ import common
 import ldm_patched.modules.model_management as model_management
 import modules.async_worker as worker
 import modules.config as config
+import modules.flags as flags
 import modules.html
 
 from args_manager import args
@@ -132,6 +133,35 @@ def generate_clicked(task: worker.AsyncTask):
         else:
             save_image_grid(False)
     return
+
+
+def bind_ip_slot_logic(
+    radio_comp, stop_slider, weight_slider, slot_idx, update_func):
+    # the Image Prompt "Logic Factory"
+    # trap the slot_idx and components so they
+    # don't get lost in the loop's late-binding trap
+
+    def ip_type_handler(selected_type):
+        # 1. Execute the backend data update
+        update_func(slot_idx, 'type', selected_type)
+
+        # 2. Fetch the corresponding UI parameters
+        params = flags.default_parameters.get(selected_type)
+        if params:
+            stop, weight = params
+            return gr.update(value=stop), gr.update(value=weight)
+
+        return gr.update(), gr.update()
+
+    # keep the .change() call out of the main loop
+    # in the webui object definitions section
+    radio_comp.change(
+        fn=ip_type_handler,
+        inputs=[radio_comp],
+        outputs=[stop_slider, weight_slider],
+        queue=False,
+        show_progress=False
+    )
 
 
 def inpaint_mode_change(mode, inpaint_engine_version):
