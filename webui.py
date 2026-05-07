@@ -752,6 +752,11 @@ with common.GRADIO_ROOT:
                         gr.HTML('<a href="https://github.com/lllyasviel/Fooocus/discussions/390" target="_blank">\U0001F4DA Documentation</a>')
 
                     def update_ip_slot(slot_index, key, value):
+                        # Ensure the slot exists before
+                        # trying to write to it
+                        while len(config.ip_slots) <= slot_index:
+                            config.ip_slots.append({})
+
                         config.ip_slots[slot_index][key] = value
 
                     with gr.Tab(label='Image Prompt', id='ip_tab') as ip_tab:
@@ -808,6 +813,7 @@ with common.GRADIO_ROOT:
                                         value=config.default_ip_types[display_index], container=False)
 
                                     UIU.bind_ip_slot_logic(
+                                        image_comp=ip_image,
                                         radio_comp=ip_type,
                                         stop_slider=ip_stop,
                                         weight_slider=ip_weight,
@@ -2686,49 +2692,6 @@ with common.GRADIO_ROOT:
         outputs=layout_image_tab,
         show_progress=False, queue=False)
 
-    # --- DATA SYNC HANDLERS ---
-    # Keep config.ip_slots updated in real-time.
-    # We use i=image_count to "freeze" the index
-    # for this specific slot.
-
-    ip_image.change(
-        fn=lambda x,
-        i=image_count: update_ip_slot(i, 'image', x),
-        inputs=ip_image, queue=False)
-
-    ip_stop.change(
-        fn=lambda x,
-        i=image_count: update_ip_slot(i, 'stop', x),
-        inputs=ip_stop, queue=False)
-
-    ip_weight.change(
-        fn=lambda x,
-        i=image_count: update_ip_slot(i, 'weight', x),
-        inputs=ip_weight, queue=False)
-    '''
-    def handle_ip_type_change(x, i):
-        # 1. Update the underlying data structure
-        # i is the image_count index captured at definition
-        print(f'Updating slot {i} to type: {x}')
-        update_ip_slot(i, 'type', x)
-
-        # 2. Get the slider parameters
-        params = flags.default_parameters.get(x)
-        if params:
-            stop, weight = params
-            return gr.update(value=stop), gr.update(value=weight)
-
-        # Fallback
-        return gr.update(), gr.update()
-
-    ip_type.change(
-        fn=lambda x: handle_ip_type_change(x, image_count),
-        inputs=[ip_type],
-        outputs=[ip_stop, ip_weight],
-        queue=False,
-        show_progress=False
-    )
-    '''
     def ip_advance_checked(x):
         # Explicitly update everything using gr.update for reliability
         default_stop, default_weight = flags.default_parameters[flags.default_ip]

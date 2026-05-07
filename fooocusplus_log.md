@@ -51,6 +51,9 @@
   * it was inoperative & redundant, use Disable Preview instead
 * the ADM Scaler controls are moved to the end of Expert Tools
 * Release Date: May 4th, 2026<br/>
+* Hotfix3: Restored Image Prompt operation
+  * improved Toolbox error control
+  * introduced full date strings for Catalogue indexing
 * Hotfix2: Debugged the Toolbox and Image Prompt type selectors
 * Hotfix1: Fixed a bug with with the Image Editor not saving
   * also added startup version control for major updates<br/><br/>

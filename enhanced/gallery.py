@@ -9,6 +9,7 @@ import enhanced.toolbox as toolbox
 import re
 from lxml import etree
 from enhanced.translator import interpret
+from pathlib import Path
 
 
 # app context
@@ -52,7 +53,7 @@ def refresh_output_list(max_per_page, max_catalog):
             for i in range(1,max_page_no+1):
                 listdirs1.append("{}/{}".format(index, str(i).zfill(len(str(max_page_no)))))
             listdirs1.remove(index)
-    output_list = sorted([f[2:] for f in listdirs1], reverse=True)
+    output_list = sorted([f for f in listdirs1], reverse=True)
     actual_total_pages = len(output_list)
     display_max_pages = max_catalog
     output_list = output_list[:display_max_pages]
@@ -124,7 +125,9 @@ def get_images_from_gallery_index(choice, max_per_page):
             images_gallery = images_list[choice][(page-1)*max_per_page:page*max_per_page]
         else:
             images_gallery = images_list[choice][nums-max_per_page:]
-    images_gallery = [os.path.join(os.path.join(config.path_outputs, "20{}".format(choice)), f) for f in images_gallery]
+
+    base_path = Path(config.path_outputs) / choice
+    images_gallery = [str(base_path / f) for f in images_gallery]
     #print(f'[Gallery]Get images from index: choice={choice}, page={page}, images_gallery={images_gallery}')
     return images_gallery
 
@@ -135,24 +138,36 @@ def refresh_images_catalog(choice: str, passthrough = False):
     if not passthrough and choice in images_list_keys:
         images_list_keys.remove(choice)
         images_list_keys.append(choice)
-        #print(f'[Gallery] Refresh_images_list: hit cache {len(images_list[choice])} image_items of {choice}.')
         return images_list[choice]
 
-    images_list_new = sorted([f for f in util.get_files_from_folder(os.path.join(config.path_outputs, "20{}".format(choice)), image_types, None)], reverse=True)
-    if len(images_list_new)==0:
+    # Pathlib modernization: Direct path mapping
+    base_path = Path(config.path_outputs) / choice
+
+    # Get files from folder using the string representation of the Path
+    images_list_new = sorted([f for f in util.get_files_from_folder(str(base_path), image_types, None)], reverse=True)
+
+    if len(images_list_new) == 0:
         parse_html_log(choice, passthrough)
         if choice in images_list_keys:
-            images_list_keys.pop(images_list_keys.index(choice))
-            images_list.pop(choice)
+            images_list_keys.remove(choice)
+            images_list.pop(choice, None)
         return []
+
+    # Cache Management
     if choice in images_list_keys:
-        images_list_keys.pop(images_list_keys.index(choice))
-    if len(images_list.keys())>15:
-        images_list.pop(images_list_keys.pop(0))
+        images_list_keys.remove(choice)
+
+    if len(images_list_keys) > 15:
+        old_key = images_list_keys.pop(0)
+        images_list.pop(old_key, None)
+
     images_list.update({choice: images_list_new})
     images_list_keys.append(choice)
+
+    # This now uses the modernized choice string internally
     parse_html_log(choice, passthrough)
-    print(f'[Gallery] Refresh_images_catalog: loaded {len(images_list[choice])} image_items of {choice}.')
+
+    print(f'[Gallery] Refresh_images_catalog: loaded {len(images_list[choice])} items for {choice}.')
     return images_list[choice]
 
 
@@ -193,44 +208,58 @@ def get_images_prompt(choice, selected, max_per_page, display_index=False):
 
     if choice is None:
         return None
+
     page = 0
     _page = choice.split("/")
     if len(_page) > 1:
         choice = _page[0]
         page = int(_page[1])
+
     page_choice = page
     page_index = selected
-    parse_html_log(choice)
+
+    # A. Call the parser and capture the file existence flag
+    log_file_exists = parse_html_log(choice)
+
+    # B. Determine Catalog Numbers
     if choice not in images_list.keys():
         nums = len(refresh_images_catalog(choice))
     else:
         nums = len(images_list[choice])
+
+    # C. Handle Pagination
     if page > 0:
-        page = abs(page-math.ceil(nums/max_per_page))+1
-        if page*max_per_page < nums:
-            selected = (page-1)*max_per_page + selected
+        page = abs(page - math.ceil(nums / max_per_page)) + 1
+        if page * max_per_page < nums:
+            selected = (page - 1) * max_per_page + selected
         else:
-            selected = nums-max_per_page + selected
+            selected = nums - max_per_page + selected
 
     filename = images_list[choice][selected]
 
-    if choice in images_prompt_keys:
-        images_prompt_keys.remove(choice)
-    images_prompt_keys.append(choice)
+    # D. DIAGNOSTIC BRANCHING
+    # Condition 1: The entire log file is missing
+    if not log_file_exists:
+        return {
+            "[Gallery]": "The HTML Image Log is not available for this date.",
+            "Filename": filename
+        }
 
-    # Does the Image Log exist
-    # and does it have metadata for this image?
+    # Condition 2: Log exists, but this specific image is not in it (e.g., Editor composite)
     if choice not in images_prompt or filename not in images_prompt[choice]:
-        # Instead of crashing, return a dictionary
-        # that tells the UI what happened:
-        return {"[Gallery]": "No metadata found in the HTML Image Log.", "Filename": filename}
+        return {
+            "[Gallery]": "Metadata for this specific image was not found in the Log.",
+            "Filename": filename
+        }
 
+    # E. Success: Return MetaInfo
     metainfo = images_prompt[choice][filename]
 
     if display_index:
-        print(f'[Gallery] The image selected: catalog={choice}, page={page_choice}, in_page={page_index}, in_catalog={selected}, filename={filename}')
+        print(f'[Gallery] Image selected: {filename} (Catalog: {choice})')
+
     if choice in images_ads.keys() and filename in images_ads[choice].keys():
-        metainfo.update({"Advanced_parameters": images_ads[choice][metainfo['Filename']]})
+        metainfo.update({"Advanced_parameters": images_ads[choice][filename]})
 
     return metainfo
 
@@ -238,112 +267,121 @@ def get_images_prompt(choice, selected, max_per_page, display_index=False):
 def parse_html_log(choice: str, passthrough = False):
     global images_prompt, images_prompt_keys, images_ads
 
+    # 1. Clean the choice index
     choice = choice.split('/')[0]
-    if not passthrough and choice in images_prompt_keys and images_prompt[choice]:
-        images_prompt_keys.remove(choice)
+
+    # 2. Cache Check: If we already have it, return True
+    if not passthrough and choice in images_prompt:
+        if choice in images_prompt_keys:
+            images_prompt_keys.remove(choice)
         images_prompt_keys.append(choice)
-        #print(f'[Gallery] Parse_html_log: hit cache {len(images_prompt[choice])} image_infos of {choice}.')
-        return
-    html_file = os.path.join(os.path.join(config.path_outputs, "20{}".format(choice)), 'log.html')
-    if not os.path.exists(html_file):
-        return
-    html = etree.parse(html_file, etree.HTMLParser(encoding='utf-8'))
+        return True
+
+    # 3. Pathlib Construction
+    base_path = Path(config.path_outputs) / choice
+    html_file = base_path / 'log.html'
+
+    # 4. Physical Existence Check
+    if not html_file.exists():
+        return False
+
+    # 5. Parsing Logic
+    try:
+        html = etree.parse(str(html_file), etree.HTMLParser(encoding='utf-8'))
+    except Exception as e:
+        print(f'[Gallery] Parse Error: {e}')
+        return False
+
     prompt_infos = html.xpath('/html/body/div')
     images_prompt_list = {}
+
     for info in prompt_infos:
         text = info.xpath('.//p//text()')
-        #print(f'log_parse_text1:{text}')
-        if len(text)>20:
+        if len(text) > 20:
             def standardized(x):
-                if x.startswith(', '):
-                    x=x[2:]
-                if x.endswith(': '):
-                    x=x[:-2]
-                if x==' ':
-                    x=''
-                return x
+                if x.startswith(', '): x = x[2:]
+                if x.endswith(': '): x = x[:-2]
+                return '' if x == ' ' else x
+
             text = list(map(standardized, info.xpath('.//p//text()')))
-            if text[6]!='':
-                text.insert(6, '')
-            if text[8]=='':
-                text.insert(8, '')
-            info_dict={"Filename":text[0]}
-            if text[3]=='':
+            if text[6] != '': text.insert(6, '')
+            if text[8] == '': text.insert(8, '')
+
+            info_dict = {"Filename": text[0]}
+            if text[3] == '':
                 info_dict[text[1]] = text[2]
                 info_dict[text[4]] = text[5]
                 info_dict[text[7]] = text[8]
-                for i in range(0,int(len(text)/2)-5):
+                for i in range(0, int(len(text)/2)-5):
                     info_dict[text[10+i*2]] = text[11+i*2]
             else:
-                if text[4]!='Fooocus V2 Expansion':
+                if text[4] != 'Fooocus V2 Expansion':
                     del text[6]
                 else:
                     text.insert(4, '')
-                    if text[6]=='Styles':
+                    if text[6] == 'Styles':
                         text.insert(6, '')
                         del text[8]
                     else:
                         del text[7]
-                for i in range(0,int(len(text)/2)-1):
+                for i in range(0, int(len(text)/2)-1):
                     info_dict[text[1+i*2]] = text[2+i*2]
         else:
             text = info.xpath('.//td//text()')
-            #print(f'log_parse_text2:{text}')
-            if len(text)>10:
-                if text[2]=='\n' or text[2]=='\r\n':
-                    text.insert(2, '')
-                if text[5]=='\n' or text[5]=='\r\n':
-                    text.insert(5, '')
-                if text[8]=='\n' or text[8]=='\r\n':
-                    text.insert(8, '')
-                if text[29]=='\n' or text[29]=='\r\n':
-                    text.insert(29, '')
-                if text[32]=='\n' or text[32]=='\r\n':
-                    text.insert(32, '')
-                if text[35]=='\n' or text[35]=='\r\n':
-                    text.insert(35, '')
-                if text[41]=='\n' or text[41]=='\r\n':
-                    text.insert(41, '')
-                info_dict={"Filename":text[0]}
-                for i in range(0,int(len(text)/3)):
+            if len(text) > 10:
+                # Handle line breaks
+                for idx in [2, 5, 8, 29, 32, 35, 41]:
+                    if idx < len(text) and text[idx] in ['\n', '\r\n']:
+                        text.insert(idx, '')
+
+                info_dict = {"Filename": text[0]}
+                for i in range(0, int(len(text)/3)):
                     key = text[1+i*3].strip()
                     value = text[2+i*3].strip()
-                    if key == '' or key is None or key == 'Full raw prompt' or key == 'Positive' or key == 'Negative':
+                    if key in ['', None, 'Full raw prompt', 'Positive', 'Negative']:
                         continue
                     info_dict[key] = value
             else:
                 if 'Upscale (Fast)' not in text:
-                    print(f'[Gallery] Parse_html_log: Parse error for {choice}, file={html_file}\ntext:{info.xpath(".//text()")}')
-                info_dict={"Filename":text[1]}
+                    print(f'[Gallery] Parse error for {choice}, file={html_file}')
+                info_dict = {"Filename": text[1]}
                 info_dict[text[2]] = text[3]
-        #print(f'{len(text)},info_dict={info_dict}')
+
         images_prompt_list.update({info_dict["Filename"]: info_dict})
-    if len(images_prompt_list.keys())==0:
-        if choice in images_prompt.keys():
-            images_prompt_keys.pop(images_prompt_keys.index(choice))
-            images_prompt.pop(choice)
-            if choice in images_ads.keys():
-                images_ads.pop(choice)
-        return
+
+    # 6. Cleanup if log was found but is empty
+    if not images_prompt_list:
+        if choice in images_prompt:
+            if choice in images_prompt_keys:
+                images_prompt_keys.remove(choice)
+            images_prompt.pop(choice, None)
+            images_ads.pop(choice, None)
+        return False
+
+    # 7. Update Cache
     if choice in images_prompt_keys:
-        images_prompt_keys.pop(images_prompt_keys.index(choice))
-    if len(images_prompt.keys())>15:
+        images_prompt_keys.remove(choice)
+
+    if len(images_prompt) > 15:
         key = images_prompt_keys.pop(0)
-        images_prompt.pop(key)
-        if key in images_ads.keys():
-            images_ads.pop(key)
+        images_prompt.pop(key, None)
+        images_ads.pop(key, None)
+
     images_prompt.update({choice: images_prompt_list})
     images_prompt_keys.append(choice)
 
-    dirname, filename = os.path.split(html_file)
-    log_name = os.path.join(dirname, "log_ads.json")
+    # 8. Load JSON Logs (Advanced Params)
+    log_json = html_file.parent / "log_ads.json"
     log_ext = {}
-    if os.path.exists(log_name):
-        with open(log_name, "r", encoding="utf-8") as log_file:
-            log_ext.update(json.load(log_file))
-    images_ads.update({choice: log_ext})
+    if log_json.exists():
+        try:
+            with log_json.open("r", encoding="utf-8") as f:
+                log_ext.update(json.load(f))
+        except Exception as e:
+            print(f'[Gallery] JSON Error: {e}')
 
-    print(f'[Gallery] Parse_html_log: loaded {len(images_prompt[choice])} image_infos of {choice}.')
-    return
+    images_ads.update({choice: log_ext})
+    print(f'[Gallery] Parse_html_log: loaded {len(images_prompt[choice])} entries for {choice}.')
+    return True
 
 

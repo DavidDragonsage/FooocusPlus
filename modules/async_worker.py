@@ -164,7 +164,16 @@ class AsyncTask:
             cn_type = slot['type']
 
             if cn_img is not None:
-                self.cn_tasks[cn_type].append([cn_img, cn_stop, cn_weight])
+                # Use .copy() to ensure the worker owns a private instance of the image data
+                try:
+                    # Works for both NumPy arrays and PIL Images
+                    safe_img = cn_img.copy()
+                except AttributeError:
+                    # Fallback if it's a different object type
+                    import copy
+                    safe_img = copy.deepcopy(cn_img)
+
+                self.cn_tasks[cn_type].append([safe_img, cn_stop, cn_weight])
 
         self.debugging_dino = args.pop()
         self.dino_erode_or_dilate = args.pop()

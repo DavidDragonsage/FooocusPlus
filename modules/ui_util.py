@@ -135,28 +135,67 @@ def generate_clicked(task: worker.AsyncTask):
     return
 
 
-def bind_ip_slot_logic(
-    radio_comp, stop_slider, weight_slider, slot_idx, update_func):
-    # the Image Prompt "Logic Factory"
-    # trap the slot_idx and components so they
-    # don't get lost in the loop's late-binding trap
+def bind_ip_slot_logic(image_comp, radio_comp, stop_slider, weight_slider, slot_idx, update_func):
+    """
+    The complete Image Prompt Logic Factory.
+    Ensures all slot parameters are bound to the correct index without lambdas.
+    """
 
-    def ip_type_handler(selected_type):
-        # 1. Execute the backend data update
+    # 1. Image Handler
+    def img_handler(x):
+        # This ensures the image actually reaches config.ip_slots[slot_idx]
+        update_func(slot_idx, 'image', x)
+
+    # 2. Stop Slider Handler
+    def stop_handler(x):
+        update_func(slot_idx, 'stop', x)
+
+    # 3. Weight Slider Handler
+    def weight_handler(x):
+        update_func(slot_idx, 'weight', x)
+
+    # 4. Type (Radio) Handler
+    def type_handler(selected_type):
+        # Update the backend type
         update_func(slot_idx, 'type', selected_type)
 
-        # 2. Fetch the corresponding UI parameters
+        # Fetch and apply defaults
         params = flags.default_parameters.get(selected_type)
         if params:
             stop, weight = params
+            # CRITICAL: Also update the backend for these values
+            # so the config isn't waiting for a manual slider move
+            update_func(slot_idx, 'stop', stop)
+            update_func(slot_idx, 'weight', weight)
             return gr.update(value=stop), gr.update(value=weight)
 
         return gr.update(), gr.update()
 
-    # keep the .change() call out of the main loop
-    # in the webui object definitions section
+    # --- Bindings ---
+
+    image_comp.change(
+        fn=img_handler,
+        inputs=[image_comp],
+        queue=False,
+        show_progress=False
+    )
+
+    stop_slider.change(
+        fn=stop_handler,
+        inputs=[stop_slider],
+        queue=False,
+        show_progress=False
+    )
+
+    weight_slider.change(
+        fn=weight_handler,
+        inputs=[weight_slider],
+        queue=False,
+        show_progress=False
+    )
+
     radio_comp.change(
-        fn=ip_type_handler,
+        fn=type_handler,
         inputs=[radio_comp],
         outputs=[stop_slider, weight_slider],
         queue=False,

@@ -312,7 +312,7 @@ def get_resolution(key: str, fallback: str | None, source_dict: dict, results: l
             results.append(gr.update())
             results.append(int(width))
             results.append(int(height))
-    except e:
+    except Exception as e:
         print(f'in except:{e}')
         results.append(gr.update())
         results.append(gr.update())
