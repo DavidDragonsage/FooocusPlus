@@ -51,6 +51,7 @@
   * it was inoperative & redundant, use Disable Preview instead
 * the ADM Scaler controls are moved to the end of Expert Tools
 * Release Date: May 4th, 2026<br/>
+* Hotfix4: The default_max_lora_number config.txt option now works
 * Hotfix3: Restored Image Prompt operation
   * improved Toolbox error control
   * introduced full date strings for Catalogue indexing
