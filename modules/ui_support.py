@@ -262,14 +262,14 @@ def refresh_nav_bars(state_params):
 
 
 def manage_image_buffers(inpaint_img=None, inpaint_mask=None):
-    # check if the Input Image checkbox is active or not
+    # Check if the Input Image checkbox is active or not.
+    # We no longer clear the IP-Adapter (Image Prompt) images
+    # in the function so that they always available to the
+    # Inpainter or UOV when operating in linked mode
     if not config.default_image_prompt_checkbox:
         common.uov_image_buffer = None
         common.inpaint_image_buffer = None
         common.inpaint_mask_buffer = None
-        # Purge the IP-Adapter (Image Prompt) images:
-        for slot in config.ip_slots:
-            slot['image'] = None
         common.enhance_image_buffer = None
 
         # check for IC-Light in Features mode
@@ -282,8 +282,6 @@ def manage_image_buffers(inpaint_img=None, inpaint_mask=None):
         active = common.current_tab_name
 
         if active == 'uov':
-            for slot in config.ip_slots:
-                slot['image'] = None
             common.inpaint_image_buffer = None
             common.inpaint_mask_buffer = None
             common.enhance_image_buffer = None
@@ -298,8 +296,6 @@ def manage_image_buffers(inpaint_img=None, inpaint_mask=None):
 
         elif active == 'inpaint':
             common.uov_image_buffer = None
-            for slot in config.ip_slots:
-                slot['image'] = None
             common.inpaint_image_buffer = inpaint_img
             # check for auto or manual masking:
             if util.is_valid_image(inpaint_mask):
@@ -316,8 +312,6 @@ def manage_image_buffers(inpaint_img=None, inpaint_mask=None):
 
         elif active == 'enhance':
             common.uov_image_buffer = None
-            for slot in config.ip_slots:
-                slot['image'] = None
             common.inpaint_image_buffer = None
             common.inpaint_mask_buffer = None
             common.layer_image_buffer = None
