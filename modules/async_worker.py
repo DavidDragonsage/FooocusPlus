@@ -1299,10 +1299,6 @@ def worker():
             interpret('[Worker] Enabled Fooocus Backend')
             comfyd.stop()
 
-        if async_task.task_class not in ['Kolors', 'Kolors+', 'HyDiT', 'HyDiT+'] and 'kolors' not in async_task.task_name.lower():
-            async_task.prompt = translator.translate(async_task.prompt, True)
-            async_task.negative_prompt = translator.translate(async_task.negative_prompt, True)
-
         async_task.outpaint_selections = [o.lower() for o in async_task.outpaint_selections]
         base_model_additional_loras = []
         async_task.uov_method = async_task.uov_method.casefold()
@@ -1646,11 +1642,6 @@ def worker():
                 enhancement_task_start_time = time.perf_counter()
                 is_last_enhance_for_image = (current_task_id + 1) % active_enhance_tabs == 0 and not enhance_uov_after
                 persist_image = not async_task.save_final_enhanced_image_only or is_last_enhance_for_image
-
-
-                enhance_mask_dino_prompt_text = translator.translate(enhance_mask_dino_prompt_text, True)
-                enhance_prompt = translator.translate(enhance_prompt, True)
-                enhance_negative_prompt = translator.translate(enhance_negative_prompt, True)
 
                 extras = {}
                 if enhance_mask_model == 'sam':

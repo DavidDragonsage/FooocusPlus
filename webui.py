@@ -2802,9 +2802,7 @@ with common.GRADIO_ROOT:
             extras['cloth_category'] = cloth_category
         elif mask_model == 'sam':
             sam_options = SAMOptions(
-                dino_prompt=translator.convert(
-                    dino_prompt_text,
-                    params_extra['translation_methods']),
+                dino_prompt=dino_prompt_text,
                 dino_box_threshold=box_threshold,
                 dino_text_threshold=text_threshold,
                 dino_erode_or_dilate=dino_erode_or_dilate,
