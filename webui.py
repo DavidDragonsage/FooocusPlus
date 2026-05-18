@@ -3141,12 +3141,14 @@ with common.GRADIO_ROOT:
             solarize_int
         )
         results[0] = gr.update(value=final_image)
-        results[1] = gr.update(value=final_image)
+        results[1] = final_image
 
         if update_all:
             # --- Handle Slider Jumps ---
-            # only send a VALUE update if the synced value is different from what was provided.
-            # this prevents overwriting the user's current drag operation.
+            # only send a VALUE update if the
+            # synced value is different from
+            # what was provided. This prevents
+            # overwriting the user's current drag operation.
             width_update = gr.update(value=synced_width) if synced_width != width_int else gr.update()
             height_update = gr.update(value=synced_height) if synced_height != height_int else gr.update()
 
@@ -3166,14 +3168,10 @@ with common.GRADIO_ROOT:
             right_max_update = gr.update(maximum=current_w, value=right_int)
             lower_max_update = gr.update(maximum=current_h, value=lower_int)
 
-            results[2] = gr.update(
-                value=width_update)
-            results[3] = gr.update(
-                value=height_update)
-            results[4] = gr.update(
-                value=right_max_update)
-            results[5] = gr.update(
-                value=lower_max_update)
+            results[2] = width_update
+            results[3] = height_update
+            results[4] = right_max_update
+            results[5] = lower_max_update
 
         # Return everything together (Total 9 items)
         return tuple(results) + tuple(trans_updates)
