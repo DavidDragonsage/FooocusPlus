@@ -4,13 +4,13 @@ import common
 # --- The 1.1.1 Update Shield ---
 try:
     # check for the renamed variable
-    # that causes the 1.1.0 update crash:
+    # that causes the 1.1.1 update crash:
     _ = common.resolution
 except AttributeError:
     print("\n" + "!" * 60)
     print("  FOOOCUSPLUS UPDATE IN PROGRESS")
     print("  Please close this window and restart FooocusPlus")
-    print("  to finalize the 1.1.0 installation.")
+    print("  to finalize the 1.1.1 installation.")
     print("!" * 60 + "\n")
     sys.exit()
 
