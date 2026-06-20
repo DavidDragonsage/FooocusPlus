@@ -77,7 +77,11 @@ def switch_layout_template(presetdata: dict | str, state_params, preset_url=''):
     results.append(get_layout_visible_inter('overwrite_step', visible, inter))
     results.append(get_layout_visible_inter('guidance_scale', visible, inter))
     results.append(get_layout_empty_visible_inter('negative_prompt', visible, inter))
-    results.append(gr.update(visible=True if 'blank.inc.html' not in preset_url else False))
+
+    # Force the obsolete help iFrame to remain hidden.
+    # This prevents layout shifting
+    results.append(gr.update(visible=False))
+
     results += get_layout_visible_inter_loras(visible, inter, config.default_max_lora_number)
     #for i in range(config.default_max_lora_number):
     #    results += [get_layout_visible_inter('loras', visible, inter)] * 3
@@ -100,11 +104,37 @@ def switch_layout_template(presetdata: dict | str, state_params, preset_url=''):
 
 
 def process_dictionary(loaded_parameter_dict, is_generating, inpaint_mode, results):
+    # Dynamic extension resolver:
+    # Match the stem against the real files on disk
+    # Wrapped in a try/except block with local
+    # imports to prevent any silent NameErrors
+    try:
+
+        # Map lowercase 'substyle' to 'v2_substyle' to ensure perfect clipboard JSON parsing
+        if 'substyle' in loaded_parameter_dict:
+            loaded_parameter_dict['v2_substyle'] = loaded_parameter_dict.pop('substyle')
+
+        # Dynamically resolve model filename extensions (.pth, .ckpt, .bin, .safetensors, .fooocus.patch, .gguf)
+        valid_extensions = ['.pth', '.ckpt', '.bin', '.safetensors', '.fooocus.patch', '.gguf']
+        for model_key in ['base_model', 'Base Model', 'refiner_model', 'Refiner Model']:
+            if model_key in loaded_parameter_dict:
+                val = loaded_parameter_dict[model_key]
+                if isinstance(val, str) and val != 'None' and not any(val.lower().endswith(ext) for ext in valid_extensions):
+                    for filename in getattr(config, 'model_filenames', []):
+                        if Path(filename).stem == val:
+                            loaded_parameter_dict[model_key] = filename
+                            break
+    except Exception as e:
+        print(f"[MetaParser] Model resolution bypassed: {e}")
+
     get_image_quantity('image_quantity', 'Image Quantity', loaded_parameter_dict, results)
 
     prompt_str = get_str('prompt', 'Prompt', loaded_parameter_dict, results)
     get_str('negative_prompt', 'Negative Prompt', loaded_parameter_dict, results)
+
     get_list('styles', 'Styles', loaded_parameter_dict, results)
+    get_str('v2_substyle', 'Substyle', loaded_parameter_dict, results)
+
     performance = get_str('performance', 'Performance', loaded_parameter_dict, results)
     get_steps('steps', 'Steps', loaded_parameter_dict, results)
     get_number('overwrite_switch', 'Overwrite Switch', loaded_parameter_dict, results)
@@ -162,15 +192,47 @@ def process_dictionary(loaded_parameter_dict, is_generating, inpaint_mode, resul
     return results
 
 
-# directly called by load metadata from
-# log via clipboard and prompt
-# Also called indirectly by load metada from image
+# Directly called by load metadata from
+# log via clipboard and prompt,
+# or from Toolbox Load Log Info.
+# Also called indirectly by load metadata from image
 def read_meta_from_log(raw_metadata: dict | str, is_generating: bool, inpaint_mode: str):
-    loaded_parameter_dict = US.verify_dictionary(raw_metadata)
+
+    # --- NEW: MULTILINE PARSING BRIDGE ---
+    if isinstance(raw_metadata, str) and not raw_metadata.strip().startswith("{"):
+        loaded_parameter_dict = {}
+        for line in raw_metadata.strip().split("\n"):
+            if ":" in line:
+                key, value = line.split(":", 1)
+
+                # NORMALIZATION STEP:
+                # 1. Lowercase: 'Negative Prompt' -> 'negative prompt'
+                # 2. Underscores: 'negative prompt' -> 'negative_prompt'
+                clean_key = key.strip().lower().replace(" ", "_")
+
+                # 3. Specific mapping for 'preset' vs 'current_preset'
+                if clean_key == "preset":
+                    clean_key = "current_preset"
+                if clean_key == "fooocus_v2_expansion":
+                    clean_key = "prompt_expansion"
+                if clean_key == "substyle":
+                    clean_key = "v2_substyle"
+
+                loaded_parameter_dict[clean_key] = value.strip()
+    else:
+        # Standard JSON path
+        loaded_parameter_dict = US.verify_dictionary(raw_metadata)
+    # -------------------------------------
+
     if not common.log_metadata:
         common.log_metadata = loaded_parameter_dict
     else:
         loaded_parameter_dict = common.log_metadata
+
+    # Safety check: ensure we actually have a dict now
+    if not isinstance(loaded_parameter_dict, dict):
+        print("Dictionary not valid")
+        return [gr.update()]
 
     results = [True] if len(loaded_parameter_dict) > 0 else [gr.update()]
 
@@ -187,6 +249,7 @@ def read_meta_from_log(raw_metadata: dict | str, is_generating: bool, inpaint_mo
         PR.category_selection = PR.find_preset_category(PR.current_preset)
 
     results = process_dictionary(loaded_parameter_dict, is_generating, inpaint_mode, results)
+
     return results
 
 
@@ -313,11 +376,12 @@ def get_resolution(key: str, fallback: str | None, source_dict: dict, results: l
             results.append(int(width))
             results.append(int(height))
     except Exception as e:
-        print(f'in except:{e}')
+        interpret('[MetaParser] The image metadata is not available!')
         results.append(gr.update())
         results.append(gr.update())
         results.append(gr.update())
     return
+
 
 def get_seed(key: str, fallback: str | None, source_dict: dict, results: list, default=None):
     try:
@@ -843,7 +907,6 @@ def get_metadata_parser(metadata_scheme: MetadataScheme) -> MetadataParser:
             return SIMPLEMetadataParser()
         case _:
             raise NotImplementedError
-
 
 def read_meta_from_image(file) -> tuple[str | None, MetadataScheme | None]:
     items = (file.info or {}).copy()

@@ -1,23 +1,119 @@
 import threading
 import args_manager
 import common
+import copy
+import re
 import modules.config as config
+import modules.flags as flags
 import modules.util as util
-from enhanced.translator import interpret
+from enhanced.translator import interpret, \
+    interpret_warn, translate
 from extras.inpaint_mask import generate_mask_from_image, SAMOptions
 from modules.patch import PatchSettings, patch_settings, patch_all
+from pathlib import Path
+
 
 patch_all()
+_image_type = 'Text-to-Image'
+
+
+def build_image_type(async_task, base_type, update_global=True):
+    # creates and refines the Image Type
+    # metadata string using parameters
+    # from the AsyncTask __init__ function
+
+    global _image_type
+    final_type = base_type
+
+    # Refine IC-Light
+    if base_type == 'IC-Light':
+        source = getattr(async_task, 'iclight_source_radio', [])
+        if source:
+            final_type = f'IC-Light ({source})'
+
+    # Refine UOV
+    elif base_type == 'Upscale or Variation':
+        raw_method = getattr(async_task, 'uov_method', [])
+        method = re.sub(r"[()]", "", raw_method)
+        if method == 'Disabled':
+            final_type = 'Text-to-Image'
+        elif method == 'Vary':
+            vary_strength = getattr(async_task, 'overwrite_vary_strength', [])
+            final_type = f'Variation (Strength: {vary_strength})'
+        else:
+            upscale_strength = getattr(async_task, 'overwrite_upscale_strength', [])
+            final_type = f'{method} (Strength: {upscale_strength})'
+
+    # Refine Image Prompt
+    elif base_type == 'Image Prompt':
+        active_slots = getattr(async_task, 'active_ip_slots', [])
+        if active_slots:
+            # Format using the exact 1-based
+            # physical slot index captured at initialization
+            numbered_types = [f'{slot_num}. {cn_type}' for slot_num, cn_type in active_slots]
+            final_type = f"Image Prompt ({', '.join(numbered_types)})"
+
+    # Refine Outpainting
+    elif base_type == 'Outpainting':
+        selections = getattr(async_task, 'outpaint_selections', [])
+        if selections:
+            extensions_list = []
+
+            # Map each active direction sequentially (Left -> Right -> Top -> Bottom)
+            for direction in ['Left', 'Right', 'Top', 'Bottom']:
+                if direction in selections:
+                    if direction == 'Left':
+                        multiplier = getattr(async_task, 'outpaint_left_multiplier', 0.3)
+                    elif direction == 'Right':
+                        multiplier = getattr(async_task, 'outpaint_right_multiplier', 0.3)
+                    elif direction == 'Top':
+                        multiplier = getattr(async_task, 'outpaint_top_multiplier', 0.3)
+                    elif direction == 'Bottom':
+                        multiplier = getattr(async_task, 'outpaint_bottom_multiplier', 0.3)
+
+                    # Round to exactly one decimal place
+                    pct = round(multiplier * 100, 1)
+
+                    # If it is a whole number (e.g. 50.0),
+                    # cast to int to drop the .0
+                    if pct.is_integer():
+                        pct = int(pct)
+
+                    extensions_list.append(f"{direction} {pct}%")
+
+            # Formats exactly to:
+            # "Outpainting, Extensions: Top 40.5%, Bottom 50%", etc.
+            final_type = f"Outpainting, Extensions: {', '.join(extensions_list)}"
+
+    # Refine Inpainting
+    elif base_type == 'Inpainting':
+        engine = getattr(async_task, 'inpaint_engine', [])
+        inpaint_method = getattr(async_task, 'inpaint_mode', 'Inpaint Default: Blend')
+        final_type = f'{inpaint_method} (Engine: {engine})'
+
+    # Append FreeU details if enabled in the frozen task
+    if getattr(async_task, 'freeu_enabled', False):
+        preset = getattr(async_task, 'freeu_preset_name', flags.DEFAULT_FREEU_KEY)
+        is_modified = getattr(async_task, 'freeu_modified', False)
+        mod_suffix = ", Modified" if is_modified else ""
+        # The extended type information is parenthetical:
+        final_type = f"{final_type} with FreeU ({preset}{mod_suffix})"
+
+    # Only modify the global variable if explicitly requested
+    if update_global:
+        _image_type = final_type
+
+    return final_type
+
 
 class AsyncTask:
     def __init__(self, args):
         from modules.flags import Performance, MetadataScheme, ip_list, disabled, task_class_mapping
         from modules.util import get_enabled_loras, is_valid_image
         from modules.config import default_max_lora_number
-        import re
-
         from enhanced.backend import comfyd
 
+        global _image_type
         normalize_lines = lambda text: re.sub(r'[\r\n]+', ' ', text)
 
         self.args = args.copy()
@@ -35,13 +131,16 @@ class AsyncTask:
 #        print(f"Args Stack Length: {len(args)}")
 #        print()
 #        print(f'Args List: {args}')
-#        print()
 
         args.reverse()
         self.generate_image_grid = config.default_generate_image_grid
+        common.last_grid_path = ''
         self.prompt = normalize_lines(config.default_prompt)
         self.negative_prompt = config.default_prompt_negative
+
         self.style_selections = args.pop()
+        self.v2_substyle = getattr(
+            config, 'v2_substyle', 'Default')
 
         self.performance_selection = Performance(common.performance_selection)
         self.steps = self.performance_selection.steps()
@@ -60,42 +159,52 @@ class AsyncTask:
 
         self.loras = get_enabled_loras(config.lora_data)
 
-        self.input_image_checkbox = config.default_image_prompt_checkbox
-        self.current_tab = common.current_tab_name
+        self.input_image_checkbox = config.default_input_image_checkbox
+        if self.input_image_checkbox:
+            self.current_tab = common.current_tab_name
+        else:
+            self.current_tab = ''
         self.uov_method = config.default_uov_method
-        self.uov_input_image = common.uov_image_buffer
+        self.uov_input_image = common.uov_image_buffer.copy() if common.uov_image_buffer is not None else None
+
         self.outpaint_selections = getattr(common,
             'outpaint_selections', [])
-        self.inpaint_input_image = common.inpaint_image_buffer.copy() if common.inpaint_image_buffer else None
+        self.outpaint_extension = getattr(common,
+            'outpaint_extension', False)
+
+        if self.outpaint_extension:
+            # Safely convert percentage (30-100) to decimal multiplier (0.3 - 1.0)
+            self.outpaint_left_multiplier = (getattr(common, 'outpaint_left_percent', 100.0) / 100.0) if 'Left' in self.outpaint_selections else 0.3
+            self.outpaint_right_multiplier = (getattr(common, 'outpaint_right_percent', 100.0) / 100.0) if 'Right' in self.outpaint_selections else 0.3
+            self.outpaint_top_multiplier = (getattr(common, 'outpaint_top_percent', 100.0) / 100.0) if 'Top' in self.outpaint_selections else 0.3
+            self.outpaint_bottom_multiplier = (getattr(common, 'outpaint_bottom_percent', 100.0) / 100.0) if 'Bottom' in self.outpaint_selections else 0.3
+        else:
+            # Standard 30% Outpaint extension:
+            self.outpaint_left_multiplier = 0.3
+            self.outpaint_right_multiplier = 0.3
+            self.outpaint_top_multiplier = 0.3
+            self.outpaint_bottom_multiplier = 0.3
+
+        self.inpaint_input_image = common.inpaint_image_buffer.copy() if common.inpaint_image_buffer is not None else None
         self.inpaint_additional_prompt = getattr(common,
             'inpaint_additional_prompt', '')
-        self.inpaint_mask_image_upload = common.inpaint_mask_buffer.copy() if common.inpaint_mask_buffer else None
+        self.inpaint_mask_image_upload = common.inpaint_mask_buffer.copy() if common.inpaint_mask_buffer is not None else None
 
-#        print(f'Image Prompt Checkbox: {self.input_image_checkbox}')
-#        print(f'Features Checkbox: {self.input_image_checkbox}')
-#        print(f'Current Tab {self.current_tab}')
-#        print(f'Features Tab Name {common.features_tab_name}')
-#        print(f'Outpaint Selections {self.outpaint_selections}')
-#        print(f'self.aspect_ratios_selection {self.aspect_ratios_selection}')
-#        print(f'self.style_selections {self.style_selections}')
-#        print(f'IC-Light Buffer Status: {common.layer_image_buffer is not None}')
-
-        if config.default_image_prompt_checkbox and common.current_tab_name=='inpaint':
+        if self.current_tab == 'inpaint' and not self.outpaint_selections:
             interpret(f'[Worker] Inpaint Image Status:', util.is_valid_image(self.inpaint_input_image))
             mask_status = util.is_valid_image(self.inpaint_mask_image_upload)
             interpret(f'[Worker] Inpaint Mask Status:', mask_status)
             if not mask_status and common.is_auto_masking:
-                interpret('Inpaint Auto-Masking failed!')
+                interpret_warn('Inpaint Auto-Masking failed!')
                 interpret('Please try restarting', 'FooocusPlus')
                 interpret('but also make a bug report at GitHub or the Pure Fooocus Facebook group.')
 
         self.layer_method = 'Blend the Foreground with IC-Light'
-        self.layer_input_image = common.layer_image_buffer
+        self.layer_input_image = common.layer_image_buffer.copy() if common.layer_image_buffer is not None else None
 
-        self.iclight_enable = common.features_tab_name == 'layer' and common.features_checkbox and is_valid_image( common.layer_image_buffer)
+        self.iclight_enable = common.features_tab_name == 'layer' and common.features_checkbox and is_valid_image(common.layer_image_buffer)
         if self.iclight_enable:
             interpret('[Worker] IC-Light enabled')
-
         self.iclight_source_radio = common.iclight_source_radio
 
         self.disable_preview = common.disable_preview
@@ -114,28 +223,35 @@ class AsyncTask:
         self.vae_name = config.default_vae
 
         self.overwrite_step = config.default_overwrite_step
-        self.overwrite_switch = args.pop()
-        self.overwrite_width = args.pop()
-        self.overwrite_height = args.pop()
-        self.overwrite_vary_strength = args.pop()
-        self.overwrite_upscale_strength = args.pop()
-        self.mixing_image_prompt_and_vary_upscale = args.pop()
-        self.mixing_image_prompt_and_inpaint = args.pop()
-        self.debugging_cn_preprocessor = args.pop()
-        self.skipping_cn_preprocessor = args.pop()
-        self.canny_low_threshold = args.pop()
-        self.canny_high_threshold = args.pop()
-        self.refiner_swap_method = args.pop()
-        self.controlnet_softness = args.pop()
+        self.overwrite_switch = config.default_overwrite_switch
+        self.overwrite_width = common.overwrite_width
+        self.overwrite_height = common.overwrite_height
+        self.overwrite_vary_strength = common.vary_strength
+
+        self.overwrite_upscale_strength = config.default_overwrite_upscale
+        self.mixing_image_prompt_and_vary_upscale = common.mixing_ip_uov
+        self.mixing_image_prompt_and_inpaint = common.mixing_ip_inpaint
+
+        self.debugging_cn_preprocessor = common.debugging_cn_preprocessor
+        self.skipping_cn_preprocessor = common.skipping_cn_preprocessor
+        self.canny_low_threshold = common.canny_low_threshold
+        self.canny_high_threshold = common.canny_high_threshold
+        self.refiner_swap_method = common.refiner_swap_method
+        self.controlnet_softness = common.controlnet_softness
+
         self.freeu_enabled, self.freeu_b1, self.freeu_b2, self.freeu_s1, self.freeu_s2 = common.freeu_settings
-        self.debugging_inpaint_preprocessor = args.pop()
-        self.inpaint_disable_initial_latent = args.pop()
-        self.inpaint_engine = args.pop()
-        self.inpaint_strength = args.pop()
-        self.inpaint_respective_field = args.pop()
-        self.inpaint_advanced_masking_checkbox = args.pop()
-        self.invert_mask_checkbox = args.pop()
-        self.inpaint_erode_or_dilate = args.pop()
+        self.freeu_preset_name = getattr(common, 'freeu_preset_name', flags.DEFAULT_FREEU_KEY)
+        self.freeu_modified = getattr(common, 'freeu_modified', False)
+
+        self.debugging_inpaint_preprocessor = common.debugging_inpaint_preprocessor
+        self.inpaint_disable_initial_latent = common.inpaint_disable_initial_latent
+        self.inpaint_engine = common.inpaint_engine
+        self.inpaint_strength = common.inpaint_strength
+        self.inpaint_respective_field = common.inpaint_respective_field
+
+        self.inpaint_advanced_masking_checkbox = config.default_inpaint_advanced_masking_checkbox
+        self.invert_mask_checkbox = config.default_invert_mask_checkbox
+        self.inpaint_erode_or_dilate = common.inpaint_erode_or_dilate
 
         self.params_backend = args.pop().copy()
         self.backfill_prompt = self.params_backend.pop('backfill_prompt')
@@ -156,34 +272,53 @@ class AsyncTask:
                 scheme_name = 'simple'
             self.metadata_scheme = MetadataScheme(scheme_name)
 
+        all_ip_images_are_none = all(slot['image'] is None for slot in config.ip_slots)
+
+        if self.mixing_image_prompt_and_vary_upscale:
+            if all_ip_images_are_none:
+                interpret_warn('[Worker] Mix Image Prompt & Upscale/Variation is enabled but all the Image Prompt slots are empty!')
+            else:
+                interpret('Upscale or Variation is operating in "Mix Image Prompt & Vary/Upscale" mode')
+
+        if self.mixing_image_prompt_and_inpaint:
+            if all_ip_images_are_none:
+                interpret_warn('[Worker] Mix Image Prompt & Inpaint is enabled but all the Image Prompt slots are empty!')
+            else:
+                interpret('Inpaint is operating in "Mix Image Prompt and Inpaint" mode')
+
         self.cn_tasks = {x: [] for x in ip_list}
-        for slot in config.ip_slots:
+        self.active_ip_slots = [] # Capture (slot_number, cn_type)
+
+        for slot_idx, slot in enumerate(config.ip_slots):
             cn_img = slot['image']
             cn_stop = slot['stop']
             cn_weight = slot['weight']
             cn_type = slot['type']
 
             if cn_img is not None:
-                # Use .copy() to ensure the worker owns a private instance of the image data
+                # Use .copy() to ensure the worker
+                # owns a private instance of the image data
                 try:
                     # Works for both NumPy arrays and PIL Images
                     safe_img = cn_img.copy()
                 except AttributeError:
                     # Fallback if it's a different object type
-                    import copy
                     safe_img = copy.deepcopy(cn_img)
 
                 self.cn_tasks[cn_type].append([safe_img, cn_stop, cn_weight])
 
-        self.debugging_dino = args.pop()
-        self.dino_erode_or_dilate = args.pop()
-        self.debugging_enhance_masks_checkbox = args.pop()
+                # Append the 1-based physical slot index and its type
+                self.active_ip_slots.append((slot_idx + 1, cn_type))
 
-        self.enhance_input_image = common.enhance_image_buffer
-        self.enhance_checkbox = args.pop()
-        self.enhance_uov_method = args.pop()
-        self.enhance_uov_processing_order = args.pop()
-        self.enhance_uov_prompt_type = args.pop()
+        self.debugging_dino = common.debugging_dino
+        self.dino_erode_or_dilate = common.dino_erode_or_dilate
+        self.debugging_enhance_masks_checkbox =     common.debugging_enhance_masks
+
+        self.enhance_input_image = common.enhance_image_buffer.copy() if common.enhance_image_buffer is not None else None
+        self.enhance_checkbox = config.default_enhance_checkbox
+        self.enhance_uov_method = config.default_enhance_uov_method
+        self.enhance_uov_processing_order = config.default_enhance_uov_processing_order
+        self.enhance_uov_prompt_type = config.default_enhance_uov_prompt_type
         self.enhance_ctrls = []
         for _ in range(config.default_enhance_tabs):
             enhance_enabled = args.pop()
@@ -258,6 +393,28 @@ class AsyncTask:
         if self.task_name == 'default' and self.task_class == 'Comfy':
             self.params_backend.update({"ui_options": ui_options})
 
+        self.inpaint_mode = getattr(common, 'inpaint_mode', 'Inpaint Modify/Replace')
+
+        # Determine the initial base Image Type
+        # based on frozen parameters
+        if self.iclight_enable:
+            base_type = 'IC-Light'
+        elif self.current_tab == 'uov' and self.uov_input_image is not None:
+            base_type = "Upscale or Variation"
+        elif self.current_tab == 'ip' and any(self.cn_tasks.values()):
+            base_type = 'Image Prompt'
+        elif self.current_tab == 'inpaint' and self.inpaint_input_image is not None:
+            if self.outpaint_selections:
+                base_type = 'Outpainting'
+            else:
+                base_type = "Inpainting"
+        elif self.should_enhance:
+            base_type = 'Enhance'
+        else:
+            base_type = 'Text-to-Image'
+
+        # Initialize/Reset the global _image_type for this task
+        build_image_type(self, base_type, update_global=True)
 
 async_tasks = []
 
@@ -276,11 +433,9 @@ def worker():
     import torch
     import time
     import random
-    import copy
     import cv2
     import modules.default_pipeline as pipeline
     import modules.core as core
-    import modules.flags as flags
     import modules.patch
     import ldm_patched.modules.model_management
     import extras.preprocessors as preprocessors
@@ -305,7 +460,6 @@ def worker():
     from modules.meta_parser import get_metadata_parser
     from enhanced.backend import comfyd, comfyclient_pipeline as comfypipeline
     from enhanced.comfy_task import get_comfy_task, default_kolors_base_model_name
-    import enhanced.translator as translator
 
     pid = os.getpid()
     print()
@@ -341,93 +495,25 @@ def worker():
         return
 
 
-    def build_image_wall(async_task):
-        results = []
-
-        image_count = len(async_task.results)
-        if image_count < 2:
-            return
-        elif image_count > 16:
-            image_count = 16
-        elif image_count == 11 or image_count == 13:
-            image_count -= 1
-
-        for img in async_task.results:
-            if isinstance(img, str) and os.path.exists(img):
-                img = cv2.imread(img)
-                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            if not isinstance(img, np.ndarray):
-                return
-            if img.ndim != 3:
-                return
-            results.append(img)
-
-        H, W, C = results[0].shape
-        aspect_ratio = W/H
-
-        for img in results:
-            Hn, Wn, Cn = img.shape
-            if H != Hn:
-                return
-            if W != Wn:
-                return
-            if C != Cn:
-                return
-
-        # stack landscapes and avoid partial rows:
-        # image_count == 2, 3, 5 or 7
-        if (image_count == 2 or (image_count % 2 != 0 and image_count <= 7)) and aspect_ratio > 1:
-            cols = 1
-        # align odd numbers of portraits & squares in a row:
-        # image_count == 2, 3, 5 or 7
-        elif image_count == 2 or (image_count % 2 != 0 and image_count <= 7):
-            cols = image_count
-        # image_count == 9, 12 or 15, landscape:
-        elif image_count % 3 == 0 and image_count >= 9 and aspect_ratio > 1:
-            cols = 3
-        # image_count == 9, 12 or 15, portrait or square:
-        elif image_count % 3 == 0 and image_count >= 9:
-            cols = image_count // 3
-        # image_count is 4, 6, 8, 10 or 14, landscape:
-        elif image_count % 2 == 0 and image_count < 16 and aspect_ratio > 1:
-            cols = 2
-        # image_count is 4, 6, 8, 10 or 14, portrait or square:
-        elif image_count % 2 == 0 and image_count < 16:
-            cols = image_count // 2
-        # image_count == 16
-        else:
-            cols = 4
-        # calculate the number of rows needed for a grid
-        # originally it produced a final partial row if necessary:
-        rows = float(image_count) / float(cols)
-        rows = int(math.ceil(rows))
-
-        wall = np.zeros(shape=(H * rows, W * cols, C), dtype=np.uint8)
-
-        for y in range(rows):
-            for x in range(cols):
-                if y * cols + x < image_count:
-                    img = results[y * cols + x]
-                    wall[y * H:y * H + H, x * W:x * W + W, :] = img
-
-        # must use deep copy otherwise gradio is super laggy
-        # Do not use list.append()
-        async_task.results = async_task.results + [wall]
-        return
-
-
     def process_task(all_steps,
-            async_task, callback, controlnet_canny_path, controlnet_cpds_path, current_task_id,
-            denoising_strength, final_scheduler_name, goals, initial_latent, steps, switch, positive_cond,
-            negative_cond, task, loras, tiled, use_expansion, width, height, base_progress, preparation_steps,
-            total_count, show_intermediate_results, persist_image=True):
+        async_task, callback, controlnet_canny_path, controlnet_cpds_path, current_task_id,
+        denoising_strength, final_scheduler_name, goals, initial_latent, steps, switch, positive_cond,
+        negative_cond, task, loras, tiled, use_expansion, width, height, base_progress, preparation_steps,
+        total_count, show_intermediate_results, persist_image=True):
+
+        # Introduce Fooocus V2 support to Comfy:
+        # combine the styled prompt and
+        # the prompt expansion cleanly
+        combined_positive = ", ".join([x for x in task["positive"] if isinstance(x, str) and x.strip()])
+        combined_negative = ", ".join([x for x in task["negative"] if isinstance(x, str) and x.strip()])
+
         if async_task.last_stop is not False:
             ldm_patched.modules.model_management.interrupt_current_processing()
 
         if async_task.task_class in flags.comfy_classes:
             default_params = dict(
-                prompt=task["positive"][0],
-                negative_prompt=task["negative"][0],
+                prompt=combined_positive,
+                negative_prompt=combined_negative,
                 width=width,
                 height=height,
                 base_model=async_task.base_model_name,
@@ -493,10 +579,11 @@ def worker():
             progressbar(async_task, current_progress, 'Checking for NSFW content...')
             imgs = default_censor(imgs)
         progressbar(async_task, current_progress, interpret(f'Saving image {current_task_id + 1}/{total_count} to system...', '', True))
-        img_paths = save_and_log(async_task, height, imgs, task, use_expansion, width, loras, persist_image)
+        img_paths, grid_metadata = save_and_log(async_task, height, imgs, task, use_expansion, width, loras, persist_image)
         yield_result(async_task, img_paths, current_progress, async_task.black_out_nsfw, False,
             do_not_show_finished_images=not show_intermediate_results)
         return imgs, img_paths, current_progress
+
 
     def apply_patch_settings(async_task):
         patch_settings[pid] = PatchSettings(
@@ -508,14 +595,141 @@ def worker():
             async_task.adaptive_cfg
         )
 
+
+    def build_image_grid(async_task):
+        results = []
+
+        image_count = len(async_task.results)
+        if image_count < 2:
+            return
+        elif image_count > 16:
+            image_count = 16
+        elif image_count == 11 or image_count == 13:
+            image_count -= 1
+
+        for img in async_task.results:
+            if isinstance(img, str) and os.path.exists(img):
+                img = cv2.imread(img)
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            if not isinstance(img, np.ndarray):
+                return
+            if img.ndim != 3:
+                return
+            results.append(img)
+
+        H, W, C = results[0].shape
+        aspect_ratio = W/H
+
+        for img in results:
+            Hn, Wn, Cn = img.shape
+            if H != Hn:
+                return
+            if W != Wn:
+                return
+            if C != Cn:
+                return
+
+        # stack landscapes and avoid partial rows:
+        # image_count == 2, 3, 5 or 7
+        if (image_count == 2 or (image_count % 2 != 0 and image_count <= 7)) and aspect_ratio > 1:
+            cols = 1
+        # align odd numbers of portraits & squares in a row:
+        # image_count == 2, 3, 5 or 7
+        elif image_count == 2 or (image_count % 2 != 0 and image_count <= 7):
+            cols = image_count
+        # image_count == 9, 12 or 15, landscape:
+        elif image_count % 3 == 0 and image_count >= 9 and aspect_ratio > 1:
+            cols = 3
+        # image_count == 9, 12 or 15, portrait or square:
+        elif image_count % 3 == 0 and image_count >= 9:
+            cols = image_count // 3
+        # image_count is 4, 6, 8, 10 or 14, landscape:
+        elif image_count % 2 == 0 and image_count < 16 and aspect_ratio > 1:
+            cols = 2
+        # image_count is 4, 6, 8, 10 or 14, portrait or square:
+        elif image_count % 2 == 0 and image_count < 16:
+            cols = image_count // 2
+        # image_count == 16
+        else:
+            cols = 4
+        # calculate the number of rows needed for a grid
+        # originally it produced a final partial row if necessary:
+        rows = float(image_count) / float(cols)
+        rows = int(math.ceil(rows))
+
+        grid = np.zeros(shape=(H * rows, W * cols, C), dtype=np.uint8)
+
+        for y in range(rows):
+            for x in range(cols):
+                if y * cols + x < image_count:
+                    img = results[y * cols + x]
+                    grid[y * H:y * H + H, x * W:x * W + W, :] = img
+
+        try:
+            # 1. Retrieve stashed items directly from the object reference
+            grid_meta = getattr(async_task, 'grid_metadata_template', None)
+            grid_parser = getattr(async_task, 'grid_parser', None)
+            grid_task_data = getattr(async_task, 'grid_task_snapshot', None)
+
+            if grid_parser is None or grid_task_data is None:
+                grid_task_data = getattr(async_task, 'task', {})
+                interpret('[Worker] Warning: Using live task data for grid (snapshot missing)')
+
+            # 2. Use the logger
+            grid_path_str = log(
+                grid,
+                grid_meta,
+                grid_parser,
+                async_task.output_format,
+                grid_task_data,
+                True
+            )
+            grid_path = Path(grid_path_str)
+            if not grid_path.is_absolute():
+                grid_path = Path(config.path_outputs) / grid_path
+            common.last_grid_path = str(grid_path)
+
+            # 3. Update results
+            async_task.results = async_task.results + [grid_path_str]
+
+            # 4. Set a "Success" flag and store the path for the UI
+            async_task.grid_success = True
+            async_task.grid_final_path = grid_path_str
+
+        except Exception as e:
+            interpret(f'[Worker] Failed to save the Image Grid as a file:', e)
+            # Set a "Failure" flag
+            async_task.grid_success = False
+            async_task.results = async_task.results + [grid]
+
+        return
+
+
     def save_and_log(async_task, height, imgs, task, use_expansion, width, loras, persist_image=True) -> list:
+        global _image_type
         img_paths = []
+
+        # Determine the clean base type and
+        # build the correct individual image type.
+        # We pass update_global=False here
+        # to prevent contaminating the global variable.
+        base_type = _image_type.split(" with FreeU")[0] if _image_type else "Text-to-Image"
+        individual_image_type = build_image_type(
+            async_task, base_type, update_global=False)
+
         for x in imgs:
             d = [('Prompt', 'prompt', task['log_positive_prompt']),
                  ('Negative Prompt', 'negative_prompt', task['log_negative_prompt']),
                  ('Fooocus V2 Expansion', 'prompt_expansion', task['expansion']),
                  ('Styles', 'styles',
-                  str(task['styles'] if not use_expansion else [fooocus_expansion] + task['styles'])),
+                  str(task['styles'] if not use_expansion else [fooocus_expansion] + task['styles']))]
+
+            # Conditionally insert Substyle directly below Styles
+            if use_expansion:
+                d.append(('Substyle', 'v2_substyle', async_task.v2_substyle))
+
+            # Extend with the rest of standard parameters
+            d.extend([
                  ('Performance', 'performance', async_task.performance_selection.value),
                  ('Steps', 'steps', async_task.steps),
                  ('Resolution', 'resolution', str((width, height))),
@@ -527,7 +741,7 @@ def worker():
                      modules.patch.patch_settings[pid].adm_scaler_end))),
                  ('Base Model', 'base_model', async_task.base_model_name),
                  ('Refiner Model', 'refiner_model', async_task.refiner_model_name),
-                 ('Refiner Switch', 'refiner_switch', async_task.refiner_switch)]
+                 ('Refiner Switch', 'refiner_switch', async_task.refiner_switch)])
 
             if async_task.refiner_model_name != 'None':
                 if async_task.overwrite_switch > 0:
@@ -574,9 +788,42 @@ def worker():
             d.append(('Preset', 'current_preset', args_manager.args.preset))
             fooocusplus_ver, hotfix, hotfix_title = version.get_fooocusplus_ver()
             d.append(('Version', 'version', f'{fooocusplus_ver}.{hotfix_title}'))
+
+            # Inject the built Image Type directly
+            # into this individual image's metadata list (d)
+            d.append(('Image Type', 'image_type', individual_image_type))
+
+            # Save the first image metadata in the
+            # batch for image grid.
+            try:
+                if getattr(async_task, 'grid_metadata_template', None) is None and async_task.image_quantity > 1:
+
+                    # Dynamically build the grid image type
+                    # (e.g., "Image Grid" or "Image Grid with FreeU...")
+
+                    grid_image_type = build_image_type(
+                        async_task, 'Image Grid', update_global=False)
+
+                    # Create the stashed metadata replacing
+                    # the individual type with the grid type
+                    grid_d = [item for item in d if item[1] != 'image_type']
+                    grid_d.append(('Image Type', 'image_type', grid_image_type))
+
+                    async_task.grid_metadata_template = grid_d
+                    async_task.grid_task_snapshot = task.copy()
+                    async_task.grid_parser = metadata_parser
+
+            except Exception as grid_err:
+                interpret(f"\n[Worker] Global stash failed: {grid_err}\n")
+
+            # This line must follow the metadata
+            # block to save every image
             img_paths.append(log(x, d, metadata_parser, async_task.output_format, task, persist_image))
 
-        return img_paths
+        # We return the first_metadata we just stashed
+        # (or None if not a grid)
+        return img_paths, getattr(async_task, 'grid_metadata_template', None)
+
 
     def apply_control_nets(async_task, height, ip_adapter_face_path, ip_adapter_path, width, current_progress):
         for task in async_task.cn_tasks[flags.cn_canny]:
@@ -629,6 +876,7 @@ def worker():
         if len(all_ip_tasks) > 0:
             pipeline.final_unet = ip_adapter.patch_model(pipeline.final_unet, all_ip_tasks)
 
+
     def apply_vary(async_task, uov_method, denoising_strength, uov_input_image, switch, current_progress, advance_progress=False):
         denoising_strength = async_task.overwrite_vary_strength
         shape_ceil = get_image_shape_ceil(uov_input_image)
@@ -653,13 +901,15 @@ def worker():
         B, C, H, W = initial_latent['samples'].shape
         width = W * 8
         height = H * 8
-        print(f'Final resolution is {str((width, height))}.')
+        interpret('The final resolution is', str((width, height)))
         return uov_input_image, denoising_strength, initial_latent, width, height, current_progress
 
+
     def apply_inpaint(async_task, initial_latent, inpaint_head_model_path, inpaint_image,
-                      inpaint_mask, inpaint_parameterized, denoising_strength, inpaint_respective_field, switch,
-                      inpaint_disable_initial_latent, current_progress, skip_apply_outpaint=False,
-                      advance_progress=False):
+            inpaint_mask, inpaint_parameterized, denoising_strength, inpaint_respective_field, switch,
+            inpaint_disable_initial_latent, current_progress, skip_apply_outpaint=False,
+            advance_progress=False):
+
         if not skip_apply_outpaint:
             inpaint_image, inpaint_mask = apply_outpaint(async_task, inpaint_image, inpaint_mask)
 
@@ -670,6 +920,7 @@ def worker():
             k=inpaint_respective_field
         )
         if async_task.debugging_inpaint_preprocessor:
+            interpret('Debugging the inpaint preprocessor:', debugging_inpaint_preprocessor)
             yield_result(async_task, inpaint_worker.current_task.visualize_mask_processing(), 100,
                          async_task.black_out_nsfw, do_not_show_finished_images=True)
             raise EarlyReturnException
@@ -722,33 +973,58 @@ def worker():
 
         return denoising_strength, initial_latent, width, height, current_progress
 
+
     def apply_outpaint(async_task, inpaint_image, inpaint_mask):
-        if len(async_task.outpaint_selections) > 0:
+
+        len_select = len(async_task.outpaint_selections)
+
+        if len_select > 0:
+
             H, W, C = inpaint_image.shape
             if 'top' in async_task.outpaint_selections:
-                inpaint_image = np.pad(inpaint_image, [[int(H * 0.3), 0], [0, 0], [0, 0]], mode='edge')
-                inpaint_mask = np.pad(inpaint_mask, [[int(H * 0.3), 0], [0, 0]], mode='constant',
-                                      constant_values=255)
+                inpaint_image = np.pad(inpaint_image,
+                    [[int(H * async_task.outpaint_top_multiplier), 0],
+                    [0, 0], [0, 0]], mode='edge')
+
+                inpaint_mask = np.pad(inpaint_mask,
+                    [[int(H * async_task.outpaint_top_multiplier), 0],
+                    [0, 0]], mode='constant', constant_values=255)
+
             if 'bottom' in async_task.outpaint_selections:
-                inpaint_image = np.pad(inpaint_image, [[0, int(H * 0.3)], [0, 0], [0, 0]], mode='edge')
-                inpaint_mask = np.pad(inpaint_mask, [[0, int(H * 0.3)], [0, 0]], mode='constant',
-                                      constant_values=255)
+                inpaint_image = np.pad(inpaint_image,
+                    [[0, int(H * async_task.outpaint_bottom_multiplier)],
+                     [0, 0], [0, 0]], mode='edge')
+
+                inpaint_mask = np.pad(inpaint_mask,
+                    [[0, int(H * async_task.outpaint_bottom_multiplier)],
+                     [0, 0]], mode='constant', constant_values=255)
 
             H, W, C = inpaint_image.shape
             if 'left' in async_task.outpaint_selections:
-                inpaint_image = np.pad(inpaint_image, [[0, 0], [int(W * 0.3), 0], [0, 0]], mode='edge')
-                inpaint_mask = np.pad(inpaint_mask, [[0, 0], [int(W * 0.3), 0]], mode='constant',
-                                      constant_values=255)
+                inpaint_image = np.pad(inpaint_image,
+                    [[0, 0], [int(W * async_task.outpaint_left_multiplier), 0],
+                    [0, 0]], mode='edge')
+
+                inpaint_mask = np.pad(inpaint_mask,
+                    [[0, 0], [int(W * async_task.outpaint_left_multiplier), 0]],
+                    mode='constant', constant_values=255)
+
             if 'right' in async_task.outpaint_selections:
-                inpaint_image = np.pad(inpaint_image, [[0, 0], [0, int(W * 0.3)], [0, 0]], mode='edge')
-                inpaint_mask = np.pad(inpaint_mask, [[0, 0], [0, int(W * 0.3)]], mode='constant',
-                                      constant_values=255)
+                inpaint_image = np.pad(inpaint_image, [[0, 0],
+                    [0, int(W * async_task.outpaint_right_multiplier)],
+                    [0, 0]], mode='edge')
+
+                inpaint_mask = np.pad(inpaint_mask, [[0, 0],
+                    [0, int(W * async_task.outpaint_right_multiplier)]],
+                    mode='constant',  constant_values=255)
 
             inpaint_image = np.ascontiguousarray(inpaint_image.copy())
             inpaint_mask = np.ascontiguousarray(inpaint_mask.copy())
             async_task.inpaint_strength = 1.0
             async_task.inpaint_respective_field = 1.0
+
         return inpaint_image, inpaint_mask
+
 
     def apply_upscale(async_task, uov_input_image, uov_method, switch, current_progress, advance_progress=False):
         H, W, C = uov_input_image.shape
@@ -850,7 +1126,7 @@ def worker():
             pipeline.reload_expansion()
         if advance_progress:
             current_progress += 1
-        print()
+
         if config.default_extra_variation:
             progressbar(async_task, current_progress, 'Processing the prompts, "Extra Variation" randomness active...')
         else:
@@ -943,10 +1219,30 @@ def worker():
             for i, t in enumerate(tasks):
                 print()
                 progressbar(async_task, current_progress, f'Preparing Fooocus text #{i + 1}...')
-                expansion = pipeline.final_expansion(t['task_prompt'], t['task_seed'])
+
+                # 1. Safe fallback for the substyle
+                substyle = getattr(config, 'v2_substyle', 'Default')
+
+                # 2. Grab the IC-Light flag directly from the task data (no recalculation needed)
+                # We check the 'ui_options' dict we tucked into the task earlier.
+                iclight_active = t.get('ui_options', {}).get('iclight_enable', False)
+
+                # 3. Determine if the prefix anchor should be applied
+                use_anchor = substyle not in ['Default', 'Unlit'] and not iclight_active
+
+                if use_anchor:
+                    anchor = substyle.replace("_", " ")
+                    # Seed the GPT-2 engine with the anchor
+                    seed_prompt = f"{t['task_prompt']}, {anchor},"
+                    expansion = pipeline.final_expansion(seed_prompt, t['task_seed'])
+                else:
+                    # Clean run for Default, Unlit, or IC-Light modes
+                    expansion = pipeline.final_expansion(t['task_prompt'], t['task_seed'])
+
                 interpret('[Worker] Prompt Expansion:', expansion)
                 t['expansion'] = expansion
-                t['positive'] = copy.deepcopy(t['positive']) + [expansion]  # Deep copy.
+                t['positive'] = copy.deepcopy(t['positive']) + [expansion]
+
         if async_task.task_class in ['Fooocus']:
             if advance_progress:
                 current_progress += 1
@@ -1005,7 +1301,7 @@ def worker():
         progressbar(async_task, current_progress, 'Downloading Hyper-SD components...')
         async_task.performance_loras += [(config.downloading_sdxl_hyper_sd_lora(), 0.8)]
         if async_task.refiner_model_name != 'None':
-            print(f'Refiner disabled in Hyper-SD mode.')
+            interpret('Refiner disabled in Hyper-SD mode.')
         async_task.refiner_model_name = 'None'
         async_task.sampler_name = 'dpmpp_sde_gpu'
         async_task.scheduler_name = 'karras'
@@ -1025,7 +1321,7 @@ def worker():
         progressbar(async_task, 1, 'Downloading Lightning components...')
         async_task.performance_loras += [(config.downloading_sdxl_lightning_lora(), 1.0)]
         if async_task.refiner_model_name != 'None':
-            print(f'Refiner disabled in Lightning mode.')
+            interpret('Refiner disabled in Lightning mode.')
         async_task.refiner_model_name = 'None'
         async_task.sampler_name = 'euler'
         async_task.scheduler_name = 'sgm_uniform'
@@ -1085,8 +1381,7 @@ def worker():
                 if isinstance(async_task.inpaint_mask_image_upload,
                               np.ndarray) and async_task.inpaint_mask_image_upload.ndim == 3:
                     H, W, C = inpaint_image.shape
-                    async_task.inpaint_mask_image_upload = resample_image(async_task.inpaint_mask_image_upload,
-                                                                          width=W, height=H)
+                    async_task.inpaint_mask_image_upload = resample_image(async_task.inpaint_mask_image_upload, width=W, height=H)
                     async_task.inpaint_mask_image_upload = np.mean(async_task.inpaint_mask_image_upload, axis=2)
                     async_task.inpaint_mask_image_upload = (async_task.inpaint_mask_image_upload > 127).astype(
                         np.uint8) * 255
@@ -1199,7 +1494,7 @@ def worker():
             direct_return, img, denoising_strength, initial_latent, tiled, width, height, current_progress = apply_upscale(
                 async_task, img, async_task.enhance_uov_method, switch, current_progress)
             if direct_return:
-                d = [('Upscale (Fast)', 'upscale_fast', '2x')]
+                d = [('Image Type', 'image_type', 'Upscale 2x Fast')]
                 if config.default_black_out_nsfw or async_task.black_out_nsfw:
                     progressbar(async_task, current_progress, 'Checking for NSFW content...')
                     img = default_censor(img)
@@ -1300,8 +1595,8 @@ def worker():
             comfyd.stop()
 
         if async_task.task_class not in ['Kolors', 'Kolors+', 'HyDiT', 'HyDiT+'] and 'kolors' not in async_task.task_name.lower():
-            async_task.prompt = translator.translate(async_task.prompt, True)
-            async_task.negative_prompt = translator.translate(async_task.negative_prompt, True)
+            async_task.prompt = translate(async_task.prompt, True)
+            async_task.negative_prompt = translate(async_task.negative_prompt, True)
 
         async_task.outpaint_selections = [o.lower() for o in async_task.outpaint_selections]
         base_model_additional_loras = []
@@ -1410,7 +1705,7 @@ def worker():
                 async_task, async_task.uov_input_image, async_task.uov_method, switch, current_progress,
                 advance_progress=True)
             if direct_return:
-                d = [('Upscale (Fast)', 'upscale_fast', '2x')]
+                d = [('Image Type', 'image_type', 'Upscale 2x Fast')]
                 if config.default_black_out_nsfw or async_task.black_out_nsfw:
                     progressbar(async_task, 100, 'Checking for NSFW content...')
                     async_task.uov_input_image = default_censor(async_task.uov_input_image)
@@ -1435,6 +1730,7 @@ def worker():
                     current_progress,
                     advance_progress=True)
             except EarlyReturnException:
+                interpret('[Worker] Early return error in Inpaint')
                 return
 
         if 'cn' in goals:
@@ -1647,10 +1943,9 @@ def worker():
                 is_last_enhance_for_image = (current_task_id + 1) % active_enhance_tabs == 0 and not enhance_uov_after
                 persist_image = not async_task.save_final_enhanced_image_only or is_last_enhance_for_image
 
-
-                enhance_mask_dino_prompt_text = translator.translate(enhance_mask_dino_prompt_text, True)
-                enhance_prompt = translator.translate(enhance_prompt, True)
-                enhance_negative_prompt = translator.translate(enhance_negative_prompt, True)
+                enhance_mask_dino_prompt_text = translate(enhance_mask_dino_prompt_text, True)
+                enhance_prompt = translate(enhance_prompt, True)
+                enhance_negative_prompt = translate(enhance_negative_prompt, True)
 
                 extras = {}
                 if enhance_mask_model == 'sam':
@@ -1687,7 +1982,7 @@ def worker():
                 interpret('Enhance segments applied to mask;', sam_detection_on_mask_count)
 
                 if enhance_mask_model == 'sam' and (dino_detection_count == 0 or not async_task.debugging_dino and sam_detection_on_mask_count == 0):
-                    print(f'[Enhance] No "{enhance_mask_dino_prompt_text}" detected, skipping')
+                    interpret(f'[Enhance] No "{enhance_mask_dino_prompt_text}" detected, skipping')
                     continue
 
                 goals_enhance = ['inpaint']
@@ -1758,7 +2053,7 @@ def worker():
             try:
                 handler(task)
                 if config.default_generate_image_grid:
-                    build_image_wall(task)
+                    build_image_grid(task)
                 task.yields.append(['finish', task.results])
                 if task.task_class not in flags.comfy_classes:
                     pipeline.prepare_text_encoder(async_call=True)

@@ -16,6 +16,7 @@ if model_management.xformers_enabled():
 
 from args_manager import args
 import ldm_patched.modules.ops
+
 ops = ldm_patched.modules.ops.disable_weight_init
 
 # CrossAttn precision handling

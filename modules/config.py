@@ -5,16 +5,16 @@ import numbers
 import common
 import string # required by prompt_array_separator verification
 import modules.constants as constants
-import modules.flags
 import modules.user_structure as US
 import tempfile
+import modules.flags as flags
 
+from modules.flags import EditFormat, OutputFormat, \
+    Performance, MetadataScheme
 from pathlib import Path
 from args_manager import args
 from enhanced.translator import interpret
 from modules.extra_utils import get_files_from_folder, try_eval_env_var
-from modules.flags import EditFormat, OutputFormat, \
-    Performance, MetadataScheme
 from modules.model_loader import load_file_from_url
 from modules.ui_features import control_notification
 
@@ -104,8 +104,7 @@ def get_config_path(config_file):
     config_path = os.path.abspath(f'{config_path}/{config_file}')
     return config_path
 
-# config_dict.update(PR.get_initial_preset_content())
-theme = args.theme
+mode = args.mode
 
 config_path = get_config_path('/config.txt')
 config_example_path = get_config_path('/config_modification_tutorial.txt')
@@ -154,6 +153,8 @@ path_rembg = get_dir_or_set_default('path_rembg', Path(path_models_root/'rembg')
 path_layer_model = get_dir_or_set_default('path_layer_model', Path(path_models_root/'layer_model').resolve())
 paths_diffusers = get_dir_or_set_default('path_diffusers', [Path(path_models_root/'diffusers').resolve()], True, False)
 path_outputs = get_path_output()
+print()
+interpret('Analyzing the graphics system...')
 
 from enhanced.backend import init_modelsinfo
 modelsinfo = init_modelsinfo(path_models_root, dict(
@@ -271,8 +272,8 @@ default_low_vram_presets = get_config_item_or_set_default(
     expected_type=bool
 )
 
-default_image_prompt_checkbox = get_config_item_or_set_default(
-    key='default_image_prompt_checkbox',
+default_input_image_checkbox = get_config_item_or_set_default(
+    key='default_input_image_checkbox',
     default_value=False,
     validator=lambda x: isinstance(x, bool),
     expected_type=bool
@@ -431,8 +432,8 @@ default_describe_apply_prompts_checkbox = get_config_item_or_set_default(
 )
 default_describe_content_type = get_config_item_or_set_default(
     key='default_describe_content_type',
-    default_value=[modules.flags.describe_type_photo, modules.flags.describe_type_anime],
-    validator=lambda x: all(k in modules.flags.describe_types for k in x),
+    default_value=[flags.describe_type_photo, flags.describe_type_anime],
+    validator=lambda x: all(k in flags.describe_types for k in x),
     expected_type=list
 )
 enable_auto_describe_image = get_config_item_or_set_default(
@@ -451,6 +452,14 @@ default_styles = get_config_item_or_set_default(
     ],
     validator=lambda x: isinstance(x, list) and all(y in modules.sdxl_styles.legal_style_names for y in x),
     expected_type=list
+)
+# Fooocus V2 Substyle
+# controls which word list to use
+v2_substyle = get_config_item_or_set_default(
+    key='v2_substyle',
+    default_value='Default',
+    validator=lambda x: isinstance(x, str),
+    expected_type=str
 )
 
 default_engine = get_config_item_or_set_default(
@@ -592,7 +601,7 @@ edit_save_metadata_to_images = get_config_item_or_set_default(
 default_metadata_scheme = get_config_item_or_set_default(
     key='default_metadata_scheme',
     default_value='Fooocus',
-    validator=lambda x: x in [y[1] for y in modules.flags.metadata_scheme if y[1] == x],
+    validator=lambda x: x in [y[1] for y in flags.metadata_scheme if y[1] == x],
     expected_type=str
 )
 metadata_created_by = get_config_item_or_set_default(
@@ -666,25 +675,25 @@ default_backfill_prompt = get_config_item_or_set_default(
 default_sampler = get_config_item_or_set_default(
     key='default_sampler',
     default_value='dpmpp_2m_sde_gpu',
-    validator=lambda x: x in modules.flags.sampler_list if backend_engine == 'Fooocus' else modules.flags.comfy_sampler_list,
+    validator=lambda x: x in flags.sampler_list if backend_engine == 'Fooocus' else flags.comfy_sampler_list,
     expected_type=str
 )
 default_scheduler = get_config_item_or_set_default(
     key='default_scheduler',
     default_value='karras',
-    validator=lambda x: x in modules.flags.scheduler_list if backend_engine == 'Fooocus' else modules.flags.comfy_scheduler_list,
+    validator=lambda x: x in flags.scheduler_list if backend_engine == 'Fooocus' else flags.comfy_scheduler_list,
     expected_type=str
 )
 default_vae = get_config_item_or_set_default(
     key='default_vae',
-    default_value=modules.flags.default_vae,
+    default_value=flags.default_vae,
     validator=lambda x: isinstance(x, str),
     expected_type=str
 )
 default_clip_skip = get_config_item_or_set_default(
     key='default_clip_skip',
     default_value=2,
-    validator=lambda x: isinstance(x, int) and 1 <= x <= modules.flags.clip_skip_max,
+    validator=lambda x: isinstance(x, int) and 1 <= x <= flags.clip_skip_max,
     expected_type=int
 )
 
@@ -729,19 +738,19 @@ vae_downloads = get_config_item_or_set_default(
 default_inpaint_engine_version = get_config_item_or_set_default(
     key='default_inpaint_engine_version',
     default_value='v2.6',
-    validator=lambda x: x in modules.flags.inpaint_engine_versions,
+    validator=lambda x: x in flags.inpaint_engine_versions,
     expected_type=str
 )
 default_selected_image_input_tab_id = get_config_item_or_set_default(
     key='default_selected_image_input_tab_id',
-    default_value=modules.flags.default_input_image_tab,
-    validator=lambda x: x in modules.flags.input_image_tab_ids,
+    default_value=flags.default_input_image_tab,
+    validator=lambda x: x in flags.input_image_tab_ids,
     expected_type=str
 )
 default_uov_method = get_config_item_or_set_default(
     key='default_uov_method',
-    default_value=modules.flags.disabled,
-    validator=lambda x: x in modules.flags.uov_list,
+    default_value=flags.disabled,
+    validator=lambda x: x in flags.uov_list,
     expected_type=str
 )
 default_controlnet_image_count = get_config_item_or_set_default(
@@ -771,12 +780,12 @@ for image_count in range(default_controlnet_image_count):
 
     default_ip_types[image_count] = get_config_item_or_set_default(
         key=f'default_ip_type_{image_count}',
-        default_value=modules.flags.default_ip,
-        validator=lambda x: x in modules.flags.ip_list,
+        default_value=flags.default_ip,
+        validator=lambda x: x in flags.ip_list,
         expected_type=str
     )
 
-    default_end, default_weight = modules.flags.default_parameters[default_ip_types[image_count]]
+    default_end, default_weight = flags.default_parameters[default_ip_types[image_count]]
 
     default_ip_stop_ats[image_count] = get_config_item_or_set_default(
         key=f'default_ip_stop_at_{image_count}',
@@ -813,9 +822,9 @@ inpaint_translation_map = {
 # retrieve and validate the Inpaint mode
 default_inpaint_method = get_config_item_or_set_default(
     key='default_inpaint_method',
-    default_value=modules.flags.inpaint_option_default,
+    default_value=flags.inpaint_option_default,
     # the validator now checks BOTH new and old lists:
-    validator=lambda x: x in (modules.flags.inpaint_options + modules.flags.legacy_inpaint_options),
+    validator=lambda x: x in (flags.inpaint_options + flags.legacy_inpaint_options),
     expected_type=str
 )
 # if the string is an old one, swap it for the new one immediately
@@ -852,20 +861,20 @@ default_enhance_tabs = get_config_item_or_set_default(
 )
 default_enhance_uov_method = get_config_item_or_set_default(
     key='default_enhance_uov_method',
-    default_value=modules.flags.disabled,
-    validator=lambda x: x in modules.flags.uov_list,
+    default_value=flags.disabled,
+    validator=lambda x: x in flags.uov_list,
     expected_type=int
 )
 default_enhance_uov_processing_order = get_config_item_or_set_default(
     key='default_enhance_uov_processing_order',
-    default_value=modules.flags.enhancement_uov_before,
-    validator=lambda x: x in modules.flags.enhancement_uov_processing_order,
+    default_value=flags.enhancement_uov_before,
+    validator=lambda x: x in flags.enhancement_uov_processing_order,
     expected_type=int
 )
 default_enhance_uov_prompt_type = get_config_item_or_set_default(
     key='default_enhance_uov_prompt_type',
-    default_value=modules.flags.enhancement_uov_prompt_type_original,
-    validator=lambda x: x in modules.flags.enhancement_uov_prompt_types,
+    default_value=flags.enhancement_uov_prompt_type_original,
+    validator=lambda x: x in flags.enhancement_uov_prompt_types,
     expected_type=int
 )
 default_sam_max_detections = get_config_item_or_set_default(
@@ -911,47 +920,47 @@ default_invert_mask_checkbox = get_config_item_or_set_default(
 default_inpaint_mask_model = get_config_item_or_set_default(
     key='default_inpaint_mask_model',
     default_value='isnet-general-use',
-    validator=lambda x: x in modules.flags.inpaint_mask_models,
+    validator=lambda x: x in flags.inpaint_mask_models,
     expected_type=str
 )
 edit_background_mask_model = get_config_item_or_set_default(
     key='edit_background_mask_model',
     default_value='isnet-general-use',
-    validator=lambda x: x in modules.flags.edit_bg_mask_models,
+    validator=lambda x: x in flags.edit_bg_mask_models,
     expected_type=str
 )
 default_enhance_inpaint_mask_model = get_config_item_or_set_default(
     key='default_enhance_inpaint_mask_model',
     default_value='sam',
-    validator=lambda x: x in modules.flags.inpaint_mask_models,
+    validator=lambda x: x in flags.inpaint_mask_models,
     expected_type=str
 )
 default_inpaint_mask_cloth_category = get_config_item_or_set_default(
     key='default_inpaint_mask_cloth_category',
     default_value='full',
-    validator=lambda x: x in modules.flags.inpaint_mask_cloth_category,
+    validator=lambda x: x in flags.inpaint_mask_cloth_category,
     expected_type=str
 )
 default_inpaint_mask_sam_model = get_config_item_or_set_default(
     key='default_inpaint_mask_sam_model',
     default_value='vit_b',
-    validator=lambda x: x in modules.flags.inpaint_mask_sam_model,
+    validator=lambda x: x in flags.inpaint_mask_sam_model,
     expected_type=str
 )
 default_inpaint_mask_model = get_config_item_or_set_default(
     key='default_inpaint_mask_model',
     default_value='isnet-general-use',
-    validator=lambda x: x in modules.flags.inpaint_mask_models
+    validator=lambda x: x in flags.inpaint_mask_models
 )
 default_inpaint_mask_cloth_category = get_config_item_or_set_default(
     key='default_inpaint_mask_cloth_category',
     default_value='full',
-    validator=lambda x: x in modules.flags.inpaint_mask_cloth_category
+    validator=lambda x: x in flags.inpaint_mask_cloth_category
 )
 default_inpaint_mask_sam_model = get_config_item_or_set_default(
     key='default_inpaint_mask_sam_model',
     default_value='sam_vit_b_01ec64',
-    validator=lambda x: x in modules.flags.inpaint_mask_sam_model
+    validator=lambda x: x in flags.inpaint_mask_sam_model
 )
 default_mixing_image_prompt_and_vary_upscale = get_config_item_or_set_default(
     key='default_mixing_image_prompt_and_vary_upscale',
@@ -964,7 +973,7 @@ default_mixing_image_prompt_and_inpaint = get_config_item_or_set_default(
     validator=lambda x: isinstance(x, bool)
 )
 
-default_freeu = [1.01, 1.02, 0.99, 0.95]
+default_freeu = flags.FREEU_DATA[flags.DEFAULT_FREEU_KEY]
 
 default_adm_guidance = [1.5, 0.8, 0.3]
 styles_definition = {}
@@ -1001,6 +1010,7 @@ possible_preset_keys = {
     "default_prompt_negative": "negative_prompt",
     "default_extra_variation": "extra_variation",
     "default_styles": "styles",
+    "v2_substyle": "substyle",
     "default_aspect_ratio": "resolution",
     "default_save_metadata_to_images": "save_metadata_to_images",
     "checkpoint_downloads": "checkpoint_downloads",
@@ -1034,6 +1044,7 @@ allow_missing_preset_key = [
     "default_prompt",
     "default_prompt_negative",
     "default_extra_variation",
+    "v2_substyle",
     "default_aspect_ratio",
     "default_save_metadata_to_images",
     "default_vae",
@@ -1113,10 +1124,10 @@ def get_model_filenames(folder_paths, extensions=None, name_filter=None):
 
 def get_base_model_list(engine='Fooocus', task_method=None):
     global modelsinfo
-    file_filter = modules.flags.model_file_filter.get(engine, [])
+    file_filter = flags.model_file_filter.get(engine, [])
     base_model_list = modelsinfo.get_model_names('checkpoints', file_filter)
     if engine in ['Fooocus', 'Comfy']:
-        base_model_list = modelsinfo.get_model_names('checkpoints', modules.flags.model_file_filter['Fooocus'], reverse=True)
+        base_model_list = modelsinfo.get_model_names('checkpoints', flags.model_file_filter['Fooocus'], reverse=True)
     elif task_method == 'flux_base2_gguf':
         # adjusted the GGUF filter to include "flux" and "schnell",
         # not just "hyperflux"
@@ -1169,27 +1180,27 @@ def downloading_sdxl_lcm_lora():
     load_file_from_url(
         url='https://huggingface.co/lllyasviel/misc/resolve/main/sdxl_lcm_lora.safetensors',
         model_dir=paths_loras[0],
-        file_name=modules.flags.PerformanceLoRA.Extreme_Speed.value
+        file_name=flags.PerformanceLoRA.Extreme_Speed.value
     )
-    return modules.flags.PerformanceLoRA.Extreme_Speed.value
+    return flags.PerformanceLoRA.Extreme_Speed.value
 
 
 def downloading_sdxl_lightning_lora():
     load_file_from_url(
         url='https://huggingface.co/mashb1t/misc/resolve/main/sdxl_lightning_4step_lora.safetensors',
         model_dir=paths_loras[0],
-        file_name=modules.flags.PerformanceLoRA.Lightning.value
+        file_name=flags.PerformanceLoRA.Lightning.value
     )
-    return modules.flags.PerformanceLoRA.Lightning.value
+    return flags.PerformanceLoRA.Lightning.value
 
 
 def downloading_sdxl_hyper_sd_lora():
     load_file_from_url(
         url='https://huggingface.co/mashb1t/misc/resolve/main/sdxl_hyper_sd_4step_lora.safetensors',
         model_dir=paths_loras[0],
-        file_name=modules.flags.PerformanceLoRA.Hyper_SD.value
+        file_name=flags.PerformanceLoRA.Hyper_SD.value
     )
-    return modules.flags.PerformanceLoRA.Hyper_SD.value
+    return flags.PerformanceLoRA.Hyper_SD.value
 
 
 def downloading_controlnet_canny():
@@ -1410,6 +1421,7 @@ common.current_tab_name = default_selected_image_input_tab_id.split('_')[0]
 
 # Common FreeU defaults
 common.freeu_settings = [False] + list(default_freeu)
+common.freeu_preset_name = flags.DEFAULT_FREEU_KEY
 
 # Common support for performance
 common.performance_selection = default_performance
@@ -1419,4 +1431,4 @@ common.prompt_translator = default_prompt_translator_enable
 common.wildcard_lines_to_interpret = wildcard_lines_to_interpret
 
 # Flags support
-modules.flags.custom_performance = custom_performance_steps
+flags.custom_performance = custom_performance_steps

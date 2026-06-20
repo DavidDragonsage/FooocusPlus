@@ -104,8 +104,8 @@ parser.add_argument("--disable-preset-download",
     help="Prevent presets from downloading new models.")
 
 
-parser.add_argument("--theme", type=str, default='dark',
-    help="Launch FooocusPlus with a light or dark theme")
+parser.add_argument("--mode", type=str, default='dark',
+    help="Launch FooocusPlus with a light or dark background mode")
 
 
 parser.add_argument("--always-offload-from-vram", action="store_true",

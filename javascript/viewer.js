@@ -15,7 +15,7 @@ refresh_finished_images_catalog_label = function(translated_string) {
 
         if (label && label.textContent !== translated_string) {
             label.textContent = translated_string;
-            console.log("[UI Support] Startup Label Success: " + translated_string);
+            console.log("[Viewer] Startup Label Success: " + translated_string);
             return true;
         }
         return false;
@@ -34,6 +34,56 @@ refresh_finished_images_catalog_label = function(translated_string) {
     }, 500);
 };
 window.refresh_finished_images_catalog_label = refresh_finished_images_catalog_label;
+
+
+close_finished_images_catalog = function() {
+
+    var accordion = document.getElementById('finished_images_catalog');
+    if (!accordion) {
+        console.log("[Viewer] The #finished_images_catalog was not found!");
+        return;
+    }
+
+    // Find the <details> element (native HTML5 accordion)
+    var details = (accordion.tagName.toUpperCase() === 'DETAILS') ? accordion : accordion.querySelector('details');
+
+    if (details) {
+        if (details.open) {
+            var summary = accordion.querySelector('summary') || details.querySelector('summary');
+            if (summary) {
+                console.log("[Viewer] Clicking Catalogue summary to close native accordion...");
+                summary.click();
+            } else {
+                console.log("[Viewer] Directly closing Catalogue details open property...");
+                details.open = false;
+                details.dispatchEvent(new Event('change'));
+            }
+        } else {
+            console.log("[Viewer] The Catalogue accordion is already closed.");
+        }
+    } else {
+
+        // Find the clickable header element using standard classes
+        var toggleHeader = accordion.querySelector('.label-wrap') ||
+                           accordion.querySelector('.label') ||
+                           accordion.querySelector('span');
+
+        if (toggleHeader) {
+            // Check if the header container actually has the "open" class
+            var isOpen = toggleHeader.classList.contains('open');
+
+            if (isOpen) {
+                console.log("[Viewer] The Catalogue Header is open. Clicking to close...");
+                toggleHeader.click();
+            } else {
+                console.log("[Viewer] The Catalogue Header is already closed. No action taken.");
+            }
+        } else {
+            console.log("[Viewer] Could not find any clickable header or details tag inside #finished_images_catalog.");
+        }
+    }
+};
+window.close_finished_images_catalog = close_finished_images_catalog;
 
 
 function refresh_grid() {

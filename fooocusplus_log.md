@@ -1,9 +1,117 @@
+# 1.1.1 IMPORTANT: Click "Check Performance" under the Extras tab!
+
+* introduced full support for Blackwell 50xx GPUs
+  * Blackwell GPUs are detected automatically
+  * Torch 2.10.0 with CUDA 13 will be installed
+  * CUDA 13 requires a video driver version >=580.65
+* for non-Blackwell NVIDIA GPUs:
+  * CUDA 13 is about 6.3% slower for Flux models
+  * CUDA 13 is about 2.6% faster for SDXL models
+  * to force CUDA 13, use run_FooocusPlus_cu130.bat
+* "Check Performance", under the Extras tab, supports:
+  * NVIDIA video driver version detection
+  * CUDA compatibility checks
+  * optional GPU reconfiguration
+  * performance metrics for the last generative batch
+* introduced the Remove Torch Components Debugging option
+* added OK/Cancel options for Toolbox View & Load Log
+  * View Log Info was previously called "View Info"
+  * Load Log Info was previously called "Regenerate"
+* debugged History Gallery & regeneration problems
+* introduced Save/Cancel options for Make New Preset
+* in Make New Preset, debugged "Save the Current Resolution"
+* added "Overwrite the Current Prompts" in Make New Preset
+* introduced eight Fooocus FreeU presets:
+  * A: Automatic1111 Default
+  * B: Realistic Portraits
+  * C: Minimal
+  * D: FooocusPlus Default - Realism
+  * E: Creator's Default - Fantasy
+  * F: Original Fooocus - Subtle
+  * G: GreyScope Default
+  * H: SD1.5 Default
+* relocated FreeU controls from Expert Tools to Input Image
+  * the FreeU sliders can override the preset values
+  * custom presets can be added to UserDir/user_substyles
+  * Restore Preset Values returns the sliders to default
+  * the FreeU interface now contains help info. and links
+* Image Grids are now treated as generative images
+  * they contain the metadata of the first image in the batch
+  * Image Grids are logged with the first image metadata
+  * Grids are Recovered the same way as generated images
+* images from the Image Editor now appear in the log
+  * the log displays the metadata from the source image
+  * Image Editor metadata can be used for regeneration
+* introduced the Apply Variable Outpaint Extension option
+  * if enabled the extension in one direction is up to 100%
+  * and in two directions it is up to 50% each
+  * the variable extensions are adjusted by sliders
+  * if disabled, the extension is 30% in each direction
+  * variable extension is not available for 3 or 4 directions
+* the Fooocus V2 GPT-2 expander now works in Comfy mode
+* introduced Fooocus V2 substyles (alternate word lists)
+  * using a substyle, Fooocus V2 expansion can be redirected
+  * substyles are selected at the bottom of the Styles list
+  * each substyle contains at least 640 words
+  * substyles are logged in the new Substyle field
+  * regeneration uses the correct substyle
+  * user substyles can be added to UserDir/user_substyles
+  * the words in a substyle come from a master dictionary
+  * Refresh All Files can add substyles during program ops.
+* presets can use the optional v2_substyle field
+  * if v2_substyle is not present, falls back to "Default"
+  * the 3 fantasy presets now use "Spellcasting Druid"
+  * all other V2 using presets use "Default"
+* These are the new substyles:
+  * Default: the original unchanged wordlist
+  * Lovecraftian Damnation: Poe, Ambrose Bierce, Lovecraft
+  * Sci_Fi: science fiction including cybernetics
+  * Spellcasting Druid: natural magic and alchemy
+  * Unlit: similar to Default but no lighting cues
+  * Victorian Steampunk: equally Victorian and Steampunk
+* IC-light can now use the Fooocus V2 style
+  * IC-Light will auto-select the "Unlit" substyle
+  * debugged IC-Light selection after using Input Image
+* Image Type is now recorded in the log, as follows:
+  * Text-to-Image, the default
+  * Enhance
+  * Fooocus FreeU
+  * IC-Light
+  * Image Grid
+  * Image Editor
+  * Image Prompt
+  * Inpainting
+  * Outpainting
+  * Upscale and Variation (UOV)
+* improved the Mix Image Prompt functions
+* Image Prompt now has a "Clear Image Prompts" selector
+* moved the ControlNet sliders to the Image Prompt section
+  * they were located under the Expert Mode Control tab
+* moved GroundingDINO Erode or Dilate to Advanced SAM Options
+  * it was located under the Expert Mode Inpaint tab
+* grouped the Expert Inpainting Tools in a new accordion
+  * moved Inpaint Engine and Disable Initial Latent here
+  * it was located under the Expert Mode Inpaint tab
+* added three new documentation links to Inpaint or Outpaint
+* grouped all the Expert Mode debug tools under "Debugging"
+  * introduced a Debug Substyles option to Debugging
+* replaced args manager "--theme" with "--mode"
+  * the UI dark/light selector is now named "Background Mode"
+* renamed "config.default_image_prompt_checkbox" to:
+  * "config.default_input_image_checkbox"
+  * the user config.txt setting may need to be adjusted
+* image buffers are no longer auto-cleared
+  * this prevents "dead" images in Input Image modes
+* Hotfix0
+<br/><br/>
+
+
 # 1.1.0 Improved Image Catalog Control, Logo Welcome Option & Reliability Upgrades
 
 * contains some features retrofitted from the Gradio 5.5 project
 * introduced a Catalog Control accordion, under the Advanced tab
   * including:
-  * Enable the Images Catalog
+  * Enable the Images Catalog (it is now an optional feature)
   * Quantity of Catalog Pages
   * Quantity of Images per Page
   * Copy Prompts While Switching Images
@@ -51,6 +159,11 @@
   * it was inoperative & redundant, use Disable Preview instead
 * the ADM Scaler controls are moved to the end of Expert Tools
 * Release Date: May 4th, 2026<br/>
+* Hotfix8: Regeneration no longer causes the topbar to right-shift
+* Hotfix7: Restored the Image Editor Save function
+* Hotfix6: Debugged the Inpaint auto-mask SAM prompt
+* Hotfix5: Debugged "Mix Image Prompt & Inpaint" or "Vary/Upscale"
+* Hotfix4: The default_max_lora_number config.txt option now works
 * Hotfix3: Restored Image Prompt operation
   * improved Toolbox error control
   * introduced full date strings for Catalogue indexing
@@ -82,9 +195,9 @@
   * the grid may be viewed in the Catalog but not in the log file
   * the Generate Image Grid control is located in the Batch Control accordion
 * under the Main Prompt box, introduced the Features option to hold:
-  * IC-Light and Edit, the new image editor
+  * IC-Light and the Image Editor
   * unlike Input Image, these functions are always available
-* Edit is composed of five optional dropdowns:
+* the Image Editor is composed of five optional dropdowns:
   * Adjustments include Brightness, Contrast, Hue, Saturation & Sharpness
   * Transformations can resize, flip and crop the image
   * Transparency options create a transparent image or an invisible background

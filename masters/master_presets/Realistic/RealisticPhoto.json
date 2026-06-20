@@ -1,4 +1,4 @@
-{ 
+{
     "default_model": "realisticStockPhoto_v20.safetensors",
     "default_refiner": "None",
     "default_refiner_switch": 0.6,
@@ -40,6 +40,7 @@
         "Fooocus Photograph",
         "Fooocus Negative"
     ],
+    "v2_substyle": "Default",
     "default_aspect_ratio": "0*0",
     "default_overwrite_step": -1,
     "checkpoint_downloads": {
@@ -50,4 +51,4 @@
         "SDXL_FILM_PHOTOGRAPHY_STYLE_V1.safetensors": "https://huggingface.co/mashb1t/fav_models/resolve/main/fav/SDXL_FILM_PHOTOGRAPHY_STYLE_V1.safetensors"
     },
     "previous_default_models": ["realisticStockPhoto_v10.safetensors"]
-} 
+}

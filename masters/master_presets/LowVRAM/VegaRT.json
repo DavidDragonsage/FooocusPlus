@@ -40,6 +40,7 @@
         "Fooocus V2",
         "Fooocus Enhance"
     ],
+    "v2_substyle": "Default",
     "default_aspect_ratio": "0*0",
     "default_overwrite_step": 4,
     "checkpoint_downloads": {

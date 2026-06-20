@@ -46,6 +46,7 @@
         "Fooocus Enhance",
         "Fooocus Sharp"
     ],
+    "v2_substyle": "Default",
     "default_aspect_ratio": "0*0",
     "default_overwrite_step": 30,
     "checkpoint_downloads": {

@@ -106,6 +106,23 @@ legacy_inpaint_options = [
     'Modify Content (add objects, change background, etc.)'
 ]
 
+
+# Define the master Free_U dictionary
+FREEU_DATA = {
+    "A: Automatic1111 Default":         [1.2, 1.4, 0.9, 0.2],
+    "B: Realistic Portraits":           [0.9, 0.8, 0.9, 0.3],
+    "C: Minimal":                       [1.1, 1.2, 0.6, 0.4],
+    "D: FooocusPlus Default - Realism": [1.1, 1.15, 0.85, 0.35],
+    "E: Creator's Default - Fantasy":   [1.3, 1.4, 0.9, 0.2],
+    "F: Original Fooocus - Subtle":     [1.01, 1.02, 0.99, 0.95],
+    "G: GreyScope Default":             [1.2, 1.0, 0.6, 0.4],
+    "H: SD1.5 Default":                 [1.5, 1.6, 0.9, 0.2]
+}
+
+# Define the constant for your default choice
+DEFAULT_FREEU_KEY = "D: FooocusPlus Default - Realism"
+
+
 describe_type_photo = 'Photograph'
 describe_type_anime = 'Art/Anime'
 describe_types = [describe_type_photo, describe_type_anime]

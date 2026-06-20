@@ -116,19 +116,25 @@ def find_file_path(search_dir, filename, excluding_dir = ''):
     return '' # empty string for search fail
 
 def list_files_by_patterns(search_dir,
-    patterns=None, names_only=False):
+    patterns=None, names_only=False,
+    with_extension=False):
     # looks in search_dir and its subdirectories
     # returns a list of complete pathlib objects
     # corresponding to the patterns
     # or if names_only, just the filenames & extensions
-    # a pattern could be a file extension such as "*.jpg"
+    # a pattern could be a file extension such as ["*.jpg"]
     file_list = []
+    if isinstance(patterns, str):
+        patterns = [patterns]
     search_path = Path(search_dir)
     if search_path.exists() and patterns:
         for p in patterns:
-            file_list.extend(search_path.rglob(p))
+            file_list.extend([f for f in search_path.rglob(p) if f.is_file()])
         if names_only:
-            # return only filenames+extensions as strings:
+            # return filenames without extensions as strings:
+            return sorted(list(set([f.stem for f in file_list])))
+        elif with_extension:
+            # return filenames with extensions as strings:
             return [f.name for f in file_list]
     # or return list of pathlib objects with full paths
     # empty list if no qualifying files found
@@ -607,6 +613,22 @@ def create_user_structure(config_user_dir):
     interpret('Verified the working styles directory:', working_styles_path)
 
 
+    # initialize the Substyles structure
+    master_substyles_path = Path('masters/master_fooocus_v2')
+    ref_substyles_path = Path(user_path/'reference_substyles')
+    remove_dirs(ref_substyles_path)
+    copy_dirs(master_substyles_path, ref_substyles_path)
+
+    working_substyles_path = Path('substyles').resolve()
+    remove_dirs(working_substyles_path)
+    copy_dirs(master_substyles_path, working_substyles_path)
+
+    user_substyles_path = Path(user_path/'user_substyles')
+    make_dir(user_substyles_path)
+    copy_dirs(user_substyles_path, working_substyles_path)
+    interpret('Verified the working substyles directory:', working_substyles_path)
+
+
     # delete the contents of user_path/master_topics to get a clean start
     # copy the contents of '.masters/master_topics' to user_path
     # for the user's reference only
@@ -661,7 +683,7 @@ def create_user_structure(config_user_dir):
     # preserving any custom wildcards from old_user_wildcards_path
     old_user_wildcards_path = Path(user_path/'wildcards')
     excluding_list = list_files_by_patterns(master_wildcards_path,
-        patterns=["*.txt"], names_only=True)
+        patterns=["*.txt"], with_extension=True)
     move_files_excluding(old_user_wildcards_path, user_wildcards_path, excluding_list)
     remove_dirs(old_user_wildcards_path)
 

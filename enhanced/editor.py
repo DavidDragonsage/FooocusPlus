@@ -1,21 +1,28 @@
 import gradio as gr
+import base64
 import copy
+import json
+import re
+import numpy as np
+
+from io import BytesIO
 from pathlib import Path
 from PIL import Image as _Image
 from PIL import ImageOps, ImageEnhance, ImageFilter
 from PIL.PngImagePlugin import PngInfo
 from PIL.Image import Resampling
-import base64
-from io import BytesIO
-import numpy as np
+
+import common
 import modules.config as config
+import modules.meta_parser as meta_parser
+import modules.user_structure as US
 
 # renamed rembg.remove to avoid confusion with function name:
 from rembg import remove as remove_bg
 from rembg import new_session
 from enhanced.translator import interpret, interpret_info, interpret_warn
-import common
-import modules.user_structure as US
+from modules.flags import MetadataScheme
+from modules.private_logger import log
 from modules.util import generate_temp_filename
 
 
@@ -30,19 +37,19 @@ def convert_to_rgba(img: _Image.Image) -> _Image.Image:
 
 def on_upload_trigger(input_image: _Image.Image, meta=False):
     if input_image is None:
-        return None, None
+        return None, None, None, None
     # load the metadata
     print()
     if meta:
-        interpret('[Edit] Copied the output image to the input')
+        interpret('[Editor] Copied the output image to the input')
     else:
         common.input_meta = input_image.info
     if input_image.mode == 'RGBA':
         rgba_img = input_image
-        interpret('[Edit] The input image mode is', 'RGBA:')
+        interpret('[Editor] The input image mode is', 'RGBA:')
     else:
         rgba_img = input_image.convert('RGBA')
-        interpret('[Edit] Converted the input image mode to', 'RGBA')
+        interpret('[Editor] Converted the input image mode to', 'RGBA')
     interpret('Transparency support is enabled')
     if common.input_meta:
         interpret('Loaded input image metadata')
@@ -361,6 +368,37 @@ def save_metadata_logic(save_metadata_bool):
     config.edit_save_metadata_to_images = save_metadata_bool
     return save_metadata_bool
 
+
+# Refresh and index the catalog
+# after an Image Editor save
+def refresh_catalog_after_save(state_params):
+    import modules.config as config
+    import modules.gallery_util as gallery_util
+
+    # 1. Scan the outputs directory
+    # to capture the newly saved image
+    max_per_page = state_params.get("__max_per_page", config.default_image_catalog_max_per_page)
+    max_catalog = state_params.get("__max_catalog", config.default_image_catalog_max_number)
+
+    output_list, finished_nums, finished_pages = gallery_util.refresh_output_list(max_per_page, max_catalog)
+    state_params.update({"__output_list": output_list})
+    state_params.update({"__finished_nums_pages": f'{finished_nums},{finished_pages}'})
+
+    # 2. Re-cache the on-disk index and
+    # log files for the new folder
+    if len(output_list) > 0:
+        output_index = output_list[0].split('/')[0]
+        gallery_util.refresh_images_catalog(output_index, True)
+        gallery_util.parse_html_log(output_index, True)
+
+    # 3. Update the choices and pagination counts in the UI
+    return (
+        gr.update(choices=output_list),
+        gr.update(value=f'{finished_nums},{finished_pages}'),
+        state_params
+    )
+
+
 def if_alpha_required(src_image):
     # determine if we actually use the alpha channel
     src_image_mode = (src_image.mode).upper()
@@ -375,58 +413,322 @@ def if_alpha_required(src_image):
         output_image = src_image # transparency is used
     else:
         output_image = src_image.convert("RGB")
-        interpret('[Edit] Transparency is not in use so the transparent layer will not be saved.')
+        interpret('[Editor] Transparency is not in use so the transparent layer will not be saved.')
         interpret('Converted the image mode:', f'{src_image_mode} → RGB')
     return output_image
+
+
+def get_sort_index(tup):
+    key_norm = str(tup[1]).lower().replace(' ', '_')
+
+    base_order = [
+        'prompt',
+        'negative_prompt',
+        'prompt_expansion',
+        'fooocus_v2_expansion',
+        'styles',
+        'v2_substyle',
+        'substyle',
+        'performance',
+        'steps',
+        'resolution',
+        'guidance_scale',
+        'sharpness',
+        'adm_guidance',
+        'base_model',
+        'refiner_model',
+        'refiner_switch',
+        'clip_skip',
+        'sampler',
+        'scheduler',
+        'vae',
+        'seed',
+        'freeu'
+    ]
+
+    end_order = [
+        'backend_engine',
+        'metadata_scheme',
+        'preset',
+        'version',
+        'image_type'
+    ]
+
+    lora_match = re.match(r'^(?:lora_combined_|lora_)(?P<num>\d+)$', key_norm)
+
+    if key_norm in base_order:
+        return base_order.index(key_norm)
+    elif lora_match:
+        lora_num = int(lora_match.group('num'))
+        return len(base_order) + lora_num
+    elif key_norm in end_order:
+        return len(base_order) + 100 + end_order.index(key_norm)
+    else:
+        return len(base_order) + 99
 
 
 def save_image(output_image, format_str, save_meta):
     print()
     if output_image is None:
         interpret_warn('The output image is not available')
+        return None
 
+    # 1. Clean the image mode/transparency channels
     output_image = if_alpha_required(output_image)
 
     if output_image.mode == 'RGBA' and format_str != 'png' and format_str != 'gif':
         interpret_warn('To preserve transparency, converted the file format:', '{format_str.upper} → PNG')
         format_str = 'png'
 
-    # check if the image content is visually grayscale
-    # i.e. it only contains gray tones
+    # 2. Convert to efficient Grayscale if appropriate
     if output_image.mode == 'RGB':
-        # Split channels and check if R == G and G == B for all pixels
         r, g, b = output_image.split()
         if r.tobytes() == g.tobytes() == b.tobytes():
-            # if so, convert to single-channel 'L' mode
-            # for efficient storage
             output_image = output_image.convert('L')
             interpret('Detected only grayscale content, saving as a true grayscale image')
-    if save_meta and config.edit_save_metadata_to_images:
-        # initiate a PngInto object
-        metadata = PngInfo()
-        for key, value in save_meta.items():
-            # only add text-based metadata
-            if isinstance(value, str):
-                metadata.add_text(key, value)
 
-    path_outputs = Path(config.path_outputs)
-    date_string, file_dest, only_name = generate_temp_filename(f'{path_outputs}/', '')
-    path_today = path_outputs / date_string
-    US.make_dir(path_today)
-    path_full = (path_outputs / date_string / only_name).resolve()
-    # Save the image using the most appropriate mode
-    save_path = f"{path_full}{format_str.lower()}"
-    if save_meta and config.edit_save_metadata_to_images:
-        output_image.save(save_path, format=format_str.upper(), pnginfo=metadata)
+    # Resolve the active Metadata Scheme
+    # and check if we are saving metadata
+    scheme_name = getattr(config, 'default_metadata_scheme', 'simple')
+    save_metadata = bool(save_meta and config.edit_save_metadata_to_images)
+
+    # 3. Unpack raw PNG chunks ('Comment' or 'parameters') into a clean, flat dictionary
+    flat_meta = {}
+    if save_meta:
+        if 'Comment' in save_meta:
+            # SIMPLE scheme: Parse the packed JSON metadata string back to flat keys
+            try:
+                flat_meta = json.loads(save_meta['Comment'])
+            except Exception:
+                flat_meta = {}
+        elif 'parameters' in save_meta:
+            # A1111 scheme: Parse the packed multiline string back to flat keys
+            try:
+                a1111_parser = meta_parser.get_metadata_parser(MetadataScheme.A1111)
+                flat_meta = a1111_parser.to_json(save_meta['parameters'])
+            except Exception:
+                flat_meta = {}
+        else:
+            # Already a flat dictionary of keys and values
+            flat_meta = save_meta.copy()
+
+    # Helper function to extract any metadata field
+    # case-insensitively and safely
+    def extract_field(target_keys, default_val='None'):
+        targets = [str(x).lower().strip().replace('_', ' ') for x in target_keys]
+        for k, v in flat_meta.items():
+            if str(k).lower().strip().replace('_', ' ') in targets:
+                return v
+        return default_val
+
+    # 4. Extract parameters case-insensitively to prevent spacing/case mismatches
+    original_image_type = extract_field(['image type'])
+    full_pos = extract_field(['full prompt'])
+    full_neg = extract_field(['full negative prompt'])
+
+    # Fallback: If "Full Prompt" or "Full Negative Prompt"
+    # arrays are missing, fall back to standard
+    # Prompt/Negative Prompt text strings
+    if full_pos == 'None':
+        full_pos = extract_field(['prompt'], '')
+    if full_neg == 'None':
+        full_neg = extract_field(['negative prompt'], '')
+
+    # 5. Construct the standard metadata
+    # list 'd' for private_logger
+    d = []
+    if flat_meta:
+        # Standardize labels case-insensitively
+        meta_label_mapping = {
+            'prompt': 'Prompt',
+            'negative prompt': 'Negative Prompt',
+            'prompt expansion': 'Fooocus V2 Expansion',
+            'styles': 'Styles',
+            'performance': 'Performance',
+            'steps': 'Steps',
+            'resolution': 'Resolution',
+            'guidance scale': 'Guidance Scale',
+            'sharpness': 'Sharpness',
+            'base model': 'Base Model',
+            'refiner model': 'Refiner Model',
+            'sampler': 'Sampler',
+            'scheduler': 'Scheduler',
+            'seed': 'Seed',
+            'version': 'Version',
+            'vae': 'VAE',
+            'clip skip': 'CLIP Skip',
+            'adm guidance': 'ADM Guidance',
+            'v2 substyle': 'Substyle',
+            'substyle': 'Substyle'
+        }
+
+        valid_extensions = ['.pth', '.ckpt', '.bin', '.safetensors', '.fooocus.patch', '.gguf']
+
+        for key, value in flat_meta.items():
+            # Normalize key to handle spaces
+            # and underscores uniformly
+            norm_key = str(key).lower().strip().replace('_', ' ')
+
+            # Use substring matching to robustly exclude raw arrays and system metadata
+            exclude_keywords = [
+                'image type', 'metadata scheme',
+                'full prompt', 'full negative prompt',
+                'styles definition', 'user',
+                'base model hash', 'loras'
+            ]
+            if any(x in norm_key for x in exclude_keywords):
+                continue
+
+            # Dynamic extension resolver for
+            # Base Model/Refiner Model in the 'd' list
+            # Ensures they match the correct file on disk
+            # (.safetensors, .gguf, .ckpt, etc.)
+            # so they are written to the HTML log file
+            # with their full on-disk filenames.
+            # Dynamic extension resolver for Base Model/Refiner Model inside the 'd' list
+            if norm_key == 'base model' and value != 'None' and not any(str(value).lower().endswith(ext) for ext in valid_extensions):
+                for filename in getattr(config, 'model_filenames', []):
+                    if Path(filename).stem == str(value):
+                        value = filename
+                        break
+            elif norm_key == 'refiner model' and value != 'None' and not any(str(value).lower().endswith(ext) for ext in valid_extensions):
+                for filename in getattr(config, 'model_filenames', []):
+                    if Path(filename).stem == str(value):
+                        value = filename
+                        break
+
+            # Dynamically format LoRA keys with strict 'LoRA X' casing and resolve extensions
+            if norm_key.startswith('lora'):
+                num_match = re.search(r'\d+', str(key))
+                if num_match:
+                    label = f"LoRA {num_match.group()}"
+                else:
+                    label = "LoRA"
+
+                # Dynamically resolve LoRA filename extensions against config.lora_filenames
+                if ' : ' in str(value):
+                    lora_name, lora_weight = str(value).split(' : ', 1)
+                    if not any(lora_name.lower().endswith(ext) for ext in valid_extensions):
+                        for filename in getattr(config, 'lora_filenames', []):
+                            if Path(filename).stem == lora_name:
+                                lora_name = filename
+                                break
+                    value = f"{lora_name} : {lora_weight}"
+            else:
+                label = meta_label_mapping.get(norm_key, str(key).replace('_', ' ').title())
+
+            # THE CRITICAL FIX: The second element
+            # of the tuple must be the clean, lowercase,
+            # underscore-separated key to ensure
+            # the clipboard JSON matches standard generation keys!
+            internal_key = norm_key.replace(' ', '_')
+            d.append((label, key, value))
+
+    # Append our Metadata Scheme (strictly required
+    # by meta_parser.to_string() to avoid KeyError)
+    metadata_val = ('A1111' if scheme_name.lower() == 'a1111' else 'Fooocus') if save_metadata else False
+    d.append(('Metadata Scheme', 'metadata_scheme', metadata_val))
+
+    # Append our custom Image Editor brand,
+    # prefixing the original Image Type if it exists
+    if original_image_type != 'None':
+        editor_image_type = f"{original_image_type} / Image Editor"
     else:
-        output_image.save(save_path, format=format_str.upper())
+        editor_image_type = "Image Editor"
+    d.append(('Image Type', 'image_type', editor_image_type))
+
+    # 6. Enforce standard visual sorting order
+    # to prevent alphabetical "jumping"
+    d.sort(key=get_sort_index)
+
+    # 7. Package the raw prompt arrays
+    # into a mock 'task' dictionary
+    task = None
+    if full_pos != 'None' or full_neg != 'None':
+        pos = full_pos if full_pos != 'None' else []
+        if isinstance(pos, str):
+            pos = [pos]
+        neg = full_neg if full_neg != 'None' else []
+        if isinstance(neg, str):
+            neg = [neg]
+
+        task = {
+            'positive': pos,
+            'negative': neg
+        }
+
+    # 8. Prepare the MetadataParser to
+    # embed metadata into the saved image
+    parser_instance = None
+    if save_metadata:
+        try:
+            scheme_enum = MetadataScheme(scheme_name)
+        except ValueError:
+            scheme_enum = MetadataScheme.SIMPLE
+
+        parser_instance = meta_parser.get_metadata_parser(scheme_enum)
+
+        # Build safe defaults with case-insensitive fallback checks
+        prompt_str = extract_field(['prompt'], '')
+        neg_prompt_str = extract_field(['negative prompt'], '')
+        base_model_name = extract_field(['base model'], 'None')
+        refiner_model_name = extract_field(['refiner model'], 'None')
+        vae_name = extract_field(['vae'], 'None')
+
+
+        # Restore extensions dynamically supporting all 6 valid formats
+        valid_extensions = ['.pth', '.ckpt',
+                            '.bin', '.safetensors',
+                            '.fooocus.patch', '.gguf']
+        if base_model_name != 'None' and not any(base_model_name.lower().endswith(ext) for ext in valid_extensions):
+            for filename in getattr(config, 'model_filenames', []):
+                if Path(filename).stem == base_model_name:
+                    base_model_name = filename
+                    break
+
+        if refiner_model_name != 'None' and not any(refiner_model_name.lower().endswith(ext) for ext in valid_extensions):
+            for filename in getattr(config, 'model_filenames', []):
+                if Path(filename).stem == refiner_model_name:
+                    refiner_model_name = filename
+                    break
+
+        try:
+            steps = int(extract_field(['steps'], 30))
+        except (ValueError, TypeError):
+            steps = 30
+
+        # Feed the fully expanded positive/negative
+        # lists directly to the parser
+        pos_list = full_pos if isinstance(full_pos, list) else [prompt_str]
+        neg_list = full_neg if isinstance(full_neg, list) else [neg_prompt_str]
+
+        parser_instance.set_data(
+            prompt_str, pos_list,
+            neg_prompt_str, neg_list,
+            steps, base_model_name, refiner_model_name,
+            [], vae_name, ''
+        )
+
+    # 9. Convert PIL image to NumPy array
+    # and call the system logger
+    img_np = np.array(output_image)
+    save_path = log(
+        img=img_np,
+        metadata=d,
+        metadata_parser=parser_instance,
+        output_format=format_str.lower(),
+        task=task,
+        persist_image=True
+    )
+
     interpret_info('Saved edited image to', save_path)
     interpret('Using image mode:', output_image.mode)
-    if save_meta and config.edit_save_metadata_to_images:
+    if save_metadata:
         interpret('Saved with metadata')
     else:
         interpret('Saved without metadata')
-    return str(save_path)
+
+    return save_path
 
 
 def on_save_output_click(output_image_state, current_save_format_value):

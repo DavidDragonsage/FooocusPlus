@@ -9,7 +9,6 @@ accelerate==0.32.1
 albumentations==2.0.4
 aiohttp==3.12.15
 attrs==24.2.0
-bitsandbytes>=0.46.0
 blend_modes
 blind-watermark
 certifi==2025.1.31

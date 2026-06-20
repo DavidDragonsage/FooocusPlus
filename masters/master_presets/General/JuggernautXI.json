@@ -38,6 +38,7 @@
         "Fooocus V2",
         "Fooocus Enhance"
     ],
+    "v2_substyle": "Default",
     "default_aspect_ratio": "0*0",
     "checkpoint_downloads": {
         "juggernautXL_juggXIByRundiffusion.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/juggernautXL_juggXIByRundiffusion.safetensors"

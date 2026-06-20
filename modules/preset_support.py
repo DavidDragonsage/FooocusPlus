@@ -175,10 +175,20 @@ def parse_meta_from_preset(preset_content):
 
 
 def get_lora_values(lora_combined):
+    # Safety check for None or empty strings
+    if not lora_combined or not isinstance(lora_combined, str):
+        return False, 'None', 1.0
+
     values = lora_combined.split(' : ')
+
+    # Ensure we have all 3 parts (Enabled, Name, Weight)
+    if len(values) < 3:
+        return False, 'None', 1.0
+
     bool_value = 'true' in values[0].lower()
     float_value = float(values[2])
     return bool_value, values[1], float_value
+
 
 def normalize_AR(arg_AR):
     if not arg_AR:
@@ -187,6 +197,7 @@ def normalize_AR(arg_AR):
         table = str.maketrans({"(": "", ")": "", ",": "", " ": "*", "'": ""})
         arg_AR = arg_AR.translate(table)
     return arg_AR
+
 
 def init_config_preset():
     # called by launch.py
@@ -197,11 +208,16 @@ def init_config_preset():
         default_model = preset_prepared.get('base_model')
         config.default_base_model_name = default_model
         config.default_refiner = preset_prepared.get('refiner_model')
-        config.default_loras = [get_lora_values(preset_prepared.get("lora_combined_1")),
-            get_lora_values(preset_prepared.get("lora_combined_2")),
-            get_lora_values(preset_prepared.get("lora_combined_3")),
-            get_lora_values(preset_prepared.get("lora_combined_4")),
-            get_lora_values(preset_prepared.get("lora_combined_5"))]
+
+        new_loras = []
+        for i in range(1, config.default_max_lora_number + 1):
+            lora_key = f"lora_combined_{i}"
+            lora_data = preset_prepared.get(lora_key)
+            # This will now return (False, 'None', 1.0)
+            # if the key is missing
+            new_loras.append(get_lora_values(lora_data))
+        config.default_loras = new_loras
+
         config.default_cfg_scale = preset_prepared.get('guidance_scale')
         config.default_sample_sharpness = preset_prepared.get('sharpness')
         config.default_sampler = preset_prepared.get(
@@ -272,4 +288,6 @@ def init_config_preset():
     else:
         config.default_low_vram_presets = False
         args.preset = 'Default'
+    print()
+    interpret('Initializing image processors...')
     return

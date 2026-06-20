@@ -4,16 +4,19 @@
 # If used outside Fooocus, only non-commercial use is permitted (CC-By NC 4.0).
 # This applies to the word list, vocab, model, and algorithm.
 
-
 import os
 import torch
 import math
+import common
+import modules.config as config
 import ldm_patched.modules.model_management as model_management
+import modules.user_structure as US
 
+from enhanced.translator import interpret
 from transformers.generation.logits_process import LogitsProcessorList
 from transformers import AutoTokenizer, AutoModelForCausalLM, set_seed
-from modules.config import path_fooocus_expansion
 from ldm_patched.modules.model_patcher import ModelPatcher
+from pathlib import Path
 
 
 # limitation of np.random.seed(), called from transformers.set_seed()
@@ -36,47 +39,104 @@ def remove_pattern(x, pattern):
 
 class FooocusExpansion:
     def __init__(self):
-        self.tokenizer = AutoTokenizer.from_pretrained(path_fooocus_expansion)
-
-        positive_words = open(os.path.join(path_fooocus_expansion, 'positive.txt'),
-                              encoding='utf-8').read().splitlines()
-        positive_words = ['Ġ' + x.lower() for x in positive_words if x != '']
-
-        self.logits_bias = torch.zeros((1, len(self.tokenizer.vocab)), dtype=torch.float32) + neg_inf
-
-        debug_list = []
-        for k, v in self.tokenizer.vocab.items():
-            if k in positive_words:
-                self.logits_bias[0, v] = 0
-                debug_list.append(k[1:])
-
-        print(f'Fooocus V2 Expansion: Vocab with {len(debug_list)} words.')
-
-        # debug_list = '\n'.join(sorted(debug_list))
-        # print(debug_list)
-
-        # t11 = self.tokenizer(',', return_tensors="np")
-        # t198 = self.tokenizer('\n', return_tensors="np")
-        # eos = self.tokenizer.eos_token_id
-
-        self.model = AutoModelForCausalLM.from_pretrained(path_fooocus_expansion)
+        self.tokenizer = AutoTokenizer.from_pretrained(config.path_fooocus_expansion)
+        self.model = AutoModelForCausalLM.from_pretrained(config.path_fooocus_expansion)
         self.model.eval()
 
+        # Hardware Setup
         load_device = model_management.text_encoder_device()
         offload_device = model_management.text_encoder_offload_device()
 
-        # MPS hack
         if model_management.is_device_mps(load_device):
             load_device = torch.device('cpu')
             offload_device = torch.device('cpu')
 
-        use_fp16 = model_management.should_use_fp16(device=load_device)
-
-        if use_fp16:
+        if model_management.should_use_fp16(device=load_device):
             self.model.half()
 
         self.patcher = ModelPatcher(self.model, load_device=load_device, offload_device=offload_device)
-        print(f'Fooocus Expansion engine loaded for {load_device}, use_fp16 = {use_fp16}.')
+
+        # Internal state to track the active substyle
+        self.current_substyle = None
+        self.logits_bias = None
+
+        # Initial load based on substyle state
+        self.update_substyle(config.v2_substyle)
+
+        interpret('Fooocus Expansion engine ready on', load_device)
+        print()
+
+
+    def update_substyle(self, substyle_name):
+        """Dynamic reload of the expansion vocabulary without reloading the model."""
+        if substyle_name == self.current_substyle and self.logits_bias is not None:
+            return # Skip if already loaded
+
+        # Pathlib Refactor: Construct path directly from repo structure
+        v2_file = f"{substyle_name}.txt"
+        v2_substyle_path = US.current_dir/ 'substyles' / v2_file
+
+        if not v2_substyle_path.exists():
+            print(f"Warning: Substyle file {v2_substyle_path} not found. Falling back to Default.")
+            v2_substyle_path = US.masters_dir / 'master_fooocus_v2' / 'Default.txt'
+
+        try:
+            # Load and process word list
+            with v2_substyle_path.open('r', encoding='utf-8') as f:
+                positive_words = f.read().splitlines()
+
+            # KEEP WORDS CLEAN & LOWERCASE (without the 'Ġ' prefix here)
+            cleaned_words = [x.strip().lower() for x in positive_words if x.strip()]
+
+            # Reset Logits Bias (neg_inf forces the model to ignore words NOT in our list)
+            neg_inf = -1e18 # Sufficiently small number for masking
+            new_bias = torch.zeros((1, len(self.tokenizer.vocab)), dtype=torch.float32) + neg_inf
+
+            count = 0
+            # Track which lowercase words from the
+            # file were successfully matched in the vocabulary
+            accepted_words_set = set()
+
+            for k, v in self.tokenizer.vocab.items():
+                # Strictly match tokens that start with the space prefix (representing whole-word entries)
+                if k.startswith('Ġ') or k.startswith('ġ'):
+                    word = k[1:].lower()
+
+                    # Compare the clean lowercase word
+                    if word in cleaned_words:
+                        new_bias[0, v] = 0
+                        count += 1
+                        accepted_words_set.add(word)
+
+            self.logits_bias = new_bias
+            self.current_substyle = substyle_name
+            interpret(f'[Expansion] Switched to the Fooocus V2 substyle', f'"{substyle_name}"')
+            interpret(f'with {len(positive_words)} words and {count} tokens')
+
+            # Real-Time Developer Audit
+            # Prints to the console during generation
+            if common.debug_substyles:
+                # Find which words in the original file did not match any single-token in the vocabulary
+                ignored_words = [w for w in positive_words if w.strip().lower() not in accepted_words_set]
+
+                print(f"\n=============================================")
+                print(f"Substyle Vocabulary Audit: {substyle_name}")
+                print(f"  Total Words in File: {len(positive_words)}")
+                print(f"  Active Tokens: {count}")
+                print(f"  Ignored/Split Words: {len(ignored_words)}")
+
+                if ignored_words:
+                    print("  List of Ignored Words (will not be generated by GPT-2):")
+                    # Display the first 100 ignored words with their original casing
+                    for iw in ignored_words[:100]:
+                        print(f"    - {iw}")
+                    if len(ignored_words) > 100:
+                        print(f"    - ... and {len(ignored_words) - 100} more.")
+                print("=============================================\n")
+
+        except Exception as e:
+            interpret('[Expansion] Failed to load V2 substyle:', e)
+
 
     @torch.no_grad()
     @torch.inference_mode()

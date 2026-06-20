@@ -1,4 +1,4 @@
-{ 
+{
     "default_engine": {
 	"backend_engine": "Flux",
 	"disvisible": ["backend_selection", "performance_selection", "negative_prompt",  "refiner_model"],
@@ -48,6 +48,7 @@
     "default_styles": [
         "Fooocus V2"
     ],
+    "v2_substyle": "Default",
     "default_aspect_ratio": "0*0",
     "default_overwrite_step": 20,
     "checkpoint_downloads": {
@@ -57,5 +58,5 @@
     "lora_downloads": {},
     "vae_downloads": {
         "ae.safetensors": "https://huggingface.co/lovis93/testllm/resolve/ed9cf1af7465cebca4649157f118e331cf2a084f/ae.safetensors?download=true"
-    } 
+    }
 }

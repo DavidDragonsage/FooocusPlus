@@ -1,4 +1,4 @@
-{ 
+{
     "default_engine": {
 	"backend_engine": "Flux",
 	"disvisible": ["backend_selection", "performance_selection", "negative_prompt",  "refiner_model"],
@@ -46,6 +46,7 @@
     "default_styles": [
         "Fooocus V2"
     ],
+    "v2_substyle": "Default",
     "default_aspect_ratio": "0*0",
     "default_overwrite_step": 25,
     "checkpoint_downloads": {

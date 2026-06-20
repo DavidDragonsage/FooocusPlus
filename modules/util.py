@@ -8,6 +8,7 @@ import math
 import os
 import re
 import sys
+import common
 from pathlib import Path
 from PIL import Image
 from typing import List, Tuple, AnyStr, NamedTuple
@@ -15,7 +16,8 @@ from typing import List, Tuple, AnyStr, NamedTuple
 import modules.config as config
 import modules.sdxl_styles
 import modules.user_structure as US
-from enhanced.translator import interpret, interpret_info
+from enhanced.translator import \
+    interpret, interpret_info, interpret_warn
 from modules.flags import Performance
 
 LANCZOS = (Image.Resampling.LANCZOS if hasattr(Image, 'Resampling') else Image.LANCZOS)
@@ -196,28 +198,20 @@ def cleanup_temp_files():
     return
 
 
-def save_image_grid(recover=False):
+def save_image_grid(UI=False):
     print()
-    success = False
-    image_grid = US.find_file_path(config.temp_path, 'image.png')
-    if image_grid:
-        date_string, file_dest, only_name = generate_temp_filename(f'{config.path_outputs}/', 'png')
-        path_outputs = Path(config.path_outputs)
-        path_full = Path(path_outputs/date_string/only_name)
-        path_dest = US.copy_file(image_grid, path_full)
-        if recover:
-            interpret_info('Saved the image grid to', path_full)
+    if common.last_grid_path:
+        if UI:
+            interpret_info('Saved the image grid to', common.last_grid_path)
         else:
-            interpret('Saved the image grid to', path_full)
-            print()
-        success = True
-    elif config.default_generate_image_grid:
-        if recover:
-            interpret('Could not locate an image grid in', config.temp_path)
+            interpret('Saved the image grid to', common.last_grid_path)
+        common.last_grid_path = ''
+    else:
+        if UI:
+            interpret_warn('Could not locate an image grid')
         else:
-            interpret_info('Could not locate an image grid in', config.temp_path)
-            print()
-    return success
+            interpret('Could not locate an image grid')
+    return
 
 
 def is_valid_image(image_data):
@@ -249,7 +243,6 @@ def is_valid_image(image_data):
 
 
 def recover_images():
-    success = save_image_grid(True)
     file_list = US.list_files_by_patterns(config.temp_path,
         ['*.*'])
     image_list = US.list_files_excluding(file_list, ['image.png'])
@@ -260,8 +253,6 @@ def recover_images():
         copy_count, exists_count = US.copy_files(image_list, today_outputs)
         interpret_info(f'Recovered {copy_count} images to', today_outputs)
         interpret_info(f'Omitted {exists_count} images that already exist')
-    elif success == True:
-        interpret_info('Recovered the image grid but no other recovery images found')
     else:
         interpret_info('No recovery images found!')
     print()

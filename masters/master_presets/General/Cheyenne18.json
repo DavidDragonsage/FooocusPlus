@@ -41,6 +41,7 @@
         "Fooocus V2",
         "Fooocus Semi Realistic"
     ],
+    "v2_substyle": "Default",
     "default_aspect_ratio": "0*0",
     "default_overwrite_step": -1,
     "default_inpaint_engine_version": "None",

@@ -3,7 +3,9 @@ import modules.config as config
 import json
 import urllib.parse
 import enhanced.enhanced_parameters as ehs
+import modules.user_structure as US
 
+from pathlib import Path
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 from enhanced.translator import interpret
@@ -22,10 +24,12 @@ def get_current_html_path(output_format=None):
 
 
 def log(img, metadata, metadata_parser: MetadataParser | None = None, output_format=None, task=None, persist_image=True) -> str:
+
     path_outputs = config.temp_path if not persist_image else config.path_outputs
     output_format = output_format if output_format else config.default_output_format
     date_string, local_temp_filename, only_name = generate_temp_filename(folder=path_outputs, extension=output_format)
-    os.makedirs(os.path.dirname(local_temp_filename), exist_ok=True)
+
+    US.make_dir(Path(local_temp_filename).parent)
 
     parsed_parameters = metadata_parser.to_string(metadata.copy()) if metadata_parser is not None else ''
     metadata_scheme = metadata_parser.get_scheme().value if metadata_parser is not None else ''
@@ -45,10 +49,13 @@ def log(img, metadata, metadata_parser: MetadataParser | None = None, output_for
         if output_format == OutputFormat.JPEG.value:
             local_temp_filename = local_temp_filename[:-4] + "png"
         image.save(local_temp_filename, pnginfo=pnginfo)
+
     elif output_format == OutputFormat.JPEG.value and image.mode != 'RGBA':
         image.save(local_temp_filename, quality=95, optimize=True, progressive=True, exif=get_exif(parsed_parameters, metadata_scheme) if metadata_parser else Image.Exif())
+
     elif output_format == OutputFormat.WEBP.value:
         image.save(local_temp_filename, quality=95, lossless=False, exif=get_exif(parsed_parameters, metadata_scheme) if metadata_parser else Image.Exif())
+
     else:
         image.save(local_temp_filename)
 
@@ -62,9 +69,9 @@ def log(img, metadata, metadata_parser: MetadataParser | None = None, output_for
         "<style>"
         "body { background-color: #121212; color: #E0E0E0; } "
         "a { color: #BB86FC; } "
-        ".metadata { border-collapse: collapse; width: 100%; } "
-        ".metadata .label { width: 15%; } "
-        ".metadata .value { width: 85%; font-weight: bold; } "
+        ".metadata { border-collapse: collapse; width: 100%; min-width: 500px; } "
+        ".metadata .label { width: 120px; } "
+        ".metadata .value { font-weight: bold; } "
         ".metadata th, .metadata td { border: 1px solid #4d4d4d; padding: 4px; } "
         ".image-container img { height: auto; max-width: 512px; display: block; padding-right:10px; } "
         ".image-container div { text-align: center; padding: 4px; } "
@@ -100,7 +107,7 @@ def log(img, metadata, metadata_parser: MetadataParser | None = None, output_for
     )
 
     begin_part = f'<!DOCTYPE html><html><head><title>FooocusPlus Log {date_string}</title>{css_styles}</head>\
-    <body>{js}<p>FooocusPlus Log {date_string}</p>\n<p>To save text data in an image, adjust the "metadata" settings in config.txt or under the Advanced tab.</p><!--fooocus-log-split-->\n\n'
+    <body>{js}<p>FooocusPlus Log {date_string}</p>\n<p>To save text data to an image, set "default_save_metadata_to_images": true, in config.txt or use the "Save Metadata to Images" option in the Image Control accordion located under the Advanced tab.</p><!--fooocus-log-split-->\n\n'
     end_part = f'\n<!--fooocus-log-split--></body></html>'
 
     middle_part = log_cache.get(html_name, "")

@@ -154,7 +154,6 @@ else:
 
 total_vram = get_vram()
 total_ram = get_sysram()
-print()
 print("Total VRAM {:0.0f} MB, total RAM {:0.0f} MB".format(total_vram, total_ram))
 if not args.always_normal_vram and not args.always_cpu:
     if lowvram_available and total_vram <= 4096:

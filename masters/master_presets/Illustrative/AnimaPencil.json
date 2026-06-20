@@ -1,4 +1,4 @@
-{ 
+{
     "default_model": "animaPencilXL_v500.safetensors",
     "default_refiner": "None",
     "default_refiner_switch": 0.6,
@@ -41,6 +41,7 @@
         "Fooocus Semi Realistic",
         "Fooocus Masterpiece"
     ],
+    "v2_substyle": "Default",
     "default_aspect_ratio": "0*0",
     "default_overwrite_step": -1,
     "checkpoint_downloads": {

@@ -1,4 +1,4 @@
-{ 
+{
     "default_engine": {
 	"backend_engine": "HyDiT+",
 	"disvisible": ["backend_selection", "performance_selection", "refiner_model"],
@@ -46,10 +46,11 @@
         "Fooocus V2",
         "Fooocus Enhance"
     ],
+    "v2_substyle": "Default",
     "default_aspect_ratio": "0*0",
     "checkpoint_downloads": {
         "Alternative/hunyuan_dit_1.2.safetensors": "https://huggingface.co/comfyanonymous/hunyuan_dit_comfyui/resolve/main/hunyuan_dit_1.2.safetensors"
     },
     "embeddings_downloads": {},
-    "lora_downloads": {} 
+    "lora_downloads": {}
 }

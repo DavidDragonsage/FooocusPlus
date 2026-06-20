@@ -40,6 +40,7 @@
         "Fooocus V2",
         "Fooocus Enhance"
     ],
+    "v2_substyle": "Default",
     "default_aspect_ratio": "0*0",
     "checkpoint_downloads": {
         "RealvisXLv40_v40Bakedvae.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/RealvisXLv40_v40Bakedvae.safetensors"

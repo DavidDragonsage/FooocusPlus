@@ -8,10 +8,9 @@ from enhanced.backend import ComfyTaskParams
 from enhanced.translator import interpret_warn
 from modules.model_loader import load_file_from_url
 
-default_method_names = ['Blend the Foreground with IC-Light', 'Create the Foreground with Convolutional Injection']
+default_method_names = ['Blend the Foreground with IC-Light']
 default_method_list = {
-    default_method_names[0]: 'iclight_fc',
-    default_method_names[1]: 'layerdiffuse_fg',
+    default_method_names[0]: 'iclight_fc'
 }
 
 iclight_source_names = ['Top Left Light', 'Top Light', 'Top Right Light', 'Middle Left Light', 'Middle Light', 'Middle Right Light', 'Bottom Left Light', 'Bottom Light', 'Bottom Right Light']
@@ -91,36 +90,31 @@ def get_comfy_task(task_name, task_method, default_params, input_images, options
     global default_method_names, default_method_list
 
     if task_name == 'default':
-        if task_method == default_method_names[1]:
-            comfy_params = ComfyTaskParams(default_params)
-            comfy_params.update_params({"layer_diffuse_injection": "SDXL, Conv Injection"})
-            return ComfyTask(default_method_list[task_method], comfy_params)
-        else:
-            comfy_params = ComfyTaskParams(default_params)
-            if input_images is None:
-                raise ValueError("input_images cannot be None for this method")
-            images = {"input_image": input_images[0]}
-            if 'iclight_enable' in options and options["iclight_enable"]:
-                if common.MODELS_INFO.exists_model(catalog="checkpoints", model_path=default_base_SD15_name):
-                    config.downloading_base_sd15_model()
-                comfy_params.update_params({"base_model": default_base_SD15_name})
-                if options["iclight_source_radio"] == 'CenterLight':
-                    comfy_params.update_params({"light_source_text_switch": False})
-                else:
-                    comfy_params.update_params({
-                        "light_source_text_switch": True,
-                        "light_source_text": iclight_source_text[options["iclight_source_radio"]]
-                        })
-                return ComfyTask(default_method_list[task_method], comfy_params, images)
+        comfy_params = ComfyTaskParams(default_params)
+        if input_images is None:
+            raise ValueError("input_images cannot be None for this method")
+        images = {"input_image": input_images[0]}
+        if 'iclight_enable' in options and options["iclight_enable"]:
+            if common.MODELS_INFO.exists_model(catalog="checkpoints", model_path=default_base_SD15_name):
+                config.downloading_base_sd15_model()
+            comfy_params.update_params({"base_model": default_base_SD15_name})
+            if options["iclight_source_radio"] == 'CenterLight':
+                comfy_params.update_params({"light_source_text_switch": False})
             else:
-                width, height = fixed_width_height(default_params["width"], default_params["height"], 64)
                 comfy_params.update_params({
-                    "layer_diffuse_cond": "SDXL, Foreground",
-                    "width": width,
-                    "height": height,
+                    "light_source_text_switch": True,
+                    "light_source_text": iclight_source_text[options["iclight_source_radio"]]
                     })
-                comfy_params.delete_params(['denoise'])
-                return ComfyTask('layerdiffuse_cond', comfy_params, images)
+            return ComfyTask(default_method_list[task_method], comfy_params, images)
+        else:
+            width, height = fixed_width_height(default_params["width"], default_params["height"], 64)
+            comfy_params.update_params({
+                "layer_diffuse_cond": "SDXL, Foreground",
+                "width": width,
+                "height": height,
+                })
+            comfy_params.delete_params(['denoise'])
+            return ComfyTask('layerdiffuse_cond', comfy_params, images)
 
     elif task_name == 'SD3x':
         if not common.MODELS_INFO.exists_model(catalog="checkpoints", model_path=default_params["base_model"]):

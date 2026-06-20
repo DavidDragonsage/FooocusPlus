@@ -198,6 +198,7 @@ def select_data_from_preset(preset_content):
         config.default_prompt)
     items.setdefault("default_prompt_negative",
         config.default_prompt_negative)
+    items.setdefault("v2_substyle", "Default")
     items.setdefault("default_image_quantity",
         config.default_image_quantity)
     items.setdefault("default_sampler",
@@ -219,6 +220,10 @@ def select_data_from_preset(preset_content):
         preset_negative = items.get("default_prompt_negative")
         if preset_negative != "":
             default_prompt_negative = preset_negative
+
+        preset_substyle = items.get("v2_substyle")
+        if preset_substyle != "":
+            config.v2_substyle = preset_substyle
 
         preset_quantity = items.get("default_image_quantity")
         if preset_quantity != config.default_image_quantity:
@@ -323,6 +328,7 @@ def set_preset_selection(arg_preset_selection, state_params):
         gr.update(value=category_selection),
         gr.update(value=config.default_prompt),
         gr.update(value=config.default_prompt_negative),
+        gr.update(value=config.v2_substyle),
         gr.update(value=config.default_image_quantity),
         gr.update(value=config.default_sampler),
         gr.update(value=config.default_scheduler),

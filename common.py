@@ -19,9 +19,11 @@ REQUIRED_VERSION = '1.1.0'
 # 0 = no change, 1 = hotfix, 2 = new version
 version_update = 0
 
-# set in UIS.process_before_generation() and
-# clear it in UIS.process_after_generation()
-# currently used to prevent audio randomization
+# Set in UIS.process_before_generation() and
+# cleared by gallery images_list_update()
+# Used to prevent audio randomization and
+# history_gallery activation after a
+# generative cycle
 is_generating = False
 
 # Common support for black_out_nsfw
@@ -56,15 +58,40 @@ inpaint_mask_buffer = None
 enhance_image_buffer = None
 layer_image_buffer = None
 
+# UOV (Upscale/Vary) controls
+# set by webui, read by async_worker
+mixing_ip_uov = False
+vary_strength = 0.50
+
+# Image Prompt controls
+# set by webui, read by async_worker
+controlnet_softness = 0.25
+canny_low_threshold = 64
+canny_high_threshold = 128
+
 # Inpainting controls
 # set by webui, read by async_worker
+inpaint_mode = 'Inpaint Default: Blend'
 inpaint_additional_prompt = ""
-outpaint_selections = []
-
-# Inpainting masking mode
-# set by ui_support, read by async_worker
-# True = Auto-Masking, False = Manual
+inpaint_engine = 'v2.6'
+inpaint_disable_initial_latent = False
+mixing_ip_inpaint = False
+inpaint_strength = 1.0
+inpaint_respective_field = 0.618
+inpaint_erode_or_dilate = 0
+# True = Auto-Masking, False = Manual:
 is_auto_masking = False
+dino_erode_or_dilate = 0
+
+# Outpainting controls
+# set by webui, read by async_worker
+outpaint_selections = []
+outpaint_extension = False
+# Default outpaint extension percentages (30% to 100%)
+outpaint_left_percent = 100.0
+outpaint_right_percent = 100.0
+outpaint_top_percent = 100.0
+outpaint_bottom_percent = 100.0
 
 # Common support for miscellaneous controls
 # set by webui, read by async_worker
@@ -76,15 +103,22 @@ prompt_translator = True
 read_wildcards_in_order = False
 wildcard_lines_to_interpret = 50
 
-# the current resolution is set by modules.aspect_ratios
+# the current resolution is set
+# by modules.aspect_ratios
 resolution = '0*0'
 full_AR_labels = []
 
+# Resolution Overrides
+# set by webui, read by async_worker
+overwrite_width = -1
+overwrite_height = -1
+
 # Used with webui "Make New Preset"
-# determines whether the current AR will be saved
-# set by save_AR_checkbox
-# used by enhanced.toolbox.save_preset()
-AR_preset_save = False
+# determines whether the current resolution
+# and prompts will be saved.
+# Read by enhanced.toolbox.save_preset()
+save_resolution = False
+overwrite_prompts = False
 
 # set by webui to control
 # UIS.reset_layout_parameters
@@ -122,9 +156,18 @@ base_meta = ''
 # how many times to run the generative cycle
 batch_count = 1
 
+# Image Grid path
+# saved by async_worker,
+# read by utl.save_image_grid
+last_grid_path = ''
+
 # FreeU controls initialized by config,
 # updated by webui and read by async_worker
 freeu_settings = [False, 1.01, 1.02, 0.99, 0.95]
+freeu_preset_name = "D: FooocusPlus Default - Realism"
+# Track if user has modified
+# the current preset's slider values
+freeu_modified = False
 
 # performance selection initialized by config,
 # updated by webui and read by async_worker
@@ -138,8 +181,13 @@ saved_seed = '0'        # initialize seed saver
 
 # Expert Tool settings
 # set by webui, read by async_worker
+refiner_swap_method = 'joint'
 adm_scaler_positive = 1.5
 adm_scaler_negative = 0.8
 adm_scaler_end = 0.3
-
-
+debugging_cn_preprocessor = False
+skipping_cn_preprocessor = False
+debugging_inpaint_preprocessor = False
+debugging_dino = False
+debugging_enhance_masks = False
+debug_substyles = False

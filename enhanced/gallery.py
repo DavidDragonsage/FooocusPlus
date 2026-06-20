@@ -3,10 +3,11 @@ import os
 import math
 import json
 import copy
+import re
+import common
 import modules.util as util
 import modules.config as config
 import enhanced.toolbox as toolbox
-import re
 from lxml import etree
 from enhanced.translator import interpret
 from pathlib import Path
@@ -70,10 +71,32 @@ def images_list_update(choice, state_params):
         choice = output_list[0]
     images_gallery = get_images_from_gallery_index(choice, state_params["__max_per_page"])
     state_params.update({"prompt_info": [choice, 0]})
-    return (gr.update(value=images_gallery),
+
+    # Check if we are coming from a deletion
+    show_welcome = state_params.get("show_welcome", False)
+
+    # Clear it immediately so subsequent manual clicks work normally
+    if show_welcome:
+        state_params["show_welcome"] = False
+
+    if common.is_generating:
+        common.is_generating = False
+        # Keep history hidden
+        history_gallery_update = gr.update(value=images_gallery, visible=False)
+        # Keep progress_gallery open and visible
+        progress_gallery_update = gr.update(visible=True)
+    else:
+        # Show history normally:
+        history_gallery_update = gr.update(value=images_gallery, visible=True)
+        # Turn off progress
+        progress_gallery_update = gr.update(visible=False)
+
+    return (history_gallery_update,
             gr.update(open=False, visible=len(output_list)>0),
             state_params,
-            gr.update(visible=False)) # turn off welcome_window
+            # Dynamic progress_gallery visibility update:
+            progress_gallery_update,
+            gr.update(visible=show_welcome)) # turn off welcome_window
 
 
 def select_index(choice, image_tools_checkbox, state_params, evt: gr.SelectData):
@@ -383,5 +406,3 @@ def parse_html_log(choice: str, passthrough = False):
     images_ads.update({choice: log_ext})
     print(f'[Gallery] Parse_html_log: loaded {len(images_prompt[choice])} entries for {choice}.')
     return True
-
-

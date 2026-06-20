@@ -19,9 +19,10 @@ fooocusplus_ver, hotfix, hotfix_title = version.get_fooocusplus_ver()
 """
 # For future use:
 # THE GLOBAL TRAP (The Gatekeeper)
-# If we just updated, 'common' might be the new file, but
-# if Python is confused by cached bytecode or a partial load,
-# we check if the code "thinks" it's the right version.
+# If we just updated, 'common' might be the new file,
+# but if Python is confused by cached bytecode or a
+# partial load,  we check if the code "thinks"
+# it's the right version.
 if getattr(common, 'REQUIRED_VERSION', None) != fooocusplus_ver:
     print("\n" + "="*60)
     print(f" FOOOCUSPLUS UPDATE IN PROGRESS: {version_info.current_version}")
@@ -32,6 +33,7 @@ if getattr(common, 'REQUIRED_VERSION', None) != fooocusplus_ver:
     import sys
     sys.exit()
 """
+
 import os
 import ssl
 from pathlib import Path
@@ -133,7 +135,9 @@ def prepare_environment():
     xformers_ver = torch_dict['xformers_ver']
     pytorchlightning_ver = torch_dict['pytorchlightning_ver']
     lightningfabric_ver = torch_dict['lightningfabric_ver']
+    bitsandbytes_ver = torch_dict['bitsandbytes_ver']
     torch_platform_ver = torch_dict['torch_platform_ver']
+
     torch_base_ver = read_torch_base()
 
     print()
@@ -150,9 +154,10 @@ def prepare_environment():
             xformers_info = "not installed"
         print(f"Torch {torch_info}{cuda_info}, Xformers {xformers_info}")
     else:
+        print()
         print(f"Torch {torch_base_ver}")
+        print()
     print(f"FooocusPlus Version: {fooocusplus_ver}, Hotfix: {hotfix}")
-    print()
 
     if REINSTALL_ALL or torch_ver != torch_base_ver or \
         torch_info == "not installed":
@@ -173,6 +178,12 @@ def prepare_environment():
         torchaudio_statement = " torchaudio==" + torchaudio_ver
         no_warning_statement = "--no-warn-script-location"
         packages = [no_warning_statement, torch_statement, torchvision_statement, torchaudio_statement]
+
+        # Inject --no-deps for Blackwell/CUDA 13.0
+        # to protect NumPy 1.26.4
+        if torch_platform_ver == 'cu130':
+            packages.append('--no-deps')
+
         # run the installer
         cmds = get_install_commands(torch_platform_ver, packages)
         cmds = get_pip_commands(cmds)
@@ -180,10 +191,14 @@ def prepare_environment():
 
     verify_installed_version('pytorch-lightning', pytorchlightning_ver, False)
     verify_installed_version('lightning-fabric', lightningfabric_ver, False)
+    verify_installed_version('bitsandbytes', bitsandbytes_ver, False)
+    print()
 
     if REINSTALL_ALL or not is_installed("xformers"):
         if platform.python_version().startswith("3.10"):
-            if torch_platform_ver == 'cu128':
+            if torch_platform_ver == 'cu130':
+                verify_installed_version('xformers', xformers_ver, False, use_index = 'https://download.pytorch.org/whl/cu130', package_url = '')
+            elif torch_platform_ver == 'cu128':
                 verify_installed_version('xformers', xformers_ver, False, use_index = 'https://download.pytorch.org/whl/cu128', package_url = '')
             elif torch_platform_ver == 'cu124':
                 verify_installed_version('xformers', xformers_ver, False, use_index = 'https://download.pytorch.org/whl/cu124', package_url = '')
@@ -198,6 +213,7 @@ def prepare_environment():
                 exit(0)
     return
 
+
 vae_approx_filenames = [
     ('xlvaeapp.pth', 'https://huggingface.co/lllyasviel/misc/resolve/main/xlvaeapp.pth'),
     ('vaeapp_sd15.pth', 'https://huggingface.co/lllyasviel/misc/resolve/main/vaeapp_sd15.pt'),
@@ -207,7 +223,8 @@ vae_approx_filenames = [
 
 
 prepare_environment()
-interpret('Analyzing the graphics system...')
+interpret('Verifying the file structure...')
+
 
 # build_launcher()
 if args.gpu_device_id is not None:
@@ -234,7 +251,7 @@ os.environ['GRADIO_TEMP_DIR'] = config.temp_path
 write_torch_base(torch_ver)
 
 print()
-interpret('Initializing image processors...')
+interpret('Initializing preset support...')
 
 launch_vram = int(get_vram()/1000)
 if launch_vram<6:

@@ -14,7 +14,7 @@ import enhanced.comfy_task as comfy_task
 import modules.aspect_ratios as AR
 import modules.config as config
 import modules.constants as constants
-import modules.flags
+import modules.flags as flags
 import modules.meta_parser as meta_parser
 import modules.preset_resource as PR
 import modules.sdxl_styles
@@ -172,7 +172,7 @@ def init_nav_bars(state_params, request: gr.Request):
     if "__lang" not in state_params.keys():
         state_params.update({"__lang": args.language})
     if "__theme" not in state_params.keys():
-        state_params.update({"__theme": args.theme})
+        state_params.update({"__theme": args.mode})
     if "__preset" not in state_params.keys():
         state_params.update({"__preset": args.preset})
     if "__session" not in state_params.keys() and "cookie" in request.headers.keys():
@@ -218,6 +218,7 @@ def init_nav_bars(state_params, request: gr.Request):
         abs_path = str(Path(file_welcome).resolve())
         print(f' {abs_path}')
         results += [gr.update(value=abs_path)]
+    print()
     results += [gr.update(value=state_params["__theme"])]
     results += [gr.update(choices=state_params["__output_list"], value=None), gr.update(visible=len(state_params["__output_list"])>0, open=False)]
     results += [gr.update(value=False if state_params["__is_mobile"] else config.default_inpaint_advanced_masking_checkbox)]
@@ -261,71 +262,95 @@ def refresh_nav_bars(state_params):
     return results
 
 
+def manage_ip_image_clear(index=None):
+    # User activated buffer clearing is necessary for Image
+    # Prompt slots because they can be used by other Input
+    # Image options: the Inpainter and UOV.
+    # Individual Clear (index provided) wipes ONLY the image,       #  preserving the other parameters.
+    # Clear All (index=None) wipes everything and resets
+    # the parameters to the global defaults.
+
+    # 1. INDIVIDUAL SLOT CLEAR ('x' button clicked)
+    if index is not None:
+        if 0 <= index < len(config.ip_slots):
+            config.ip_slots[index]['image'] = None
+            interpret(f'[UI Support] Cleared the buffer for Image Prompt slot {index}. Parameters preserved.')
+        # Returning None tells Gradio to clear out just this specific image component
+        return None
+
+    # 2. GLOBAL MASTER CLEAR ('Clear Image Prompts' button clicked)
+    interpret('[UI Support] "Clear Image Prompts" deleted all control net images and reset parameters to their defaults.')
+
+    # Fetch global slot defaults
+    default_type = flags.default_ip
+    default_stop, default_weight = flags.default_parameters[default_type]
+
+    # Reset slot memory backend
+    for slot in config.ip_slots:
+        slot['image'] = None
+        slot['stop'] = default_stop
+        slot['weight'] = default_weight
+        slot['type'] = default_type
+
+    # Reset the 3 new standalone common variables directly
+    common.default_softness = 0.25
+    common.default_canny_low = 64
+    common.default_canny_high = 128
+
+    # Build UI updates list step-by-step
+    ui_updates = []
+
+    # Add the slot arrays (.extend flattens these tracking lists)
+    ui_updates.extend([gr.update(value=None)] * len(config.ip_slots))
+    ui_updates.extend([gr.update(value=default_type)] * len(config.ip_slots))
+    ui_updates.extend([gr.update(value=default_stop)] * len(config.ip_slots))
+    ui_updates.extend([gr.update(value=default_weight)] * len(config.ip_slots))
+
+    # Append your 3 new standalone values directly to the end of the same list
+    ui_updates.append(gr.update(value=common.default_softness))
+    ui_updates.append(gr.update(value=common.default_canny_low))
+    ui_updates.append(gr.update(value=common.default_canny_high))
+
+    return ui_updates
+
+
 def manage_image_buffers(inpaint_img=None, inpaint_mask=None):
-    # check if the Input Image checkbox is active or not
-    if not config.default_image_prompt_checkbox:
-        common.uov_image_buffer = None
-        common.inpaint_image_buffer = None
-        common.inpaint_mask_buffer = None
-        # Purge the IP-Adapter (Image Prompt) images:
-        for slot in config.ip_slots:
-            slot['image'] = None
-        common.enhance_image_buffer = None
+    # manage the Inpaint image and mask buffers
 
-        # check for IC-Light in Features mode
-        # if the Input Image checkbox is False
-        # then the Features checkbox might be True
-        if not common.features_tab_name == 'layer':
-            common.layer_image_buffer = None
+    if common.current_tab_name == 'inpaint' and config.default_input_image_checkbox:
 
-    else:
-        active = common.current_tab_name
-
-        if active == 'uov':
-            for slot in config.ip_slots:
-                slot['image'] = None
+        if not util.is_valid_image(inpaint_img):
             common.inpaint_image_buffer = None
             common.inpaint_mask_buffer = None
-            common.enhance_image_buffer = None
-            common.layer_image_buffer = None
+            common.is_auto_masking = False
+            interpret('[UI Support] No valid Inpaint image found!')
+            return
 
-        elif active == 'ip':
-            common.uov_image_buffer = None
-            common.inpaint_image_buffer = None
+        common.inpaint_image_buffer = inpaint_img
+
+        if common.outpaint_selections:
             common.inpaint_mask_buffer = None
-            common.enhance_image_buffer = None
-            common.layer_image_buffer = None
-
-        elif active == 'inpaint':
-            common.uov_image_buffer = None
-            for slot in config.ip_slots:
-                slot['image'] = None
-            common.inpaint_image_buffer = inpaint_img
-            # check for auto or manual masking:
-            if util.is_valid_image(inpaint_mask):
-                interpret('[UI Support] Inpainting in Auto-Masking Mode')
-                common.inpaint_mask_buffer = inpaint_mask
-                common.is_auto_masking = True
+            common.is_auto_masking = False
+            if common.outpaint_extension:
+                interpret('[UI Support] Outpainting with variable extension...')
             else:
-                # It's either None or a blank canvas
-                interpret('[UI Support] Inpainting in Manual Mode')
-                common.inpaint_mask_buffer = None
-                common.is_auto_masking = False
-            common.enhance_image_buffer = None
-            common.layer_image_buffer = None
+                interpret('[UI Support] Outpainting with standard extension...')
+            return
 
-        elif active == 'enhance':
-            common.uov_image_buffer = None
-            for slot in config.ip_slots:
-                slot['image'] = None
-            common.inpaint_image_buffer = None
+        # check for auto or manual masking:
+        if util.is_valid_image(inpaint_mask):
+            interpret('[UI Support] Inpainting in Auto-Masking Mode')
+            common.inpaint_mask_buffer = inpaint_mask
+            common.is_auto_masking = True
+        else:
+            interpret('[UI Support] Inpainting in Manual Mode')
             common.inpaint_mask_buffer = None
-            common.layer_image_buffer = None
-
+            common.is_auto_masking = False
     return
 
 
 def process_before_generation(state_params, backend_params, backfill_prompt, translation_methods, comfyd_active_checkbox):
+    common.is_generating = True
     if "__nav_name_list" not in state_params.keys():
         state_params.update({"__nav_name_list": PR.get_all_presetnames()})
     superprompter.remove_superprompt()
@@ -357,15 +382,21 @@ def process_before_generation(state_params, backend_params, backfill_prompt, tra
 
 def process_after_generation(state_params):
 
-    #if "__max_per_page" not in state_params.keys():
-    #    state_params.update({"__max_per_page": 18})
     max_per_page = state_params["__max_per_page"]
     max_catalog = state_params["__max_catalog"]
     output_list, finished_nums, finished_pages = gallery_util.refresh_output_list(max_per_page, max_catalog)
     state_params.update({"__output_list": output_list})
     state_params.update({"__finished_nums_pages": f'{finished_nums},{finished_pages}'})
+
+    results = [
+        gr.update(visible=False), # welcome_window
+        gr.update(visible=False), # preview_window
+        gr.update(visible=True),  # progress_gallery
+        gr.update(visible=False)  # history_gallery
+    ]
+
     # generate_button, stop_button, skip_button, state_is_generating
-    results = [gr.update(value='Generate', visible=True, interactive=True)] + [gr.update(visible=False, interactive=False), gr.update(visible=False, interactive=False), False]
+    results += [gr.update(value='Generate', visible=True, interactive=True)] + [gr.update(visible=False, interactive=False), gr.update(visible=False, interactive=False), False]
     # gallery_index, catalogue_accordion
     results += [gr.update(choices=state_params["__output_list"], value=None), gr.update(visible=len(state_params["__output_list"])>0, open=False)]
     # prompt, random_button, translator_button, super_prompter, background_theme, image_tools_checkbox, bar0_button, bar1_button, bar2_button, bar3_button, bar4_button, bar5_button, bar6_button, bar7_button, bar8_button
@@ -427,7 +458,7 @@ def reset_layout_params(
     engine = preset_prepared.get('engine', {}).get('backend_engine', 'Fooocus')
     state_params.update({"engine": engine})
 
-    task_method = preset_prepared.get('engine', {}).get('backend_params', modules.flags.get_engine_default_backend_params(engine))
+    task_method = preset_prepared.get('engine', {}).get('backend_params', flags.get_engine_default_backend_params(engine))
     state_params.update({"task_method": task_method})
 
     if comfyd_active_checkbox:

@@ -1,12 +1,13 @@
 import modules.core as core
 import os
 import torch
-import modules.patch
-import modules.config
-import modules.flags
+import common
 import ldm_patched.modules.model_management
 import ldm_patched.modules.latent_formats
+import modules.config as config
+import modules.flags
 import modules.inpaint_worker
+import modules.patch
 import extras.vae_interpose as vae_interpose
 from extras.expansion import FooocusExpansion
 
@@ -265,6 +266,14 @@ def refresh_everything(refiner_model_name, base_model_name, loras,
     if final_expansion is None:
         final_expansion = FooocusExpansion()
 
+    # if in IC-Light mode then ensure that
+    # Fooocus V2 uses the "Unlit" substyle:
+    if common.features_tab_name=='layer' and common.features_checkbox:
+        final_expansion.update_substyle("Unlit")
+    else:
+        # otherwise use the user selected substyle
+        final_expansion.update_substyle(config.v2_substyle)
+
     prepare_text_encoder(async_call=True)
     clear_all_caches()
     return
@@ -275,6 +284,14 @@ def reload_expansion():
     global final_expansion
     if final_expansion is None:
         final_expansion = FooocusExpansion()
+
+    # if in IC-Light mode then ensure that
+    # Fooocus V2 uses the "Unlit" substyle:
+    if common.features_tab_name=='layer' and common.features_checkbox:
+        final_expansion.update_substyle("Unlit")
+    else:
+        # otherwise use the user selected substyle
+        final_expansion.update_substyle(config.v2_substyle)
     return
 
 def free_everything():

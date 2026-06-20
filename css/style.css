@@ -47,14 +47,19 @@
     position: absolute;
     top: 160px;
     left: 50%;
+    min-width: 75px !important;
+    width: 340px !important;
     transform: translateX(-50%);
-    width: 300px !important;
-    z-index: 21;
     text-align: left;
     opacity: 1;
     border-radius: 8px;
     padding: 0px;
     border: groove;
+    z-index: 21;
+}
+.toolbox_note_button {
+    border-radius: 10px !important;
+    width: 50% !important;
 }
 .identity_note {
     height: auto;
@@ -99,6 +104,56 @@
     padding: 2px !important;
 }
 
+.perf_modal_box {
+    height: auto;
+    position: absolute;
+    top: 100px;
+    left: 50%;
+    min-width: 360px !important;
+    width: 360px !important;
+    transform: translateX(-50%);
+    text-align: left;
+    opacity: 1;
+    border-radius: 8px;
+    /* Top, Right, Bottom, Left */
+    padding: 0px 20px 15px !important;
+    border: groove;
+    z-index: 22;
+}
+/* Forcibly prevent any row container inside the Performance Box from wrapping its buttons */
+.perf_modal_box .row,
+.perf_modal_box .form,
+.perf_modal_box > div {
+    flex-wrap: nowrap !important;
+}
+.remove_torch_box {
+    height: auto;
+    position: absolute;
+    top: 160px;
+    left: 50%;
+    min-width: 360px !important;
+    width: 360px !important;
+    transform: translateX(-50%);
+    text-align: left;
+    opacity: 1;
+    border-radius: 8px;
+    /* Top, Right, Bottom, Left */
+    padding: 0px 20px 15px !important;
+    border: groove;
+    z-index: 24;
+}
+/* 1. Forcibly prevent any row container inside this box from wrapping its buttons */
+.remove_torch_box .row,
+.remove_torch_box .form,
+.remove_torch_box > div {
+    flex-wrap: nowrap !important;
+}
+/* 2. Streamlined side-by-side button overrides */
+.torch_note_button {
+    border-radius: 10px !important;
+    width: 100% !important;  /* Let flexbox distribute the width equally */
+    min-width: 0 !important;  /* Overrides any Gradio minimum-width safety constraints */
+}
 
 /* Loader Styles */
 .loader-container {
@@ -280,6 +335,15 @@ div:has(> #positive_prompt) {
     max-width: 80% !important;
     width: 80% !important;
 }
+.button_classic4 {
+    align-self: center;
+    border-radius: 10px !important;
+    max-height: 80px !important;
+    max-height: 60px !important;
+    min-height: 60px !important;
+    max-width: 200px !important;
+    margin: -5px 25px -15px 0px !important;
+}
 .button_edit {
     align-self: center;
     border-radius: 10px !important;
@@ -306,6 +370,10 @@ div:has(> #positive_prompt) {
     font-size: 12px !important;
     font-weight: normal !important;
     margin: 0px 0px -10px 5px !important;
+}
+.dropdown_50 {
+    max-width: 50% !important;
+    min-width: 50% !important;
 }
 
 #advanced_check_row {
@@ -366,6 +434,9 @@ div:has(> #positive_prompt) {
 
 .edit_check{
     padding: 5px !important;
+}
+.edit_check_padded{
+    padding: 15px !important;
 }
 .edit_check_full{
     align-self: center;
@@ -602,6 +673,11 @@ div:has(> #positive_prompt) {
     display: none;
 }
 
+#style_search_bar {
+    margin-bottom: -5px !important;
+    min-width: 75% !important;
+}
+
 #stylePreviewOverlay {
     opacity: 0;
     pointer-events: none;
@@ -626,7 +702,7 @@ div:has(> #positive_prompt) {
 
 /* scrollable box for style selections */
 .contain .tabs {
-    height: 100%;
+    height: 92%;
 }
 
 .contain .tabs .tabitem.style_selections_tab {
@@ -636,15 +712,16 @@ div:has(> #positive_prompt) {
     height: 100%;
 }
 .contain .tabs .tabitem.style_selections_tab .style_selections {
-    min-height: 200px;
+    min-height: 550px;
     height: 100%;
 }
 
 .contain .tabs .tabitem.style_selections_tab .style_selections .wrap[data-testid="checkbox-group"] {
-    position: absolute; /* 删除此以禁用复选框组中的滚动 */
+    position: absolute;
     overflow: auto;
     padding-right: 2px;
-    max-height: 100%;
+    height: 100%;
+    min-height: 550px;
     scrollbar-width: thin;      /* Firefox */
     -ms-overflow-style: none;   /* IE 和 Edge */
 }
@@ -660,7 +737,7 @@ div:has(> #positive_prompt) {
     flex: calc(50% - 5px) !important;
 }
 .contain .tabs .tabitem.style_selections_tab .style_selections .wrap[data-testid="checkbox-group"] label span {
-    /* white-space:nowrap; */ /* 添加此功能以禁用文本换行 (3列布局的更好选择) */
+    /* white-space:nowrap; */
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -681,8 +758,25 @@ div:has(> #positive_prompt) {
     background: none;
 }
 
+#inpaint_brush_color input[type="color"] {
+    /* Increases the physical height of the color box */
+    height: 48px !important;
+    /* Forces the color box to span the full width of its container */
+    width: 75% !important;
+    /* Ensures stability across different browsers */
+    min-height: 40px !important;
+}
+/* Optional: Add a subtle border-radius to match the rest of your styled inputs */
+#inpaint_brush_color input[type="color"]::-webkit-color-swatch {
+    border-radius: 4px !important;
+    border: 1px solid #4d4d4d !important;
+}
+
 .elem_centre {
-    justify-content: center;
+    justify-content: center !important;
+}
+.elem_up {
+    margin-top: -10px !important;
 }
 
 #finished_images_catalog {

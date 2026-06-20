@@ -40,6 +40,7 @@
         "Fooocus V2",
         "Fooocus Semi Realistic"
     ],
+    "v2_substyle": "Spellcasting Druid",
     "default_aspect_ratio": "0*0",
     "checkpoint_downloads": {
         "SDXLFaetastic_v24.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/SDXLFaetastic_v24.safetensors"

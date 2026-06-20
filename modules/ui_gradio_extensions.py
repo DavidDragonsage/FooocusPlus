@@ -32,7 +32,7 @@ def javascript_html():
     viewer_js_path = webpath('javascript/viewer.js')
     image_viewer_js_path = webpath('javascript/imageviewer.js')
     topbar_js_path = webpath('javascript/topbar.js')
-    samples_path = webpath(os.path.abspath('./sdxl_styles/samples/fooocus_v2.jpg'))  
+    samples_path = webpath(os.path.abspath('./sdxl_styles/samples/fooocus_v2.jpg'))
 #    preset_samples_path = webpath(os.path.abspath('./presets/samples/default.jpg'))
     head = f'<script type="text/javascript">{localization_js(args_manager.args.language)}</script>\n'
     head += f'<script type="text/javascript" src="{script_js_path}"></script>\n'
@@ -46,7 +46,7 @@ def javascript_html():
     head += f'<meta name="samples-path" content="{samples_path}">\n'
 #    head += f'<meta name="preset-samples-path" content="{preset_samples_path}">\n'
 
-    theme = args_manager.args.theme if args_manager.args.theme else "light"
+    theme = args_manager.args.mode if args_manager.args.mode else "dark"
     head += f'<script type="text/javascript">set_theme(\"{theme}\");</script>\n'
 
     return head
