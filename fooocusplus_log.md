@@ -102,7 +102,7 @@
   * the user config.txt setting may need to be adjusted
 * image buffers are no longer auto-cleared
   * this prevents "dead" images in Input Image modes
-* Hotfix0
+* Hotfix1: Corrected updating error
 <br/><br/>
 
 
