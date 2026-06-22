@@ -140,6 +140,11 @@ def prepare_environment():
 
     torch_base_ver = read_torch_base()
 
+    # For Blackwell architectures where xformers is disabled,
+    # force native PyTorch attention
+    if xformers_ver == 'None':
+        args.attention_pytorch = True
+
     print()
     interpret('Program Versions:')
     print(f"Python {sys.version}")
@@ -194,7 +199,7 @@ def prepare_environment():
     verify_installed_version('bitsandbytes', bitsandbytes_ver, False)
     print()
 
-    if REINSTALL_ALL or not is_installed("xformers"):
+    if xformers_ver != 'None' and (REINSTALL_ALL or not is_installed("xformers")):
         if platform.python_version().startswith("3.10"):
             if torch_platform_ver == 'cu130':
                 verify_installed_version('xformers', xformers_ver, False, use_index = 'https://download.pytorch.org/whl/cu130', package_url = '')

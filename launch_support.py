@@ -197,11 +197,15 @@ def dependency_resolver():
 
     # Begin the assignment of dependencies:
     if torch_ver == '2.10.0': # Blackwell native mode
+        if arch_version >= 12.0:
+            xformers_blackwell = 'None'
+        else:
+            xformers_blackwell = '0.0.34'
         dependencies = dict(
             torch_ver = '2.10.0',
             torchvision_ver = '0.25.0',
             torchaudio_ver = '2.10.0',
-            xformers_ver = '0.0.34',
+            xformers_ver = xformers_blackwell,
             pytorchlightning_ver = '2.5.2',
             lightningfabric_ver = '2.5.2',
             bitsandbytes_ver = bitsandbytes_default,

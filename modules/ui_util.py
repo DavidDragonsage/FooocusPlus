@@ -327,6 +327,10 @@ def format_last_generation_time():
     if last_execution_time <= 0.0:
         return ''
 
+    # Clean, global safeguard to prevent ZeroDivisionError
+    if last_batch_size <= 0:
+        last_batch_size = 1
+
     # Format total time as MM:SS (or raw seconds if under a minute)
     minutes = int(last_execution_time // 60)
     seconds = last_execution_time % 60
