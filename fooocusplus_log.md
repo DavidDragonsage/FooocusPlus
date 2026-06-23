@@ -102,6 +102,7 @@
   * the user config.txt setting may need to be adjusted
 * image buffers are no longer auto-cleared
   * this prevents "dead" images in Input Image modes
+* Hotfix3: Clarified Check Performance popup
 * Hotfix2: debugged Blackwell 50xx generation problem
   * debugged divide-by-zero in Performance Metrics calculation
 * Hotfix1: Corrected updating error

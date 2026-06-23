@@ -58,6 +58,16 @@ from modules.util import is_json, recover_images
 
 allow_inpaint_max = False
 
+btn_torch_value = interpret(
+    'Reconfigure', 'PyTorch', silent = True)
+
+btn_cancel_value = interpret(
+    'Cancel',silent = True)
+
+btn_close_value = interpret(
+    'Close',silent = True)
+
+
 interpret('[UI] Initializing the user interface...')
 print()
 import modules.lme4fp_civitai
@@ -325,23 +335,34 @@ with common.GRADIO_ROOT:
                 elem_classes='perf_modal_box') as perf_modal_box:
                 with gr.Row():
                     # Displays either status information or the upgrade confirmation text
-                    perf_modal_msg = gr.Markdown(value='')
+                    perf_modal_header_msg = gr.Markdown(value='')
 
-                with gr.Row():
-                    # Informational Close / OK button (Single Option)
+                # Action Buttons Row
+                # placed DIRECTLY below the question
+                with gr.Row(elem_classes='elem_centre'):
+                    # Action Confirmation Buttons (Two Options)
+                    perf_upgrade_btn = gr.Button(
+                        value=btn_torch_value,
+                        elem_classes='torch_note_button',
+                        visible=False, scale=1
+                    )
+                    perf_cancel_btn = gr.Button(
+                        value=btn_close_value,
+                        elem_classes='torch_note_button',
+                        visible=False, scale=1
+                    )
+
+                # Metrics Message
+                # Optional, placed below the action buttons
+                perf_modal_metrics_msg = gr.Markdown(value='')
+
+                # Informational OK Row
+                # placed at the very bottom, below the metrics
+                with gr.Row(elem_classes='elem_centre'):
                     perf_ok_btn = gr.Button(
                         value='OK',
                         elem_classes='torch_note_button',
                         visible=False)
-                    # Action Confirmation Buttons (Two Options)
-                    perf_upgrade_btn = gr.Button(
-                        value='OK',
-                        elem_classes='torch_note_button',
-                        visible=False, scale=1)
-                    perf_cancel_btn = gr.Button(
-                        value='Cancel',
-                        elem_classes='torch_note_button',
-                        visible=False, scale=1)
 
             with gr.Group(visible=False,
                 elem_classes=['remove_torch_box']) as remove_torch_modal_box:
@@ -352,11 +373,11 @@ with common.GRADIO_ROOT:
                 with gr.Row():
                     # Action Confirmation Buttons (Two Options)
                     remove_torch_proceed_btn = gr.Button(
-                        value='OK',
+                        value=btn_torch_value,
                         elem_classes='torch_note_button',
                         visible=False, scale=1)
                     remove_torch_cancel_btn = gr.Button(
-                        value='Cancel',
+                        value=btn_cancel_value,
                         elem_classes='torch_note_button',
                         visible=False, scale=1)
 
@@ -2746,11 +2767,19 @@ with common.GRADIO_ROOT:
 
     # Performance Check Handlers
 
-    # 1. Trigger the Performance Check (Conditional Dialog)
+    # 1. Trigger the Performance Check
+    # Conditional Dialog
     perform_btn.click(
         fn=UIU.check_performance_handler,
         inputs=None,
-        outputs=[perf_modal_box, perf_modal_msg, perf_ok_btn, perf_upgrade_btn, perf_cancel_btn],
+        outputs=[
+            perf_modal_box,
+            perf_modal_header_msg,
+            perf_modal_metrics_msg,
+            perf_ok_btn,
+            perf_upgrade_btn,
+            perf_cancel_btn
+        ],
         queue=False, show_progress=False
     )
 
@@ -2770,11 +2799,19 @@ with common.GRADIO_ROOT:
         queue=False, show_progress=False
     )
 
-    # 4. Action Confirmation (Execute Upgrade, then show final OK instructions)
+    # 4. Action Confirmation
+    # Execute Upgrade, then show final OK instructions
     perf_upgrade_btn.click(
         fn=UIU.execute_cuda13_upgrade,
         inputs=None,
-        outputs=[perf_modal_msg, perf_ok_btn, perf_upgrade_btn, perf_cancel_btn],
+        outputs=[
+            perf_modal_box,
+            perf_modal_header_msg,
+            perf_modal_metrics_msg,
+            perf_ok_btn,
+            perf_upgrade_btn,
+            perf_cancel_btn
+        ],
         queue=False, show_progress=False
     )
 

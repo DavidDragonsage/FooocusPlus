@@ -415,22 +415,20 @@ def check_performance_handler():
                     f"**{details_label}** {message}\n\n"
                     f"{already_upgraded}\n\n"
                 )
-                if stats_msg:
-                    msg += f"\n{stats_msg}"
-
                 return (
-                    gr.update(visible=True),
-                    gr.update(value=msg),
-                    gr.update(visible=True),   # Show OK button
-                    gr.update(visible=False),  # Hide proceed
-                    gr.update(visible=False)   # Hide cancel
+                    gr.update(visible=True),                             # perf_modal_box
+                    gr.update(value=msg),                                 # perf_modal_header_msg
+                    gr.update(value=stats_msg, visible=bool(stats_msg)),  # perf_modal_metrics_msg (at bottom)
+                    gr.update(visible=True),                             # perf_ok_btn (Show bottom OK)
+                    gr.update(visible=False),                            # perf_upgrade_btn
+                    gr.update(visible=False)                             # perf_cancel_btn
                 )
             else:
                 # Scenario A2: Blackwell running old version (Prompt Upgrade)
                 status_val = interpret('Running in Compatibility Mode using CUDA 12.8', silent=True)
                 gpu_support = interpret('Your Blackwell GPU supports full native CUDA 13.0 with Blackwell FP4 performance.', silent=True)
                 ask_upgrade = interpret('Do you want to enable the high-performance environment upgrade?', silent=True)
-                restart_warn = interpret('This will automatically reconfigure and download PyTorch on your next restart.', silent=True)
+                restart_warn = interpret('This will automatically download then reconfigure PyTorch and its dependencies on your next restart.', silent=True)
 
                 msg = (
                     f"### **{header_check}**\n\n"
@@ -442,11 +440,12 @@ def check_performance_handler():
                     f'<div style="height: 5px;"></div>'
                 )
                 return (
-                    gr.update(visible=True),
-                    gr.update(value=msg),
-                    gr.update(visible=False),
-                    gr.update(visible=True),   # Show Proceed
-                    gr.update(visible=True)    # Show Cancel
+                    gr.update(visible=True),                             # perf_modal_box
+                    gr.update(value=msg),                                 # perf_modal_header_msg
+                    gr.update(value=stats_msg, visible=bool(stats_msg)),  # perf_modal_metrics_msg (below buttons)
+                    gr.update(visible=False),                            # perf_ok_btn (Hide bottom OK)
+                    gr.update(visible=True),                             # perf_upgrade_btn (Show action)
+                    gr.update(visible=True)                              # perf_cancel_btn (Show cancel)
                 )
         else:
             # Scenario A3: Blackwell with outdated driver (Recommend Driver Upgrade)
@@ -462,11 +461,12 @@ def check_performance_handler():
                 f"{recommend_upgrade}\n\n"
             )
             return (
-                gr.update(visible=True),
-                gr.update(value=msg),
-                gr.update(visible=True),
-                gr.update(visible=False),
-                gr.update(visible=False)
+                gr.update(visible=True),                             # perf_modal_box
+                gr.update(value=msg),                                 # perf_modal_header_msg
+                gr.update(value=stats_msg, visible=bool(stats_msg)),  # perf_modal_metrics_msg
+                gr.update(visible=True),                             # perf_ok_btn (Show bottom OK)
+                gr.update(visible=False),                            # perf_upgrade_btn
+                gr.update(visible=False)                             # perf_cancel_btn
             )
 
     # =============================================================================
@@ -477,9 +477,9 @@ def check_performance_handler():
             if is_running_cu130:
                 # Scenario B1: Non-Blackwell GPU running experimental CUDA 13.0
                 status_val = interpret('Experimental Configuration Active', silent=True)
-                experimental_warn = interpret('You are currently running on the experimental CUDA 13.0 stack. If you use quantized models like Flux, generative cycles may be 6.3% slower. For SDXL models, cycles may be 2.6% faster.', silent=True)
+                experimental_warn = interpret('You are currently running on the experimental CUDA 13.0 stack. Flux models may run from about 6% to 17% slower with CUDA 13 and SDXL models may operate from 3% faster to 9% slower', silent=True)
                 ask_revert = interpret('Would you like to restore the CUDA 12.8 configuration?', silent=True)
-                revert_warn = interpret('This will reconfigure and download PyTorch 2.7 on your next restart.', silent=True)
+                revert_warn = interpret('This will automatically download then reconfigure PyTorch and its dependencies on your next restart.', silent=True)
 
                 msg = (
                     f"### **{header_check}**\n\n"
@@ -490,15 +490,13 @@ def check_performance_handler():
                     f"{revert_warn}\n\n"
                     f'<div style="height: 5px;"></div>'
                 )
-                if stats_msg:
-                    msg += f"\n{stats_msg}"
-
                 return (
-                    gr.update(visible=True),
-                    gr.update(value=msg),
-                    gr.update(visible=False),
-                    gr.update(visible=True),   # Show Proceed (will delete torch_base.txt to revert)
-                    gr.update(visible=True)    # Show Cancel
+                    gr.update(visible=True),                             # perf_modal_box
+                    gr.update(value=msg),                                 # perf_modal_header_msg
+                    gr.update(value=stats_msg, visible=bool(stats_msg)),  # perf_modal_metrics_msg (below buttons)
+                    gr.update(visible=False),                            # perf_ok_btn (Hide bottom OK)
+                    gr.update(visible=True),                             # perf_upgrade_btn (Show action)
+                    gr.update(visible=True)                              # perf_cancel_btn (Show cancel)
                 )
             else:
                 # Scenario B2: Non-Blackwell running optimal CUDA 12.8 (Optimal!)
@@ -512,15 +510,13 @@ def check_performance_handler():
                     f"**{details_label}** {message}\n\n"
                     f"{already_optimal}\n\n"
                 )
-                if stats_msg:
-                    msg += f"\n{stats_msg}"
-
                 return (
-                    gr.update(visible=True),
-                    gr.update(value=msg),
-                    gr.update(visible=True),   # Show OK button
-                    gr.update(visible=False),  # Hide proceed
-                    gr.update(visible=False)   # Hide cancel
+                    gr.update(visible=True),                             # perf_modal_box
+                    gr.update(value=msg),                                 # perf_modal_header_msg
+                    gr.update(value=stats_msg, visible=bool(stats_msg)),  # perf_modal_metrics_msg
+                    gr.update(visible=True),                             # perf_ok_btn (Show bottom OK)
+                    gr.update(visible=False),                            # perf_upgrade_btn
+                    gr.update(visible=False)                             # perf_cancel_btn
                 )
         else:
             # Scenario B3: Non-Blackwell with outdated driver (Recommend Driver Upgrade)
@@ -536,11 +532,12 @@ def check_performance_handler():
                 f"{recommend_upgrade}\n\n"
             )
             return (
-                gr.update(visible=True),
-                gr.update(value=msg),
-                gr.update(visible=True),
-                gr.update(visible=False),
-                gr.update(visible=False)
+                gr.update(visible=True),                             # perf_modal_box
+                gr.update(value=msg),                                 # perf_modal_header_msg
+                gr.update(value=stats_msg, visible=bool(stats_msg)),  # perf_modal_metrics_msg
+                gr.update(visible=True),                             # perf_ok_btn (Show bottom OK)
+                gr.update(visible=False),                            # perf_upgrade_btn
+                gr.update(visible=False)                             # perf_cancel_btn
             )
 
 
@@ -557,7 +554,7 @@ def execute_cuda13_upgrade():
             header_success = interpret('Upgrade Unlocked Successfully!', silent=True)
             flag_cleared = interpret('The Torch identification file has been removed.',
                 silent=False)
-            restart_instruction = interpret('Please close this window and restart FooocusPlus. The launcher will automatically install PyTorch on startup.', silent=False)
+            restart_instruction = interpret('Please close this window and restart FooocusPlus. The launcher will automatically install PyTorch and its dependencies on startup.', silent=False)
 
             msg = (
                 f"### **{header_success}**\n\n"
@@ -573,11 +570,14 @@ def execute_cuda13_upgrade():
         already_cleared = interpret('The "torch_base.txt" file has already been removed. ', restart_instruction, silent=True)
         msg = f"### **{header_status}**\n\n{already_cleared}"
 
+    # Return exactly 6 elements to match the unified outputs array
     return (
-        gr.update(value=msg),
-        gr.update(visible=True),
-        gr.update(visible=False),
-        gr.update(visible=False)
+        gr.update(visible=True),                                 # perf_modal_box (Keep visible)
+        gr.update(value=msg),                                     # perf_modal_header_msg
+        gr.update(visible=False),                                 # perf_modal_metrics_msg (Hide metrics on success)
+        gr.update(visible=True),                                  # perf_ok_btn (Show bottom OK to close)
+        gr.update(visible=False),                                 # perf_upgrade_btn
+        gr.update(visible=False)                                  # perf_cancel_btn
     )
 
 
@@ -593,7 +593,7 @@ def show_remove_torch_confirm():
     Triggers the confirmation dialog warning
     the user of the impending deletion.
     """
-    header = interpret('Remove Torch Components', silent=True)
+    header = interpret('Reconfigure PyTorch Components', silent=True)
     warning_text = interpret('Warning: This will uninstall PyTorch, TorchVision, TorchAudio, xFormers, and related dependencies from the Python environment.', silent=True)
     ask_proceed = interpret('Do you want to proceed?', silent=True)
 
@@ -608,8 +608,8 @@ def show_remove_torch_confirm():
         gr.update(value=msg),      # remove torch_modal_msg
         gr.update(visible=True),   # remove torch_proceed_btn
         gr.update(visible=True,
-            value='Cancel'),   # remove torch_cancel_btn
-        gr.update(visible=False)    # perf_modal_box
+            value='Cancel'),       # remove torch_cancel_btn
+        gr.update(visible=False)   # perf_modal_box
     )
 
 
@@ -634,7 +634,7 @@ def execute_remove_torch_components():
     # Formulate translated success message
     header_success = interpret('Removal Scheduled',
         silent=True)
-    restart_instruction = interpret('The Torch identification file has been removed. Please close this window and restart FooocusPlus. The launcher will safely clean and reinstall your Torch components on startup.', silent=True)
+    restart_instruction = interpret('The Torch identification file has been removed. Please close this window and restart FooocusPlus. The launcher will automatically install PyTorch and its dependencies on startup.', silent=True)
 
     msg = (
         f"### **{header_success}**\n\n"
