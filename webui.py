@@ -2107,7 +2107,7 @@ with common.GRADIO_ROOT:
                 with gr.Group():
                     with gr.Row():
                         perform_info = interpret(
-                            'Verify graphics operation',
+                            'Verify video system',
                             '(GPU):', silent=True)
                         gr.Markdown(value=perform_info,
                             elem_classes='button_info2')

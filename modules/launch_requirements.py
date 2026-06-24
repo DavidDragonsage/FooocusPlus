@@ -152,7 +152,11 @@ def requirements_met(requirements_file):
                 version_installed = importlib.metadata.version(package)
             except Exception:
                 met_diff.update({package:'-'})
-                if package == 'cmake' or package=='https':
+                # Skip checking/installing insightface
+                # on non-Windows (Linux/Mac) platforms,
+                # letting requirements_patch.txt
+                # handle it cleanly.
+                if package == 'cmake' or package == 'https' or (package == 'insightface' and sys.platform != 'win32'):
                     continue
                 else:
                     print()

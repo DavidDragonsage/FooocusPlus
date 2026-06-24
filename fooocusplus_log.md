@@ -82,7 +82,7 @@
   * Image Prompt
   * Inpainting
   * Outpainting
-  * Upscale and Variation (UOV)
+  * Upscale or Variation (UOV)
 * improved the Mix Image Prompt functions
 * Image Prompt now has a "Clear Image Prompts" selector
 * moved the ControlNet sliders to the Image Prompt section
@@ -102,6 +102,9 @@
   * the user config.txt setting may need to be adjusted
 * image buffers are no longer auto-cleared
   * this prevents "dead" images in Input Image modes
+* Hotfix4: Eliminated a possible security issue with HyDiT
+  * rewrote the HunyuanDiT hydit_task.py module
+  * for Linux, set all requirements to specific versions
 * Hotfix3: Clarified Check Performance popup
 * Hotfix2: debugged Blackwell 50xx generation problem
   * debugged divide-by-zero in Performance Metrics calculation

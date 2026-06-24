@@ -1,4 +1,3 @@
-import os
 import tarfile
 import numpy as np
 import torch
@@ -11,9 +10,11 @@ from pathlib import Path
 from hydit.constants import SAMPLER_FACTORY
 from hydit.config import get_args
 from hydit.inference import End2End
+from enhanced.translator import interpret
 from modules.config import path_models_root, paths_diffusers
 from modules.model_loader import load_file_from_url
 from modules.launch_util import is_installed
+
 from diffusers import HunyuanDiTPipeline, DDPMScheduler, DDIMScheduler, DPMSolverMultistepScheduler
 from transformers import T5EncoderModel
 
@@ -21,18 +22,25 @@ from transformers import T5EncoderModel
 SAMPLERS = list(SAMPLER_FACTORY.keys())
 default_sampler = SAMPLERS[0]
 
-path_hydit = path_models_root  # paths_diffusers[0]
-path_hydit_name = 'hydit' # 'HyDiT'
-hydit_models_root = Path(os.path.join(path_hydit, path_hydit_name))
+path_hydit = Path(path_models_root).resolve()
+path_hydit_name = 'hydit'
+hydit_models_root = path_hydit / path_hydit_name
 hydit_text_encoder = None
 hydit_pipe = None
+
 
 def init_load_model():
     global hydit_models_root, hydit_text_encoder, hydit_pipe
 
-    check_files_exist = lambda ph, fs: all(os.path.exists(os.path.join(ph, f)) for f in fs)
+    # Safe, Pathlib-native file existence check
+    check_files_exist = lambda ph, fs: all((Path(ph) / f).exists() for f in fs)
 
-    files = ["text_encoder_2/model.safetensors", "text_encoder/model.safetensors", "transformer/diffusion_pytorch_model.safetensors", "vae/diffusion_pytorch_model.safetensors"]
+    files = [
+        "text_encoder_2/model.safetensors",
+        "text_encoder/model.safetensors",
+        "transformer/diffusion_pytorch_model.safetensors",
+        "vae/diffusion_pytorch_model.safetensors"
+    ]
     if not hydit_models_root.exists() or not check_files_exist(hydit_models_root, files):
         hydit_models_root.mkdir(parents=True, exist_ok=True)
         downloading_hydit_model(path_hydit)
@@ -53,9 +61,6 @@ def init_load_model():
                 subfolder="text_encoder_2",
                 device_map="auto",
             )
-    #hydit_text_encoder = hydit_text_encoder.to(model_management.get_torch_device())
-    #for name, param in hydit_text_encoder.named_parameters():
-    #    print(f"{name}: {param.device}")
 
     if 'hydit_pipe' not in globals():
         globals()['hydit_pipe'] = None
@@ -172,14 +177,24 @@ def inferencer(
 
     return [np.array(image)]
 
+
 def downloading_hydit_model(path_root):
+    # Purged the legacy metercai/SimpleSDXL2 URL
+    # and redirected to Tencent's official organization channel
+    interpret('[HyDit] Downloading the HunyuanDiT support package...')
+    official_tencent_url = 'https://huggingface.co/Tencent-Youtu/HunyuanDiT/resolve/main/t2i/model_v1.1/models_hydit_v1.1_fp16.tgz'
+
     load_file_from_url(
-        url='https://huggingface.co/metercai/SimpleSDXL2/resolve/main/models_hydit_v1.1_fp16.tgz',
-        model_dir=path_root,
+        url=official_tencent_url,
+        model_dir=str(Path(path_root).resolve()),
         file_name='models_hydit_fp16.tgz'
     )
-    downfile = os.path.join(path_root, 'models_hydit_fp16.tgz')
+
+    downfile = Path(path_root).resolve() / 'models_hydit_fp16.tgz'
+
+    # Pathlib-native tar extraction and deletion
     with tarfile.open(downfile, 'r:gz') as tarf:
-        tarf.extractall(path_root)
-    os.remove(downfile)
-    pass
+        tarf.extractall(str(Path(path_root).resolve()))
+
+    downfile.unlink(missing_ok=True)
+    return
