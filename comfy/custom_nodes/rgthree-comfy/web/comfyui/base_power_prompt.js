@@ -38,7 +38,7 @@ export class PowerPrompt {
                 ]);
             }
             return (this.configuring ||
-                rgthree.loadingApiJson ||
+                !!rgthree.loadingApiJson ||
                 (canConnect && !this.node.inputs[inputIndex].disabled));
         };
         const oldOnConnectOutput = this.node.onConnectOutput;
@@ -54,15 +54,16 @@ export class PowerPrompt {
                 ]);
             }
             return (this.configuring ||
-                rgthree.loadingApiJson ||
+                !!rgthree.loadingApiJson ||
                 (canConnect && !this.node.outputs[outputIndex].disabled));
         };
         const onPropertyChanged = this.node.onPropertyChanged;
         this.node.onPropertyChanged = (property, value, prevValue) => {
-            onPropertyChanged && onPropertyChanged.call(this, property, value, prevValue);
+            const v = onPropertyChanged && onPropertyChanged.call(this.node, property, value, prevValue);
             if (property === "combos_filter") {
                 this.refreshCombos(this.nodeData);
             }
+            return v !== null && v !== void 0 ? v : true;
         };
         for (let i = this.node.widgets.length - 1; i >= 0; i--) {
             if (this.shouldRemoveServerWidget(this.node.widgets[i])) {
@@ -136,7 +137,7 @@ export class PowerPrompt {
                     const shouldShow = values.length > 2 || (values.length > 1 && !values[1].match(/^disable\s[a-z]/i));
                     if (shouldShow) {
                         if (!this.combos[key]) {
-                            this.combos[key] = this.node.addWidget("combo", key, values, (selected) => {
+                            this.combos[key] = this.node.addWidget("combo", key, values[0], (selected) => {
                                 if (selected !== values[0] && !selected.match(/^disable\s[a-z]/i)) {
                                     wait().then(() => {
                                         if (key.includes("embedding")) {

@@ -251,7 +251,7 @@ default_class_params = {
         'available_aspect_ratios_selection': 'SD1.5',
         'available_sampler_name': sampler_list,
         'available_scheduler_name': scheduler_list,
-        "backend_params": {"task_method": "SD_SIMPLE"}
+        "backend_params": {"task_method": "sd15_TG"}
         },
     }
 

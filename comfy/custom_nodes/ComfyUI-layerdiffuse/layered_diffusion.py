@@ -16,22 +16,17 @@ from comfy.utils import load_torch_file
 from comfy_extras.nodes_compositing import JoinImageWithAlpha
 from comfy.conds import CONDRegular
 from .lib_layerdiffusion.utils import (
-#    load_file_from_url,
+    load_file_from_url,
     to_lora_patch_dict,
 )
 from .lib_layerdiffusion.models import TransparentVAEDecoder
 from .lib_layerdiffusion.attention_sharing import AttentionSharingPatcher
 from .lib_layerdiffusion.enums import StableDiffusionVersion
 
-from load_file_from_url import load_file_from_url
-
-def get_layer_model_root():
-    if "layer_model" in folder_paths.folder_names_and_paths:
-        layer_model_root = get_folder_paths("layer_model")[0]
-    else:
-        layer_model_root = os.path.join(folder_paths.models_dir, "layer_model")
-    return layer_model_root
-
+if "layer_model" in folder_paths.folder_names_and_paths:
+    layer_model_root = get_folder_paths("layer_model")[0]
+else:
+    layer_model_root = os.path.join(folder_paths.models_dir, "layer_model")
 load_layer_model_state_dict = load_torch_file
 
 
@@ -87,7 +82,7 @@ class LayeredDiffusionDecode:
 
         if not self.vae_transparent_decoder.get(sd_version):
             model_path = load_file_from_url(
-                url=url, model_dir=get_layer_model_root(), file_name=file_name
+                url=url, model_dir=layer_model_root, file_name=file_name
             )
             self.vae_transparent_decoder[sd_version] = TransparentVAEDecoder(
                 load_torch_file(model_path),
@@ -257,7 +252,7 @@ class LayeredDiffusionBase:
         """Patch model"""
         model_path = load_file_from_url(
             url=self.model_url,
-            model_dir=get_layer_model_root(),
+            model_dir=layer_model_root,
             file_name=self.model_file_name,
         )
         def pad_diff_weight(v):
@@ -285,7 +280,7 @@ class LayeredDiffusionBase:
         """Patch model with attn sharing"""
         model_path = load_file_from_url(
             url=self.model_url,
-            model_dir=get_layer_model_root(),
+            model_dir=layer_model_root,
             file_name=self.model_file_name,
         )
         layer_lora_state_dict = load_layer_model_state_dict(model_path)

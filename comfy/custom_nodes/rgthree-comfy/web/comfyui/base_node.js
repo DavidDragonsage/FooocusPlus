@@ -1,10 +1,11 @@
+import { app } from "../../scripts/app.js";
 import { ComfyWidgets } from "../../scripts/widgets.js";
 import { SERVICE as KEY_EVENT_SERVICE } from "./services/key_events_services.js";
-import { app } from "../../scripts/app.js";
 import { LogLevel, rgthree } from "./rgthree.js";
 import { addHelpMenuItem } from "./utils.js";
 import { RgthreeHelpDialog } from "../../rgthree/common/dialog.js";
 import { importIndividualNodesInnerOnDragDrop, importIndividualNodesInnerOnDragOver, } from "./feature_import_individual_nodes.js";
+import { defineProperty, moveArrayItem } from "../../rgthree/common/shared_utils.js";
 export class RgthreeBaseNode extends LGraphNode {
     constructor(title = RgthreeBaseNode.title, skipOnConstructedCall = true) {
         super(title);
@@ -26,7 +27,22 @@ export class RgthreeBaseNode extends LGraphNode {
             if (this.comfyClass == "__NEED_COMFY_CLASS__") {
                 throw new Error("RgthreeBaseNode needs a comfy class override.");
             }
+            if (this.constructor.type == "__NEED_CLASS_TYPE__") {
+                throw new Error("RgthreeBaseNode needs overrides.");
+            }
             this.checkAndRunOnConstructed();
+        });
+        defineProperty(this, "mode", {
+            get: () => {
+                return this.rgthree_mode;
+            },
+            set: (mode) => {
+                if (this.rgthree_mode != mode) {
+                    const oldMode = this.rgthree_mode;
+                    this.rgthree_mode = mode;
+                    this.onModeChange(oldMode, mode);
+                }
+            },
         });
     }
     checkAndRunOnConstructed() {
@@ -67,42 +83,55 @@ export class RgthreeBaseNode extends LGraphNode {
     }
     clone() {
         const cloned = super.clone();
-        if (cloned.properties && !!window.structuredClone) {
+        if ((cloned === null || cloned === void 0 ? void 0 : cloned.properties) && !!window.structuredClone) {
             cloned.properties = structuredClone(cloned.properties);
         }
+        cloned.graph = this.graph;
         return cloned;
-    }
-    set mode(mode) {
-        if (this.mode_ != mode) {
-            const oldMode = this.mode_;
-            this.mode_ = mode;
-            this.onModeChange(oldMode, mode);
-        }
-    }
-    get mode() {
-        return this.mode_;
     }
     onModeChange(from, to) {
     }
     async handleAction(action) {
         action;
     }
-    removeWidget(widgetOrSlot) {
-        if (typeof widgetOrSlot === "number") {
-            this.widgets.splice(widgetOrSlot, 1);
+    removeWidget(widget) {
+        var _a;
+        if (typeof widget === "number") {
+            widget = this.widgets[widget];
         }
-        else if (widgetOrSlot) {
-            const index = this.widgets.indexOf(widgetOrSlot);
+        if (!widget)
+            return;
+        const canUseComfyUIRemoveWidget = false;
+        if (canUseComfyUIRemoveWidget && typeof super.removeWidget === 'function') {
+            super.removeWidget(widget);
+        }
+        else {
+            const index = this.widgets.indexOf(widget);
             if (index > -1) {
                 this.widgets.splice(index, 1);
             }
+            (_a = widget.onRemove) === null || _a === void 0 ? void 0 : _a.call(widget);
+        }
+    }
+    replaceWidget(widgetOrSlot, newWidget) {
+        let index = null;
+        if (widgetOrSlot) {
+            index = typeof widgetOrSlot === "number" ? widgetOrSlot : this.widgets.indexOf(widgetOrSlot);
+            this.removeWidget(this.widgets[index]);
+        }
+        index = index != null ? index : this.widgets.length - 1;
+        if (this.widgets.includes(newWidget)) {
+            moveArrayItem(this.widgets, newWidget, index);
+        }
+        else {
+            this.widgets.splice(index, 0, newWidget);
         }
     }
     defaultGetSlotMenuOptions(slot) {
         var _a, _b;
         const menu_info = [];
         if ((_b = (_a = slot === null || slot === void 0 ? void 0 : slot.output) === null || _a === void 0 ? void 0 : _a.links) === null || _b === void 0 ? void 0 : _b.length) {
-            menu_info.push({ content: "Disconnect Links", slot: slot });
+            menu_info.push({ content: "Disconnect Links", slot });
         }
         let inputOrOutput = slot.input || slot.output;
         if (inputOrOutput) {
@@ -149,19 +178,18 @@ export class RgthreeBaseNode extends LGraphNode {
             (_a = super.getExtraMenuOptions) === null || _a === void 0 ? void 0 : _a.apply(this, [canvas, options]);
         }
         else if ((_c = (_b = this.constructor.nodeType) === null || _b === void 0 ? void 0 : _b.prototype) === null || _c === void 0 ? void 0 : _c.getExtraMenuOptions) {
-            (_f = (_e = (_d = this.constructor.nodeType) === null || _d === void 0 ? void 0 : _d.prototype) === null || _e === void 0 ? void 0 : _e.getExtraMenuOptions) === null || _f === void 0 ? void 0 : _f.apply(this, [
-                canvas,
-                options,
-            ]);
+            (_f = (_e = (_d = this.constructor.nodeType) === null || _d === void 0 ? void 0 : _d.prototype) === null || _e === void 0 ? void 0 : _e.getExtraMenuOptions) === null || _f === void 0 ? void 0 : _f.apply(this, [canvas, options]);
         }
         const help = this.getHelp() || this.constructor.help;
         if (help) {
             addHelpMenuItem(this, help, options);
         }
+        return [];
     }
 }
 RgthreeBaseNode.exposedActions = [];
 RgthreeBaseNode.title = "__NEED_CLASS_TITLE__";
+RgthreeBaseNode.type = "__NEED_CLASS_TYPE__";
 RgthreeBaseNode.category = "rgthree";
 RgthreeBaseNode._category = "rgthree";
 export class RgthreeBaseVirtualNode extends RgthreeBaseNode {
@@ -191,7 +219,7 @@ export class RgthreeBaseServerNode extends RgthreeBaseNode {
         return ComfyWidgets;
     }
     async setupFromServerNodeData() {
-        var _a, _b, _c;
+        var _a, _b, _c, _d, _e;
         const nodeData = this.constructor.nodeData;
         if (!nodeData) {
             throw Error("No node data");
@@ -251,8 +279,8 @@ export class RgthreeBaseServerNode extends RgthreeBaseNode {
             this.addOutput(outputName, output, { shape: outputShape });
         }
         const s = this.computeSize();
-        s[0] = Math.max(config.minWidth, s[0] * 1.5);
-        s[1] = Math.max(config.minHeight, s[1]);
+        s[0] = Math.max((_d = config.minWidth) !== null && _d !== void 0 ? _d : 1, s[0] * 1.5);
+        s[1] = Math.max((_e = config.minHeight) !== null && _e !== void 0 ? _e : 1, s[1]);
         this.size = s;
         this.serialize_widgets = true;
     }
@@ -271,8 +299,8 @@ export class RgthreeBaseServerNode extends RgthreeBaseNode {
     static onRegisteredForOverride(comfyClass, rgthreeClass) {
     }
 }
-RgthreeBaseServerNode.nodeData = null;
 RgthreeBaseServerNode.nodeType = null;
+RgthreeBaseServerNode.nodeData = null;
 RgthreeBaseServerNode.__registeredForOverride__ = false;
 const OVERRIDDEN_SERVER_NODES = new Map();
 const oldregisterNodeType = LiteGraph.registerNodeType;

@@ -10,7 +10,7 @@ import type {
   ComfyApiPrompt,
 } from "typings/comfy.js";
 import { api } from "scripts/api.js";
-import type { LGraph as TLGraph, LGraphCanvas as TLGraphCanvas } from "typings/litegraph.js";
+import type { LGraph as TLGraph, LGraphCanvas as TLGraphCanvas } from "@comfyorg/frontend";
 import { Resolver, getResolver } from "./shared_utils.js";
 
 /**
@@ -146,7 +146,7 @@ class PromptService extends EventTarget {
 
     // Patch the queuePrompt method so we can capture new data going through.
     const queuePrompt = api.queuePrompt;
-    api.queuePrompt = async function (num: number, prompt: ComfyApiPrompt) {
+    api.queuePrompt = async function (num: number, prompt: ComfyApiPrompt, ...args: any[]) {
       let response;
       try {
         response = await queuePrompt.apply(api, [...arguments]);

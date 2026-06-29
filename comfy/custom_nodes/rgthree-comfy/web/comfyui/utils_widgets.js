@@ -1,5 +1,5 @@
 import { app } from "../../scripts/app.js";
-import { drawNodeWidget, drawRoundedRectangle, fitString, isLowQuality } from "./utils_canvas.js";
+import { drawNodeWidget, drawWidgetButton, fitString, isLowQuality } from "./utils_canvas.js";
 export function drawLabelAndValue(ctx, label, value, width, posY, height, options) {
     var _a;
     const outerMargin = 15;
@@ -20,12 +20,20 @@ export function drawLabelAndValue(ctx, label, value, width, posY, height, option
 }
 export class RgthreeBaseWidget {
     constructor(name) {
+        this.type = "custom";
+        this.options = {};
+        this.y = 0;
         this.last_y = 0;
+        this.disabled = false;
         this.mouseDowned = null;
         this.isMouseDownedAndOver = false;
         this.hitAreas = {};
         this.downedHitAreasForMove = [];
+        this.downedHitAreasForClick = [];
         this.name = name;
+    }
+    serializeValue(node, index) {
+        return this.value;
     }
     clickWasWithinBounds(pos, bounds) {
         let xStart = bounds[0];
@@ -43,16 +51,21 @@ export class RgthreeBaseWidget {
             this.mouseDowned = [...pos];
             this.isMouseDownedAndOver = true;
             this.downedHitAreasForMove.length = 0;
+            this.downedHitAreasForClick.length = 0;
             let anyHandled = false;
             for (const part of Object.values(this.hitAreas)) {
-                if ((part.onDown || part.onMove) && this.clickWasWithinBounds(pos, part.bounds)) {
+                if (this.clickWasWithinBounds(pos, part.bounds)) {
                     if (part.onMove) {
                         this.downedHitAreasForMove.push(part);
+                    }
+                    if (part.onClick) {
+                        this.downedHitAreasForClick.push(part);
                     }
                     if (part.onDown) {
                         const thisHandled = part.onDown.apply(this, [event, pos, node, part]);
                         anyHandled = anyHandled || thisHandled == true;
                     }
+                    part.wasMouseClickedAndIsOver = true;
                 }
             }
             return (_a = this.onMouseDown(event, pos, node)) !== null && _a !== void 0 ? _a : anyHandled;
@@ -61,6 +74,7 @@ export class RgthreeBaseWidget {
             if (!this.mouseDowned)
                 return true;
             this.downedHitAreasForMove.length = 0;
+            const wasMouseDownedAndOver = this.isMouseDownedAndOver;
             this.cancelMouseDown();
             let anyHandled = false;
             for (const part of Object.values(this.hitAreas)) {
@@ -68,6 +82,18 @@ export class RgthreeBaseWidget {
                     const thisHandled = part.onUp.apply(this, [event, pos, node, part]);
                     anyHandled = anyHandled || thisHandled == true;
                 }
+                part.wasMouseClickedAndIsOver = false;
+            }
+            for (const part of this.downedHitAreasForClick) {
+                if (this.clickWasWithinBounds(pos, part.bounds)) {
+                    const thisHandled = part.onClick.apply(this, [event, pos, node, part]);
+                    anyHandled = anyHandled || thisHandled == true;
+                }
+            }
+            this.downedHitAreasForClick.length = 0;
+            if (wasMouseDownedAndOver) {
+                const thisHandled = this.onMouseClick(event, pos, node);
+                anyHandled = anyHandled || thisHandled == true;
             }
             return (_b = this.onMouseUp(event, pos, node)) !== null && _b !== void 0 ? _b : anyHandled;
         }
@@ -80,8 +106,13 @@ export class RgthreeBaseWidget {
                     pos[1] > this.last_y + LiteGraph.NODE_WIDGET_HEIGHT)) {
                 this.isMouseDownedAndOver = false;
             }
-            for (const part of this.downedHitAreasForMove) {
-                part.onMove.apply(this, [event, pos, node, part]);
+            for (const part of Object.values(this.hitAreas)) {
+                if (this.downedHitAreasForMove.includes(part)) {
+                    part.onMove.apply(this, [event, pos, node, part]);
+                }
+                if (this.downedHitAreasForClick.includes(part)) {
+                    part.wasMouseClickedAndIsOver = this.clickWasWithinBounds(pos, part.bounds);
+                }
             }
             return (_c = this.onMouseMove(event, pos, node)) !== null && _c !== void 0 ? _c : true;
         }
@@ -98,30 +129,37 @@ export class RgthreeBaseWidget {
     onMouseUp(event, pos, node) {
         return;
     }
+    onMouseClick(event, pos, node) {
+        return;
+    }
     onMouseMove(event, pos, node) {
         return;
     }
 }
 export class RgthreeBetterButtonWidget extends RgthreeBaseWidget {
-    constructor(name, mouseUpCallback) {
+    constructor(name, mouseClickCallback, label) {
         super(name);
+        this.type = "custom";
         this.value = "";
-        this.mouseUpCallback = mouseUpCallback;
+        this.label = "";
+        this.mouseClickCallback = mouseClickCallback;
+        this.label = label || name;
     }
     draw(ctx, node, width, y, height) {
-        drawWidgetButton({ ctx, node, width, height, y }, this.name, this.isMouseDownedAndOver);
+        drawWidgetButton(ctx, { size: [width - 30, height], pos: [15, y] }, this.label, this.isMouseDownedAndOver);
     }
-    onMouseUp(event, pos, node) {
-        return this.mouseUpCallback(event, pos, node);
+    onMouseClick(event, pos, node) {
+        return this.mouseClickCallback(event, pos, node);
     }
 }
-export class RgthreeBetterTextWidget {
+export class RgthreeBetterTextWidget extends RgthreeBaseWidget {
     constructor(name, value) {
+        super(name);
         this.name = name;
         this.value = value;
     }
     draw(ctx, node, width, y, height) {
-        const widgetData = drawNodeWidget(ctx, { width, height, posY: y });
+        const widgetData = drawNodeWidget(ctx, { size: [width, height], pos: [15, y] });
         if (!widgetData.lowQuality) {
             drawLabelAndValue(ctx, this.name, this.value, width, y, height);
         }
@@ -135,11 +173,12 @@ export class RgthreeBetterTextWidget {
         return false;
     }
 }
-export class RgthreeDividerWidget {
+export class RgthreeDividerWidget extends RgthreeBaseWidget {
     constructor(widgetOptions) {
+        super("divider");
+        this.value = {};
         this.options = { serialize: false };
-        this.value = null;
-        this.name = "divider";
+        this.type = "custom";
         this.widgetOptions = {
             marginTop: 7,
             marginBottom: 7,
@@ -166,18 +205,27 @@ export class RgthreeDividerWidget {
         ];
     }
 }
-export class RgthreeLabelWidget {
+export class RgthreeLabelWidget extends RgthreeBaseWidget {
     constructor(name, widgetOptions) {
+        super(name);
+        this.type = "custom";
         this.options = { serialize: false };
-        this.value = null;
+        this.value = "";
         this.widgetOptions = {};
         this.posY = 0;
-        this.name = name;
+        Object.assign(this.widgetOptions, widgetOptions);
+    }
+    update(widgetOptions) {
         Object.assign(this.widgetOptions, widgetOptions);
     }
     draw(ctx, node, width, posY, height) {
+        var _a;
         this.posY = posY;
         ctx.save();
+        let text = (_a = this.widgetOptions.text) !== null && _a !== void 0 ? _a : this.name;
+        if (typeof text === "function") {
+            text = text();
+        }
         ctx.textAlign = this.widgetOptions.align || "left";
         ctx.fillStyle = this.widgetOptions.color || LiteGraph.WIDGET_TEXT_COLOR;
         const oldFont = ctx.font;
@@ -190,10 +238,10 @@ export class RgthreeLabelWidget {
         const midY = posY + height / 2;
         ctx.textBaseline = "middle";
         if (this.widgetOptions.align === "center") {
-            ctx.fillText(this.name, node.size[0] / 2, midY);
+            ctx.fillText(text, node.size[0] / 2, midY);
         }
         else {
-            ctx.fillText(this.name, 15, midY);
+            ctx.fillText(text, 15, midY);
         }
         ctx.font = oldFont;
         if (this.widgetOptions.actionLabel === "__PLUS_ICON__") {
@@ -223,43 +271,22 @@ export class RgthreeLabelWidget {
         return true;
     }
 }
-export class RgthreeInvisibleWidget {
+export class RgthreeInvisibleWidget extends RgthreeBaseWidget {
     constructor(name, type, value, serializeValueFn) {
-        this.serializeValue = undefined;
-        this.name = name;
-        this.type = type;
+        super(name);
+        this.type = "custom";
         this.value = value;
-        if (serializeValueFn) {
-            this.serializeValue = serializeValueFn;
-        }
+        this.serializeValueFn = serializeValueFn;
     }
-    draw() { return; }
-    computeSize(width) { return [0, 0]; }
-}
-export function drawWidgetButton(drawCtx, text, isMouseDownedAndOver = false) {
-    if (!isLowQuality() && !isMouseDownedAndOver) {
-        drawRoundedRectangle(drawCtx.ctx, {
-            width: drawCtx.width - 30 - 2,
-            height: drawCtx.height,
-            posY: drawCtx.y + 1,
-            posX: 15 + 1,
-            borderRadius: 4,
-            colorBackground: "#000000aa",
-            colorStroke: "#000000aa",
-        });
+    draw() {
+        return;
     }
-    drawRoundedRectangle(drawCtx.ctx, {
-        width: drawCtx.width - 30,
-        height: drawCtx.height,
-        posY: drawCtx.y + (isMouseDownedAndOver ? 1 : 0),
-        posX: 15,
-        borderRadius: isLowQuality() ? 0 : 4,
-        colorBackground: isMouseDownedAndOver ? "#444" : LiteGraph.WIDGET_BGCOLOR,
-    });
-    if (!isLowQuality()) {
-        drawCtx.ctx.textBaseline = "middle";
-        drawCtx.ctx.textAlign = "center";
-        drawCtx.ctx.fillStyle = LiteGraph.WIDGET_TEXT_COLOR;
-        drawCtx.ctx.fillText(text, drawCtx.node.size[0] / 2, drawCtx.y + drawCtx.height / 2 + (isMouseDownedAndOver ? 1 : 0));
+    computeSize(width) {
+        return [0, 0];
+    }
+    serializeValue(node, index) {
+        return this.serializeValueFn != null
+            ? this.serializeValueFn(node, index)
+            : super.serializeValue(node, index);
     }
 }

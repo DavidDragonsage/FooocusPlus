@@ -1,7 +1,8 @@
-import { RgthreeBaseVirtualNodeConstructor } from "typings/rgthree.js";
-import { app } from "scripts/app.js";
-import { NodeTypesString } from "./constants.js";
-import { BaseFastGroupsModeChanger } from "./fast_groups_muter.js";
+import type {Size} from "@comfyorg/frontend";
+
+import {app} from "scripts/app.js";
+import {NodeTypesString} from "./constants.js";
+import {BaseFastGroupsModeChanger} from "./fast_groups_muter.js";
 
 /**
  * Fast Bypasser implementation that looks for groups in the workflow and adds toggles to mute them.
@@ -31,7 +32,7 @@ app.registerExtension({
   },
   loadedGraphNode(node: FastGroupsBypasser) {
     if (node.type == FastGroupsBypasser.title) {
-      node.tempSize = [...node.size];
+      node.tempSize = [...node.size] as Size;
     }
   },
 });

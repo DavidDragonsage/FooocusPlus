@@ -11,7 +11,7 @@ ROOT = str(Path.cwd())
 
 # Version control for major updates
 # read by launch.py
-REQUIRED_VERSION = '1.1.0'
+REQUIRED_VERSION = '1.1.2'
 
 # tracks update events
 # set by entry_with_update, checked by webui
@@ -25,14 +25,6 @@ version_update = 0
 # history_gallery activation after a
 # generative cycle
 is_generating = False
-
-# Common support for black_out_nsfw
-# if the config setting is False,
-# the UI cannot override it.
-# Initialized by config,
-# may be set to False by webui,
-# read by async_worker
-black_out_nsfw = False
 
 # Monitor the Input Image tabs:
 # initialized by config,
@@ -178,6 +170,17 @@ performance_selection = 'Speed'
 disable_seed_increment = False # alias Freeze Seed
 image_seed = '0'        # initialize working seed
 saved_seed = '0'        # initialize seed saver
+
+# Image Control settings
+# set by webui, read by async_worker
+seamless_tiling = False
+# Common support for black_out_nsfw
+# if the config setting is False,
+# the UI cannot override it.
+# Initialized by config,
+# may be set to False by webui,
+# read by async_worker
+black_out_nsfw = False
 
 # Expert Tool settings
 # set by webui, read by async_worker

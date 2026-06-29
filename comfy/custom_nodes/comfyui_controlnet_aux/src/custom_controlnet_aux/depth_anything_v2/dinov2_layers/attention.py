@@ -12,7 +12,7 @@ import logging
 
 from torch import Tensor
 from torch import nn
-
+import torch.nn.functional as F
 
 logger = logging.getLogger("dinov2")
 
@@ -62,22 +62,50 @@ class Attention(nn.Module):
         return x
 
 
+
 class MemEffAttention(Attention):
     def forward(self, x: Tensor, attn_bias=None) -> Tensor:
+        # If xFormers is not importable at all, behave exactly like before
         if not XFORMERS_AVAILABLE:
             assert attn_bias is None, "xFormers is required for nested tensors usage"
             return super().forward(x)
 
         B, N, C = x.shape
+        # qkv: (B, N, 3, H, Dh)
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads)
+        q, k, v = unbind(qkv, 2)  # each: (B, N, H, Dh)
 
-        q, k, v = unbind(qkv, 2)
+        # Rearrange to (B, H, N, Dh) like the original code expects
+        q = q.permute(0, 2, 1, 3) * self.scale
+        k = k.permute(0, 2, 1, 3)
+        v = v.permute(0, 2, 1, 3)
 
-        x = memory_efficient_attention(q, k, v, attn_bias=attn_bias)
-        x = x.reshape([B, N, C])
+        # Try xFormers fast path first
+        try:
+            x_out = memory_efficient_attention(q, k, v, attn_bias=attn_bias)
+        except NotImplementedError:
+            # New GPU / unsupported xFormers build:
+            # use PyTorch scaled_dot_product_attention (flash/sdp kernels)
+            Bh, Dh = q.shape[0] * q.shape[1], q.shape[-1]
+            q_ = q.reshape(Bh, N, Dh)
+            k_ = k.reshape(Bh, N, Dh)
+            v_ = v.reshape(Bh, N, Dh)
 
-        x = self.proj(x)
-        x = self.proj_drop(x)
-        return x
+            # attn_bias is ignored here; same limitation as Attention.forward
+            x_sdpa = F.scaled_dot_product_attention(
+                q_, k_, v_,
+                attn_mask=None,
+                dropout_p=0.0,
+                is_causal=False,
+            )  # (Bh, N, Dh)
+
+            x_out = x_sdpa.reshape(B, self.num_heads, N, Dh)
+
+        # Back to (B, N, C)
+        x_out = x_out.permute(0, 2, 1, 3).reshape(B, N, C)
+        x_out = self.proj(x_out)
+        x_out = self.proj_drop(x_out)
+        return x_out
+
 
         

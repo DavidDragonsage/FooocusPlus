@@ -5,7 +5,7 @@ import { NodeTypesString } from "./constants.js";
 let nodeData = null;
 app.registerExtension({
     name: "rgthree.PowerPrompt",
-    async beforeRegisterNodeDef(nodeType, passedNodeData, _app) {
+    async beforeRegisterNodeDef(nodeType, passedNodeData) {
         if (passedNodeData.name.includes("Power Prompt") && passedNodeData.name.includes("rgthree")) {
             nodeData = passedNodeData;
             const onNodeCreated = nodeType.prototype.onNodeCreated;
@@ -27,7 +27,7 @@ app.registerExtension({
                         node.outputs[3].links = node.outputs[3].links || [];
                         for (const link of node.outputs[0].links) {
                             node.outputs[3].links.push(link);
-                            app.graph.links[link].origin_slot = 3;
+                            (node.graph || app.graph).links[link].origin_slot = 3;
                         }
                         node.outputs[0].links = null;
                     }

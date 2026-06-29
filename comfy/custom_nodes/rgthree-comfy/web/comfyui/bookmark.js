@@ -1,8 +1,11 @@
 import { app } from "../../scripts/app.js";
 import { RgthreeBaseVirtualNode } from "./base_node.js";
 import { SERVICE as KEY_EVENT_SERVICE } from "./services/key_events_services.js";
+import { SERVICE as BOOKMARKS_SERVICE } from "./services/bookmarks_services.js";
 import { NodeTypesString } from "./constants.js";
-import { getClosestOrSelf, queryOne } from "../../rgthree/common/utils_dom.js";
+import { getClosestOrSelf, query } from "../../rgthree/common/utils_dom.js";
+import { wait } from "../../rgthree/common/shared_utils.js";
+import { findFromNodeForSubgraph } from "./utils.js";
 export class Bookmark extends RgthreeBaseVirtualNode {
     get _collapsed_width() {
         return this.___collapsed_width;
@@ -21,7 +24,7 @@ export class Bookmark extends RgthreeBaseVirtualNode {
         this.___collapsed_width = 0;
         this.isVirtualNode = true;
         this.serialize_widgets = true;
-        const nextShortcutChar = getNextShortcut();
+        const nextShortcutChar = BOOKMARKS_SERVICE.getNextShortcut();
         this.addWidget("text", "shortcut_key", nextShortcutChar, (value, ...args) => {
             value = value.trim()[0] || "1";
         }, {
@@ -61,7 +64,7 @@ export class Bookmark extends RgthreeBaseVirtualNode {
     }
     onMouseDown(event, pos, graphCanvas) {
         var _a;
-        const input = queryOne(".graphdialog > input.value");
+        const input = query(".graphdialog > input.value");
         if (input && input.value === ((_a = this.widgets[0]) === null || _a === void 0 ? void 0 : _a.value)) {
             input.addEventListener("keydown", (e) => {
                 KEY_EVENT_SERVICE.handleKeyDownOrUp(e);
@@ -70,10 +73,17 @@ export class Bookmark extends RgthreeBaseVirtualNode {
                 input.value = Object.keys(KEY_EVENT_SERVICE.downKeys).join(" + ");
             });
         }
+        return false;
     }
-    canvasToBookmark() {
+    async canvasToBookmark() {
         var _a, _b;
         const canvas = app.canvas;
+        if (this.graph !== app.canvas.getCurrentGraph()) {
+            const subgraph = this.graph;
+            const fromNode = findFromNodeForSubgraph(subgraph.id);
+            canvas.openSubgraph(subgraph, fromNode);
+            await wait(16);
+        }
         if ((_a = canvas === null || canvas === void 0 ? void 0 : canvas.ds) === null || _a === void 0 ? void 0 : _a.offset) {
             canvas.ds.offset[0] = -this.pos[0] + 16;
             canvas.ds.offset[1] = -this.pos[1] + 40;
@@ -93,18 +103,3 @@ app.registerExtension({
         Bookmark.setUp();
     },
 });
-function isBookmark(node) {
-    return node.type === NodeTypesString.BOOKMARK;
-}
-function getExistingShortcuts() {
-    const graph = app.graph;
-    const bookmarkNodes = graph._nodes.filter(isBookmark);
-    const usedShortcuts = new Set(bookmarkNodes.map((n) => n.shortcutKey));
-    return usedShortcuts;
-}
-const SHORTCUT_DEFAULTS = "1234567890abcdefghijklmnopqrstuvwxyz".split("");
-function getNextShortcut() {
-    var _a;
-    const existingShortcuts = getExistingShortcuts();
-    return (_a = SHORTCUT_DEFAULTS.find((char) => !existingShortcuts.has(char))) !== null && _a !== void 0 ? _a : "1";
-}

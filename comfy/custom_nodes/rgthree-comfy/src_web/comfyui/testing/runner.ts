@@ -1,8 +1,21 @@
 /**
  * @fileoverview A set of methods that mimic a bit of the Jasmine testing library, but simpler and
  * more succinct for manipulating a comfy integration test.
+ *
+ * Tests are not bundled by default, to test build with "--with-tests" and then invoke from the
+ * dev console like `rgthree_tests.TestDescribeLabel()`. The output is in the test itself.
  */
-import { wait } from "rgthree/common/shared_utils.js";
+import {wait} from "rgthree/common/shared_utils.js";
+
+declare global {
+  interface Window {
+    rgthree_tests: {
+      [key: string]: any;
+    };
+  }
+}
+
+window.rgthree_tests = window.rgthree_tests || {};
 
 type TestContext = {
   label?: string;
@@ -12,14 +25,18 @@ type TestContext = {
 let contexts: TestContext[] = [];
 
 export function describe(label: string, fn: Function) {
-  return async () => {
+  if (!label.startsWith("Test")) {
+    throw new Error('Test labels should start with "Test"');
+  }
+  window.rgthree_tests[label] = async () => {
     await describeRun(label, fn);
   };
+  return window.rgthree_tests[label];
 }
 
 export async function describeRun(label: string, fn: Function) {
   await wait();
-  contexts.push({ label });
+  contexts.push({label});
   console.group(`[Start] ${contexts[contexts.length - 1]!.label}`);
   await fn();
   contexts.pop();
@@ -68,6 +85,7 @@ function log(msg: string, styles: string) {
 class Expectation {
   private propertyLabel: string | null = "";
   private expectedLabel: string | null = "";
+  private verbLabel: string | null = "be";
   private expectedFn!: (v: any) => boolean;
   private value: any;
 
@@ -80,6 +98,13 @@ class Expectation {
     this.propertyLabel = maybeExpected !== undefined ? labelOrExpected : null;
     this.expectedLabel = JSON.stringify(expected);
     this.expectedFn = (v) => v == expected;
+    return this.toBeEval();
+  }
+  toMatchJson(labelOrExpected: any, maybeExpected?: any) {
+    const expected = maybeExpected !== undefined ? maybeExpected : labelOrExpected;
+    this.propertyLabel = maybeExpected !== undefined ? labelOrExpected : null;
+    this.expectedLabel = JSON.stringify(expected);
+    this.expectedFn = (v) => JSON.stringify(JSON.parse(v)) == JSON.stringify(JSON.parse(expected));
     return this.toBeEval();
   }
   toBeUndefined(propertyLabel: string) {
@@ -106,9 +131,32 @@ class Expectation {
     this.expectedLabel = "a number";
     return this.toBeEval();
   }
+  toContain(labelOrExpected: any, maybeExpected?: any) {
+    const expected = maybeExpected !== undefined ? maybeExpected : labelOrExpected;
+    this.propertyLabel = maybeExpected !== undefined ? labelOrExpected : null;
+    this.verbLabel = "contain";
+    this.expectedLabel = JSON.stringify(expected);
+    this.expectedFn = (v) => v.includes(expected);
+    return this.toBeEval();
+  }
+  toMatch(labelOrExpected: string | RegExp, maybeExpected?: RegExp): boolean {
+    let expected: RegExp | null = null;
+    if (maybeExpected instanceof RegExp) {
+      expected = maybeExpected;
+      this.propertyLabel = labelOrExpected as string;
+    } else if (labelOrExpected instanceof RegExp) {
+      expected = labelOrExpected;
+      this.propertyLabel = null;
+    }
+    if (!expected) throw new Error("No RegExp passed to toMatch");
+    this.verbLabel = "match";
+    this.expectedLabel = expected.toString();
+    this.expectedFn = (v) => !!v.match(expected);
+    return this.toBeEval();
+  }
   toBeEval(strict = false) {
     let evaluation = this.expectedFn(this.value);
-    let msg = `Expected ${this.propertyLabel ? this.propertyLabel + " to be " : ""}${
+    let msg = `Expected ${this.propertyLabel ? this.propertyLabel + ` to ${this.verbLabel} ` : ""}${
       this.expectedLabel
     }`;
     msg += evaluation ? "." : `, but was ${JSON.stringify(this.value)}`;

@@ -1,11 +1,11 @@
 import { RgthreeDialog } from "../../rgthree/common/dialog.js";
-import { createElement as $el, empty, appendChildren, getClosestOrSelf, queryOne, query, setAttributes, } from "../../rgthree/common/utils_dom.js";
+import { createElement as $el, empty, appendChildren, getClosestOrSelf, query, queryAll, setAttributes, } from "../../rgthree/common/utils_dom.js";
 import { logoCivitai, link, pencilColored, diskColored, dotdotdot, } from "../../rgthree/common/media/svgs.js";
-import { SERVICE as MODEL_INFO_SERVICE } from "../../rgthree/common/model_info_service.js";
+import { CHECKPOINT_INFO_SERVICE, LORA_INFO_SERVICE } from "../../rgthree/common/model_info_service.js";
 import { rgthree } from "./rgthree.js";
 import { MenuButton } from "../../rgthree/common/menu.js";
 import { generateId, injectCss } from "../../rgthree/common/shared_utils.js";
-export class RgthreeInfoDialog extends RgthreeDialog {
+class RgthreeInfoDialog extends RgthreeDialog {
     constructor(file) {
         const dialogOptions = {
             class: "rgthree-info-dialog",
@@ -23,7 +23,7 @@ export class RgthreeInfoDialog extends RgthreeDialog {
     async init(file) {
         var _a, _b;
         const cssPromise = injectCss("rgthree/common/css/dialog_model_info.css");
-        this.modelInfo = await MODEL_INFO_SERVICE.getLora(file, false, false);
+        this.modelInfo = await this.getModelInfo(file);
         await cssPromise;
         this.setContent(this.getInfoContent());
         this.setTitle(((_a = this.modelInfo) === null || _a === void 0 ? void 0 : _a["name"]) || ((_b = this.modelInfo) === null || _b === void 0 ? void 0 : _b["file"]) || "Unknown");
@@ -52,12 +52,12 @@ export class RgthreeInfoDialog extends RgthreeDialog {
             return;
         }
         if (action === "fetch-civitai") {
-            this.modelInfo = await MODEL_INFO_SERVICE.refreshLora(info.file);
+            this.modelInfo = await this.refreshModelInfo(info.file);
             this.setContent(this.getInfoContent());
             this.setTitle(((_a = this.modelInfo) === null || _a === void 0 ? void 0 : _a["name"]) || ((_b = this.modelInfo) === null || _b === void 0 ? void 0 : _b["file"]) || "Unknown");
         }
         else if (action === "copy-trained-words") {
-            const selected = query(".-rgthree-is-selected", target.closest("tr"));
+            const selected = queryAll(".-rgthree-is-selected", target.closest("tr"));
             const text = selected.map((el) => el.getAttribute("data-word")).join(", ");
             await navigator.clipboard.writeText(text);
             rgthree.showMessage({
@@ -71,12 +71,12 @@ export class RgthreeInfoDialog extends RgthreeDialog {
             target === null || target === void 0 ? void 0 : target.classList.toggle("-rgthree-is-selected");
             const tr = target.closest("tr");
             if (tr) {
-                const span = queryOne("td:first-child > *", tr);
-                let small = queryOne("small", span);
+                const span = query("td:first-child > *", tr);
+                let small = query("small", span);
                 if (!small) {
                     small = $el("small", { parent: span });
                 }
-                const num = query(".-rgthree-is-selected", tr).length;
+                const num = queryAll(".-rgthree-is-selected", tr).length;
                 small.innerHTML = num
                     ? `${num} selected | <span role="button" data-action="copy-trained-words">Copy</span>`
                     : "";
@@ -84,7 +84,7 @@ export class RgthreeInfoDialog extends RgthreeDialog {
         }
         else if (action === "edit-row") {
             const tr = target.closest("tr");
-            const td = queryOne("td:nth-child(2)", tr);
+            const td = query("td:nth-child(2)", tr);
             const input = td.querySelector("input,textarea");
             if (!input) {
                 const fieldName = tr.dataset["fieldName"];
@@ -166,8 +166,9 @@ export class RgthreeInfoDialog extends RgthreeDialog {
 
       <ul class="rgthree-info-images">${(_y = (_x = info.images) === null || _x === void 0 ? void 0 : _x.map((img) => `
         <li>
-          <figure>
-            <img src="${img.url}" />
+          <figure>${img.type === 'video'
+            ? `<video src="${img.url}" autoplay loop></video>`
+            : `<img src="${img.url}" />`}
             <figcaption><!--
               -->${imgInfoField("", img.civitaiUrl
             ? `<a href="${img.civitaiUrl}" target="_blank">civitai${link}</a>`
@@ -179,13 +180,13 @@ export class RgthreeInfoDialog extends RgthreeDialog {
               -->${imgInfoField("model", img.model)}<!--
               -->${imgInfoField("positive", img.positive)}<!--
               -->${imgInfoField("negative", img.negative)}<!--
-            --><!--${''}--></figcaption>
+            --><!--${""}--></figcaption>
           </figure>
         </li>`).join("")) !== null && _y !== void 0 ? _y : ""}</ul>
     `;
         const div = $el("div", { html });
         if (rgthree.isDevMode()) {
-            setAttributes(queryOne('[stub="menu"]', div), {
+            setAttributes(query('[stub="menu"]', div), {
                 children: [
                     new MenuButton({
                         icon: dotdotdot,
@@ -205,7 +206,7 @@ export class RgthreeInfoDialog extends RgthreeDialog {
                                 callback: async (e) => {
                                     var _a, _b, _c;
                                     if ((_a = this.modelInfo) === null || _a === void 0 ? void 0 : _a.file) {
-                                        this.modelInfo = await MODEL_INFO_SERVICE.clearLoraFetchedData(this.modelInfo.file);
+                                        this.modelInfo = await LORA_INFO_SERVICE.clearFetchedInfo(this.modelInfo.file);
                                         this.setContent(this.getInfoContent());
                                         this.setTitle(((_b = this.modelInfo) === null || _b === void 0 ? void 0 : _b["name"]) || ((_c = this.modelInfo) === null || _c === void 0 ? void 0 : _c["file"]) || "Unknown");
                                     }
@@ -217,6 +218,28 @@ export class RgthreeInfoDialog extends RgthreeDialog {
             });
         }
         return div;
+    }
+}
+export class RgthreeLoraInfoDialog extends RgthreeInfoDialog {
+    async getModelInfo(file) {
+        return LORA_INFO_SERVICE.getInfo(file, false, false);
+    }
+    async refreshModelInfo(file) {
+        return LORA_INFO_SERVICE.refreshInfo(file);
+    }
+    async clearModelInfo(file) {
+        return LORA_INFO_SERVICE.clearFetchedInfo(file);
+    }
+}
+export class RgthreeCheckpointInfoDialog extends RgthreeInfoDialog {
+    async getModelInfo(file) {
+        return CHECKPOINT_INFO_SERVICE.getInfo(file, false, false);
+    }
+    async refreshModelInfo(file) {
+        return CHECKPOINT_INFO_SERVICE.refreshInfo(file);
+    }
+    async clearModelInfo(file) {
+        return CHECKPOINT_INFO_SERVICE.clearFetchedInfo(file);
     }
 }
 function infoTableRow(name, value, help = "", editableFieldName = "") {
@@ -244,7 +267,7 @@ function getTrainedWordsMarkup(words) {
 function saveEditableRow(info, tr, saving = true) {
     var _a;
     const fieldName = tr.dataset["fieldName"];
-    const input = queryOne("input,textarea", tr);
+    const input = query("input,textarea", tr);
     let newValue = (_a = info[fieldName]) !== null && _a !== void 0 ? _a : "";
     let modified = false;
     if (saving) {
@@ -256,11 +279,11 @@ function saveEditableRow(info, tr, saving = true) {
             }
             newValue = (Math.round(Number(newValue) * 100) / 100).toFixed(2);
         }
-        MODEL_INFO_SERVICE.saveLoraPartial(info.file, { [fieldName]: newValue });
+        LORA_INFO_SERVICE.savePartialInfo(info.file, { [fieldName]: newValue });
         modified = true;
     }
     tr.classList.remove("-rgthree-editing");
-    const td = queryOne("td:nth-child(2)", tr);
+    const td = query("td:nth-child(2)", tr);
     appendChildren(empty(td), [$el("span", { text: newValue })]);
     return modified;
 }

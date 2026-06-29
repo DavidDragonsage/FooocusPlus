@@ -174,6 +174,36 @@ Note, you can right-click on a bunch of the rgthree-comfy nodes and select `🛟
 >    </details>
 
 
+## Power Primitive
+> A single node that can output primitives (STRING, INT, FLOAT, BOOLEAN). If connecting an input, it will cast/convert the primitive input to the desired output.
+> <details>
+>    <summary>ℹ️ <i>More Information</i></summary>
+>
+>    - You can hide the type selector input from the right-click menu or properties.
+>    - You can also fast-switch the output type from the right-click menu as well.
+>
+>    </details>
+
+
+## Power Puter
+> A  powerful and versatile node that opens the door for a wide range of utility by offering mult-line code parsing for output. This node can be used for simple string concatenation, or math operations; to an image dimension or a node's widgets with advanced list comprehension. If you want to output something in your workflow, this is the node to do it.
+>
+> Additional documentation available in the [wiki](https://github.com/rgthree/rgthree-comfy/wiki/Node:-Power-Puter)
+> <details>
+>    <summary>ℹ️ <i>More Information</i></summary>
+>
+>    - Evaluate almost any kind of input and more, and choose your output from INT, FLOAT, STRING, or BOOLEAN.
+>    - Connect some nodes and do simply math operations like `a + b` or `ceil(1 / 2)`.
+>    - Or do more advanced things, like input an image, and get the width like `a.shape[2]`.
+>    - Even more powerful, you can target nodes in the prompt that's sent to the backend. For instance; if you have a Power Lora Loader node at id #5, and want to get a comma-delimited list of the enabled loras, you could enter:
+>
+>      ```
+>      loras = [v.lora for v in node(5).inputs.values() if 'lora' in v and v.on]
+>      ', '.join(loras)
+>      ```
+>
+>    </details>
+
 ## Fast Groups Muter
 > The Fast Groups Muter is an input-less node that automatically collects all groups in your current workflow and allows you to quickly mute and unmute all nodes within the group.
 > <details>
@@ -183,6 +213,7 @@ Note, you can right-click on a bunch of the rgthree-comfy nodes and select `🛟
 >    -  `matchColors` - Only add groups that match the provided colors. Can be ComfyUI colors (red, pale_blue) or hex codes (#a4d399). Multiple can be added, comma delimited.
 >    -  `matchTitle` - Filter the list of toggles by title match (string match, or regular expression).
 >    -  `showNav` - Add / remove a quick navigation arrow to take you to the group. (default: true)
+>    -  `showAllGraphs` - Show groups from all [sub]graphs in the workflow. (default: true)
 >    -  `sort` - Sort the toggles' order by "alphanumeric", graph "position", or "custom alphabet". (default: "position")
 >    -  `customSortAlphabet` - When the sort property is "custom alphabet" you can define the alphabet to use here, which will match the beginning of each group name and sort against it. If group titles do not match any custom alphabet entry, then they will be put after groups that do, ordered alphanumerically.
 >
@@ -279,11 +310,12 @@ Note, you can right-click on a bunch of the rgthree-comfy nodes and select `🛟
 >    <summary>ℹ️ <i>More Information</i></summary>
 >
 >    - The text shown is the "Title" of the node and you can adjust the the font size, font family,
->      font color, text alignment as well as a background color, padding, and background border
->      radius from the node's properties. You can double-click the node to open the properties
->      panel.
->    - **Pro Tip #1:** You can add multiline text from the properties panel _(because ComfyUI let's
->      you shift + enter there, only)._
+>      font color, text alignment as well as a background color, padding, background border
+>      radius, and angle (in degrees) from the node's properties. You can double-click the node to
+>      open the properties panel.
+>    - The Title also supports the literal sequence "\\n" to insert a newline when drawing the label.
+>    - ~**Pro Tip #1:** You can add multiline text from the properties panel _(because ComfyUI let's
+>      you shift + enter there, only)._~
 >    - **Pro Tip #2:** You can use ComfyUI's native "pin" option in the right-click menu to make the
 >      label stick to the workflow and clicks to "go through". You can right-click at any time to
 >      unpin.
@@ -341,18 +373,9 @@ rgthree-comfy adds several improvements, features, and optimizations to ComfyUI 
 > <i>You can remove/enable from rgthree-comfy settings, as well as configure the height/size.</i>
 
 
-## ComfyUI Recursive Optimization
-> An optimization to ComfyUI's recursive execution. Because rgthree-comfy nodes make it easy to build larger, more complex workflows, I (and others) started to hit a wall of poor execution times.
-> <details>
->    <summary>ℹ️ <i>More Information</i></summary>
->
->    - Until [ComfyUI/issues/1502](https://github.com/comfyanonymous/ComfyUI/issues/1502) is resolved and/or [ComfyUI/pull/1503](https://github.com/comfyanonymous/ComfyUI/pull/1503) is pulled in, then know that you're benefiting from hundreds of millions of saved cycles each run.
->
->    - Specifically, for a rather complex test workflow, the patch reduces iterations of `recursive_will_execute` from 113,292,566 to just 135 (and 116.32 seconds to 69.84 seconds on my machine) on a fresh queue, and reduces recursive calls of `recursive_output_delete_if_changed` from 250,496,808 to 142 (and 158.13 seconds to 0.0 seconds on my machine).
->
->    - ⚠️ *However,* there is a chance ComfyUI changes something in/around the code I patched which could break. If that's the case, you should disable the optimization from rgthree-comfy settings.
->
-> </details>
+## ~~ComfyUI Recursive Optimization~~
+> 🎉 The newest version of ComfyUI no longer suffers from poor execution recursion! This feature
+> has been removed from rgthree-comfy.
 
 
 ## "Queue Selected Output Nodes" in right-click menu

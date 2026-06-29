@@ -249,10 +249,11 @@ def init_config_preset():
         embeddings_downloads = preset_prepared.get('embeddings_downloads', {})
         lora_downloads = preset_prepared.get('lora_downloads', {})
         vae_downloads = preset_prepared.get('vae_downloads', {})
+        clip_downloads = preset_prepared.get('clip_downloads', {})
 
         if common.default_engine:
             common.task_method = common.default_engine.get("backend_params", {}).get("task_method")
-        if common.task_method == 'SD_SIMPLE':
+        if common.task_method == 'sd15_TG':
             if config.default_aspect_ratio != '0*0':
                 config.default_sd1_5_aspect_ratio = config.default_aspect_ratio
                 common.resolution = config.default_aspect_ratio

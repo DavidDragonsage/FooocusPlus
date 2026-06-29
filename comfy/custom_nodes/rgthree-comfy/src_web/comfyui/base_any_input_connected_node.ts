@@ -1,17 +1,21 @@
-import type { RgthreeBaseVirtualNodeConstructor } from "typings/rgthree.js";
 import type {
   Vector2,
   LLink,
   INodeInputSlot,
   INodeOutputSlot,
   LGraphNode as TLGraphNode,
+  ISlotType,
+  ConnectByTypeOptions,
+  TWidgetType,
+  IWidgetOptions,
   IWidget,
-} from "typings/litegraph.js";
+  IBaseWidget,
+  WidgetTypeMap,
+} from "@comfyorg/frontend";
 
-import { app } from "scripts/app.js";
-import { RgthreeBaseVirtualNode } from "./base_node.js";
-import { rgthree } from "./rgthree.js";
-
+import {app} from "scripts/app.js";
+import {RgthreeBaseVirtualNode} from "./base_node.js";
+import {rgthree} from "./rgthree.js";
 import {
   PassThroughFollowing,
   addConnectionLayoutSupport,
@@ -46,22 +50,8 @@ export class BaseAnyInputConnectedNode extends RgthreeBaseVirtualNode {
     return super.onConstructed();
   }
 
-  /** Schedules a promise to run a stabilization. */
-  scheduleStabilizeWidgets(ms = 100) {
-    if (!this.schedulePromise) {
-      this.schedulePromise = new Promise((resolve) => {
-        setTimeout(() => {
-          this.schedulePromise = null;
-          this.doStablization();
-          resolve();
-        }, ms);
-      });
-    }
-    return this.schedulePromise;
-  }
-
   override clone() {
-    const cloned = super.clone();
+    const cloned = super.clone()!;
     // Copying to clipboard (and also, creating node templates) work by cloning nodes and, for some
     // reason, it manually manipulates the cloned data. So, we want to keep the present input slots
     // so if it's pasted/templatized the data is correct. Otherwise, clear the inputs and so the new
@@ -76,18 +66,39 @@ export class BaseAnyInputConnectedNode extends RgthreeBaseVirtualNode {
     }
     return cloned;
   }
+
   /**
-   * Ensures we have at least one empty input at the end.
+   * Schedules a promise to run a stabilization, debouncing duplicate requests.
    */
-  stabilizeInputsOutputs() {
+  scheduleStabilizeWidgets(ms = 100) {
+    if (!this.schedulePromise) {
+      this.schedulePromise = new Promise((resolve) => {
+        setTimeout(() => {
+          this.schedulePromise = null;
+          this.doStablization();
+          resolve();
+        }, ms);
+      });
+    }
+    return this.schedulePromise;
+  }
+
+  /**
+   * Ensures we have at least one empty input at the end, returns true if changes were made, or false
+   * if no changes were needed.
+   */
+  private stabilizeInputsOutputs(): boolean {
+    let changed = false;
     const hasEmptyInput = !this.inputs[this.inputs.length - 1]?.link;
     if (!hasEmptyInput) {
       this.addInput("", "*");
+      changed = true;
     }
     for (let index = this.inputs.length - 2; index >= 0; index--) {
       const input = this.inputs[index]!;
       if (!input.link) {
         this.removeInput(index);
+        changed = true;
       } else {
         const node = getConnectedInputNodesAndFilterPassThroughs(
           this,
@@ -95,9 +106,14 @@ export class BaseAnyInputConnectedNode extends RgthreeBaseVirtualNode {
           index,
           this.inputsPassThroughFollowing,
         )[0];
-        input.name = node?.title || "";
+        const newName = node?.title || "";
+        if (input.name !== newName) {
+          input.name = node?.title || "";
+          changed = true;
+        }
       }
     }
+    return changed;
   }
 
   /**
@@ -107,22 +123,30 @@ export class BaseAnyInputConnectedNode extends RgthreeBaseVirtualNode {
     if (!this.graph) {
       return;
     }
+    let dirty = false;
+
     // When we add/remove widgets, litegraph is going to mess up the size, so we
     // store it so we can retrieve it in computeSize. Hacky..
     (this as any)._tempWidth = this.size[0];
 
+    dirty = this.stabilizeInputsOutputs();
     const linkedNodes = getConnectedInputNodesAndFilterPassThroughs(this);
-    this.stabilizeInputsOutputs();
+    dirty = this.handleLinkedNodesStabilization(linkedNodes) || dirty;
 
-    this.handleLinkedNodesStabilization(linkedNodes);
-
-    app.graph.setDirtyCanvas(true, true);
+    // Only mark dirty if something's changed.
+    if (dirty) {
+      this.graph.setDirtyCanvas(true, true);
+    }
 
     // Schedule another stabilization in the future.
     this.scheduleStabilizeWidgets(500);
   }
 
-  handleLinkedNodesStabilization(linkedNodes: TLGraphNode[]) {
+  /**
+   * Handles stabilization of linked nodes. To be overridden. Should return true if changes were
+   * made, or false if no changes were needed.
+   */
+  handleLinkedNodesStabilization(linkedNodes: TLGraphNode[]): boolean {
     linkedNodes; // No-op, but makes overridding in VSCode cleaner.
     throw new Error("handleLinkedNodesStabilization should be overridden.");
   }
@@ -156,28 +180,31 @@ export class BaseAnyInputConnectedNode extends RgthreeBaseVirtualNode {
     return super.removeInput(slot);
   }
 
-  override addInput(name: string, type: string | -1, extra_info?: Partial<INodeInputSlot>) {
+  override addInput<TProperties extends Partial<INodeInputSlot>>(
+    name: string,
+    type: ISlotType,
+    extra_info?: TProperties | undefined,
+  ): INodeInputSlot & TProperties {
     (this as any)._tempWidth = this.size[0];
     return super.addInput(name, type, extra_info);
   }
 
-  override addWidget<T extends IWidget>(
-    type: T["type"],
+  override addWidget<Type extends TWidgetType, TValue extends WidgetTypeMap[Type]["value"]>(
+    type: Type,
     name: string,
-    value: T["value"],
-    callback?: T["callback"] | string,
-    options?: T["options"],
-  ) {
+    value: TValue,
+    callback: IBaseWidget["callback"] | string | null,
+    options?: IWidgetOptions | string,
+  ):
+    | IBaseWidget<string | number | boolean | object | undefined, string, IWidgetOptions<unknown>>
+    | WidgetTypeMap[Type] {
     (this as any)._tempWidth = this.size[0];
     return super.addWidget(type, name, value, callback, options);
   }
 
-  /**
-   * Guess this doesn't exist in Litegraph...
-   */
-  override removeWidget(widgetOrSlot?: IWidget | number) {
+  override removeWidget(widget: IBaseWidget | IWidget | number | undefined): void {
     (this as any)._tempWidth = this.size[0];
-    super.removeWidget(widgetOrSlot);
+    super.removeWidget(widget);
   }
 
   override computeSize(out: Vector2) {
@@ -196,7 +223,7 @@ export class BaseAnyInputConnectedNode extends RgthreeBaseVirtualNode {
       size[1] = size[1] - rows * LiteGraph.NODE_SLOT_HEIGHT;
     }
     setTimeout(() => {
-      app.graph.setDirtyCanvas(true, true);
+      this.graph?.setDirtyCanvas(true, true);
     }, 16);
     return size;
   }
@@ -266,12 +293,12 @@ export class BaseAnyInputConnectedNode extends RgthreeBaseVirtualNode {
    * If something is dropped on us, just add it to the bottom. onConnectInput should already cancel
    * if it's disallowed.
    */
-  override connectByTypeOutput<T = any>(
-    slot: string | number,
+  override connectByTypeOutput(
+    slot: number | string,
     sourceNode: TLGraphNode,
-    sourceSlotType: string,
-    optsIn: string,
-  ): T | null {
+    sourceSlotType: ISlotType,
+    optsIn?: ConnectByTypeOptions,
+  ): LLink | null {
     const lastInput = this.inputs[this.inputs.length - 1];
     if (!lastInput?.link && lastInput?.type === "*") {
       var sourceSlot = sourceNode.findOutputSlotByType(sourceSlotType, false, true);
@@ -292,7 +319,7 @@ export class BaseAnyInputConnectedNode extends RgthreeBaseVirtualNode {
       property: "collapse_connections",
       prepareValue: (_value, node) => !node.properties?.["collapse_connections"],
       callback: (_node) => {
-        app.graph.setDirtyCanvas(true, true);
+        app.canvas.getCurrentGraph()?.setDirtyCanvas(true, true);
       },
     });
   }
@@ -303,23 +330,25 @@ export class BaseAnyInputConnectedNode extends RgthreeBaseVirtualNode {
 // that and instead take the next free one. If that doesn't work, then we'll give it to the old
 // method.
 const oldLGraphNodeConnectByType = LGraphNode.prototype.connectByType;
-LGraphNode.prototype.connectByType = function connectByType<T = any>(
-  slot: string | number,
-  sourceNode: TLGraphNode,
-  sourceSlotType: string,
-  optsIn: string,
-): T | null {
-  // If we're droppiong on a node, and the last input is free and an "*" type, then connect there
+LGraphNode.prototype.connectByType = function connectByType(
+  slot: number | string,
+  targetNode: TLGraphNode,
+  targetSlotType: ISlotType,
+  optsIn?: ConnectByTypeOptions,
+): LLink | null {
+  // If we're dropping on a node, and the last input is free and an "*" type, then connect there
   // first...
-  if (sourceNode.inputs) {
-    for (const [index, input] of sourceNode.inputs.entries()) {
+  if (targetNode.inputs) {
+    for (const [index, input] of targetNode.inputs.entries()) {
       if (!input.link && input.type === "*") {
-        this.connect(slot, sourceNode, index);
+        this.connect(slot, targetNode, index);
         return null;
       }
     }
   }
-  return ((oldLGraphNodeConnectByType &&
-    oldLGraphNodeConnectByType.call(this, slot, sourceNode, sourceSlotType, optsIn)) ||
-    null) as T;
+  return (
+    (oldLGraphNodeConnectByType &&
+      oldLGraphNodeConnectByType.call(this, slot, targetNode, targetSlotType, optsIn)) ||
+    null
+  );
 };

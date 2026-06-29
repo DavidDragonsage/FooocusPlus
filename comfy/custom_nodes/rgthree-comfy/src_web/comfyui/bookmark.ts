@@ -1,15 +1,20 @@
-import { app } from "scripts/app.js";
-import { RgthreeBaseVirtualNode } from "./base_node.js";
-import { SERVICE as KEY_EVENT_SERVICE } from "./services/key_events_services.js";
-import { NodeTypesString } from "./constants.js";
 import type {
   LGraph,
   LGraphCanvas,
-  INumberWidget,
   LGraphNode,
-  Vector2,
-} from "typings/litegraph.js";
-import { getClosestOrSelf, queryOne } from "rgthree/common/utils_dom.js";
+  Point,
+  CanvasMouseEvent,
+  Subgraph,
+} from "@comfyorg/frontend";
+
+import {app} from "scripts/app.js";
+import {RgthreeBaseVirtualNode} from "./base_node.js";
+import {SERVICE as KEY_EVENT_SERVICE} from "./services/key_events_services.js";
+import {SERVICE as BOOKMARKS_SERVICE} from "./services/bookmarks_services.js";
+import {NodeTypesString} from "./constants.js";
+import {getClosestOrSelf, query} from "rgthree/common/utils_dom.js";
+import {wait} from "rgthree/common/shared_utils.js";
+import {findFromNodeForSubgraph} from "./utils.js";
 
 /**
  * A bookmark node. Can be placed anywhere in the workflow, and given a shortcut key that will
@@ -49,7 +54,7 @@ export class Bookmark extends RgthreeBaseVirtualNode {
 
   constructor(title = Bookmark.title) {
     super(title);
-    const nextShortcutChar = getNextShortcut();
+    const nextShortcutChar = BOOKMARKS_SERVICE.getNextShortcut();
     this.addWidget(
       "text",
       "shortcut_key",
@@ -61,7 +66,7 @@ export class Bookmark extends RgthreeBaseVirtualNode {
         y: 8,
       },
     );
-    this.addWidget<INumberWidget>("number", "zoom", 1, (value: number) => {}, {
+    this.addWidget("number", "zoom", 1, (value: number) => {}, {
       y: 8 + LiteGraph.NODE_WIDGET_HEIGHT + 4,
       max: 2,
       min: 0.5,
@@ -79,7 +84,7 @@ export class Bookmark extends RgthreeBaseVirtualNode {
   // }
 
   get shortcutKey(): string {
-    return this.widgets[0]?.value?.toLocaleLowerCase() ?? "";
+    return (this.widgets[0]?.value as string)?.toLocaleLowerCase() ?? "";
   }
 
   override onAdded(graph: LGraph): void {
@@ -90,15 +95,15 @@ export class Bookmark extends RgthreeBaseVirtualNode {
     KEY_EVENT_SERVICE.removeEventListener("keydown", this.keypressBound as EventListener);
   }
 
-  onKeypress(event: CustomEvent<{ originalEvent: KeyboardEvent }>) {
+  onKeypress(event: CustomEvent<{originalEvent: KeyboardEvent}>) {
     const originalEvent = event.detail.originalEvent;
     const target = (originalEvent.target as HTMLElement)!;
     if (getClosestOrSelf(target, 'input,textarea,[contenteditable="true"]')) {
       return;
     }
 
-    // Only the shortcut keys are held down, otionally including "shift".
-    if (KEY_EVENT_SERVICE.areOnlyKeysDown(this.widgets[0]!.value, true)) {
+    // Only the shortcut keys are held down, optionally including "shift".
+    if (KEY_EVENT_SERVICE.areOnlyKeysDown(this.widgets[0]!.value as string, true)) {
       this.canvasToBookmark();
       originalEvent.preventDefault();
       originalEvent.stopPropagation();
@@ -108,10 +113,10 @@ export class Bookmark extends RgthreeBaseVirtualNode {
   /**
    * Called from LiteGraph's `processMouseDown` after it would invoke the input box for the
    * shortcut_key, so we check if it exists and then add our own event listener so we can track the
-   * keys down for the user.
+   * keys down for the user. Note, blocks drag if the return is truthy.
    */
-  override onMouseDown(event: MouseEvent, pos: Vector2, graphCanvas: LGraphCanvas): void {
-    const input = queryOne<HTMLInputElement>(".graphdialog > input.value");
+  override onMouseDown(event: CanvasMouseEvent, pos: Point, graphCanvas: LGraphCanvas): boolean {
+    const input = query<HTMLInputElement>(".graphdialog > input.value");
     if (input && input.value === this.widgets[0]?.value) {
       input.addEventListener("keydown", (e) => {
         // ComfyUI swallows keydown on inputs, so we need to call out to rgthree to use downkeys.
@@ -121,10 +126,22 @@ export class Bookmark extends RgthreeBaseVirtualNode {
         input.value = Object.keys(KEY_EVENT_SERVICE.downKeys).join(" + ");
       });
     }
+    return false;
   }
 
-  canvasToBookmark() {
+  async canvasToBookmark() {
     const canvas = app.canvas as LGraphCanvas;
+    if (this.graph !== app.canvas.getCurrentGraph()) {
+      const subgraph = this.graph as Subgraph;
+      // At some point, ComfyUI made a second param for openSubgraph which appears to be the node
+      // that id double-clicked on to open the subgraph. We don't have that in the bookmark, so
+      // we'll look for it. Note, that when opening the root graph, this will be null (since there's
+      // no such node). It seems to still navigate fine, though there's a console error about
+      // proxyWidgets or something..
+      const fromNode = findFromNodeForSubgraph(subgraph.id);
+      canvas.openSubgraph(subgraph, fromNode!);
+      await wait(16);
+    }
     // ComfyUI seemed to break us again, but couldn't repro. No reason to not check, I guess.
     // https://github.com/rgthree/rgthree-comfy/issues/71
     if (canvas?.ds?.offset) {
@@ -144,20 +161,3 @@ app.registerExtension({
     Bookmark.setUp();
   },
 });
-
-function isBookmark(node: LGraphNode): node is Bookmark {
-  return node.type === NodeTypesString.BOOKMARK;
-}
-
-function getExistingShortcuts() {
-  const graph: LGraph = app.graph;
-  const bookmarkNodes = graph._nodes.filter(isBookmark);
-  const usedShortcuts = new Set(bookmarkNodes.map((n) => n.shortcutKey));
-  return usedShortcuts;
-}
-
-const SHORTCUT_DEFAULTS = "1234567890abcdefghijklmnopqrstuvwxyz".split("");
-function getNextShortcut() {
-  const existingShortcuts = getExistingShortcuts();
-  return SHORTCUT_DEFAULTS.find((char) => !existingShortcuts.has(char)) ?? "1";
-}

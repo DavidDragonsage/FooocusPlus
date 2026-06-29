@@ -8,16 +8,16 @@ from comfy.model_patcher import ModelPatcher
 from nodes import NODE_CLASS_MAPPINGS
 from collections import defaultdict
 from .log import log_node_info, log_node_error
-from ..dit.pixArt.loader import load_pixart
+from ..modules.dit.pixArt.loader import load_pixart
 
-stable_diffusion_loaders = ["easy fullLoader", "easy a1111Loader", "easy comfyLoader", "easy hunyuanDiTLoader","easy zero123Loader", "easy svdLoader"]
+diffusion_loaders = ["easy fullLoader", "easy a1111Loader", "easy fluxLoader", "easy comfyLoader", "easy hunyuanDiTLoader", "easy zero123Loader", "easy svdLoader"]
 stable_cascade_loaders = ["easy cascadeLoader"]
 dit_loaders = ['easy pixArtLoader']
-controlnet_loaders = ["easy controlnetLoader", "easy controlnetLoaderADV"]
+controlnet_loaders = ["easy controlnetLoader", "easy controlnetLoaderADV", "easy controlnetLoader++"]
 instant_loaders = ["easy instantIDApply", "easy instantIDApplyADV"]
 cascade_vae_node = ["easy preSamplingCascade", "easy fullCascadeKSampler"]
 model_merge_node = ["easy XYInputs: ModelMergeBlocks"]
-lora_widget = ["easy fullLoader", "easy a1111Loader", "easy comfyLoader"]
+lora_widget = ["easy fullLoader", "easy a1111Loader", "easy comfyLoader", "easy fluxLoader"]
 
 class easyLoader:
     def __init__(self):
@@ -33,7 +33,7 @@ class easyLoader:
             "t5": defaultdict(tuple),
             "chatglm3": defaultdict(tuple),
         }
-        self.memory_threshold = self.determine_memory_threshold(0.7)
+        self.memory_threshold = self.determine_memory_threshold(1)
         self.lora_name_cache = []
 
     def clean_values(self, values: str):
@@ -101,7 +101,7 @@ class easyLoader:
                 setting = f'{lora_name};{entry["inputs"]["lora_model_strength"]};{entry["inputs"]["lora_clip_strength"]}'
                 desired_lora_settings.add(setting)
 
-            if class_type in stable_diffusion_loaders:
+            if class_type in diffusion_loaders:
                 desired_ckpt_names.add(self.get_input_value(entry, "ckpt_name", prompt))
                 desired_vae_names.add(self.get_input_value(entry, "vae_name"))
 
@@ -240,7 +240,7 @@ class easyLoader:
         else:
             model_options = {}
             if re.search("nf4", ckpt_name):
-                from ..bitsandbytes_NF4 import OPS
+                from ..modules.bitsandbytes_NF4 import OPS
                 model_options = {"custom_operations": OPS}
             loaded_ckpt = comfy.sd.load_checkpoint_guess_config(ckpt_path, output_vae=True, output_clip=output_clip, output_clipvision=output_clipvision, embedding_directory=folder_paths.get_folder_paths("embeddings"), model_options=model_options)
 
@@ -323,7 +323,7 @@ class easyLoader:
 
         return load_clip
 
-    def load_lora(self, lora, model=None, clip=None, type=None):
+    def load_lora(self, lora, model=None, clip=None, type=None , use_cache=True):
         lora_name = lora["lora_name"]
         model = model if model is not None else lora["model"]
         clip = clip if clip is not None else lora["clip"]
@@ -338,7 +338,7 @@ class easyLoader:
 
         unique_id = f'{model_hash};{clip_hash};{lora_name};{model_strength};{clip_strength}'
 
-        if unique_id in self.loaded_objects["lora"]:
+        if use_cache and unique_id in self.loaded_objects["lora"]:
             log_node_info("Load LORA",f"{lora_name} cached")
             return self.loaded_objects["lora"][unique_id][0]
 
@@ -351,7 +351,7 @@ class easyLoader:
             lora_path = None
 
         if lora_path is not None:
-            log_node_info("Load LORA",f"{lora_name}: {model_strength}, {clip_strength}, LBW={lbw}, A={lbw_a}, B={lbw_b}")
+            log_node_info("Load LORA",f"{lora_name}: model={model_strength:.3f}, clip={clip_strength:.3f}, LBW={lbw}, A={lbw_a}, B={lbw_b}")
             if lbw:
                 lbw = lora["lbw"]
                 lbw_a = lora["lbw_a"]
@@ -391,13 +391,14 @@ class easyLoader:
 
                 # PixArt
                 if type is not None and type == 'PixArt':
-                    from ..dit.pixArt.loader import load_pixart_lora
+                    from ..modules.dit.pixArt.loader import load_pixart_lora
                     model = load_pixart_lora(model, _lora, lora_path, model_strength)
                 else:
                     model, clip = comfy.sd.load_lora_for_models(model, clip, _lora, model_strength, clip_strength)
 
-            self.add_to_cache("lora", unique_id, (model, clip))
-            self.eviction_based_on_memory()
+            if use_cache:
+                self.add_to_cache("lora", unique_id, (model, clip))
+                self.eviction_based_on_memory()
         else:
             log_node_error(f"LORA NOT FOUND", orig_lora_name)
 
@@ -431,10 +432,13 @@ class easyLoader:
         clip_vision = None
         lora_stack = []
 
+        # Check for model override
         can_load_lora = True
         # 判断是否存在 模型或Lora叠加xyplot, 若存在优先缓存第一个模型
+        # Determine whether there is a model or Lora overlapping xyplot, and if there is, prioritize caching the first model.
         xy_model_id = next((x for x in prompt if str(prompt[x]["class_type"]) in ["easy XYInputs: ModelMergeBlocks",
                                                                                   "easy XYInputs: Checkpoint"]), None)
+        # This will find nodes that aren't actively connected to anything, and skip loading lora's for them.
         xy_lora_id = next((x for x in prompt if str(prompt[x]["class_type"]) == "easy XYInputs: Lora"), None)
         if xy_lora_id is not None:
             can_load_lora = False
@@ -444,22 +448,23 @@ class easyLoader:
                 ckpt_name_1 = node["inputs"]["ckpt_name_1"]
                 model, clip, vae, clip_vision = self.load_checkpoint(ckpt_name_1)
                 can_load_lora = False
-        # Load models
         elif model_override is not None and clip_override is not None and vae_override is not None:
             model = model_override
             clip = clip_override
             vae = vae_override
-        elif model_override is not None:
-            raise Exception(f"[ERROR] clip or vae is missing")
-        elif vae_override is not None:
-            raise Exception(f"[ERROR] model or clip is missing")
-        elif clip_override is not None:
-            raise Exception(f"[ERROR] model or vae is missing")
         else:
             model, clip, vae, clip_vision = self.load_checkpoint(ckpt_name, config_name)
+            if model_override is not None:
+                model = model_override
+            if vae_override is not None:
+                vae = vae_override
+            elif clip_override is not None:
+                clip = clip_override
+
 
         if optional_lora_stack is not None and can_load_lora:
             for lora in optional_lora_stack:
+                # This is a subtle bit of code because it uses the model created by the last call, and passes it to the next call.
                 lora = {"lora_name": lora[0], "model": model, "clip": clip, "model_strength": lora[1],
                         "clip_strength": lora[2]}
                 model, clip = self.load_lora(lora)
@@ -488,7 +493,7 @@ class easyLoader:
             log_node_info("Load Kolors UNet", f"{unet_name} cached")
             return self.loaded_objects["unet"][unet_name][0]
         else:
-            from ..kolors.loader import applyKolorsUnet
+            from ..modules.kolors.loader import applyKolorsUnet
             with applyKolorsUnet():
                 unet_path = folder_paths.get_full_path("unet", unet_name)
                 sd = comfy.utils.load_torch_file(unet_path)
@@ -502,7 +507,7 @@ class easyLoader:
                 return model
 
     def load_chatglm3(self, chatglm3_name):
-        from ..kolors.loader import load_chatglm3
+        from ..modules.kolors.loader import load_chatglm3
         if chatglm3_name in self.loaded_objects["chatglm3"]:
             log_node_info("Load ChatGLM3", f"{chatglm3_name} cached")
             return self.loaded_objects["chatglm3"][chatglm3_name][0]
@@ -528,50 +533,6 @@ class easyLoader:
         if model:
             self.add_to_cache("ckpt", ckpt_name + '_' + model_name, model)
             self.eviction_based_on_memory()
-        return model
-
-
-    def load_dit_clip(self, clip_name, **kwargs):
-        if clip_name in self.loaded_objects["clip"]:
-            return self.loaded_objects["clip"][clip_name][0]
-
-        clip_path = folder_paths.get_full_path("clip", clip_name)
-        sd = comfy.utils.load_torch_file(clip_path)
-
-        prefix = "bert."
-        state_dict = {}
-        for key in sd:
-            nkey = key
-            if key.startswith(prefix):
-                nkey = key[len(prefix):]
-            state_dict[nkey] = sd[key]
-
-        m, e = model.load_sd(state_dict)
-        if len(m) > 0 or len(e) > 0:
-            print(f"{clip_name}: clip missing {len(m)} keys ({len(e)} extra)")
-
-        self.add_to_cache("clip", clip_name, model)
-        self.eviction_based_on_memory()
-
-        return model
-
-    def load_dit_t5(self, t5_name, **kwargs):
-        if t5_name in self.loaded_objects["t5"]:
-            return self.loaded_objects["t5"][t5_name][0]
-
-        model_type = kwargs['model_type'] if "model_type" in kwargs else 'HyDiT'
-        if model_type == 'HyDiT':
-            del kwargs['model_type']
-            model = EXM_HyDiT_Tenc_Temp(model_class="mT5", **kwargs)
-        t5_path = folder_paths.get_full_path("t5", t5_name)
-        sd = comfy.utils.load_torch_file(t5_path)
-        m, e = model.load_sd(sd)
-        if len(m) > 0 or len(e) > 0:
-            print(f"{t5_name}: mT5 missing {len(m)} keys ({len(e)} extra)")
-
-        self.add_to_cache("t5", t5_name, model)
-        self.eviction_based_on_memory()
-
         return model
 
     def load_t5_from_sd3_clip(self, sd3_clip, padding):

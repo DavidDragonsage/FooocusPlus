@@ -78,8 +78,6 @@ def dependency_resolver():
     - torchvision_ver: str
     - torchaudio_ver: str
     - xformers_ver: str
-    - pytorchlightning_ver: str
-    - lightningfabric_ver: str
     - bitsandbytes_default: str
     - torch_platform_ver: str
     """
@@ -95,9 +93,7 @@ def dependency_resolver():
         xformers_default = "0.0.31"
     else:
         xformers_default = "0.0.30"
-    pytorchlightning_default = "2.5.2"
-    lightningfabric_default = "2.5.2"
-    bitsandbytes_default = "0.49.2"
+    bitsandbytes_default = "0.46.0"
     torch_platform_default = "cu128"
 
     torch_ver = torch_default # initialize torch to the default
@@ -197,14 +193,16 @@ def dependency_resolver():
 
     # Begin the assignment of dependencies:
     if torch_ver == '2.10.0': # Blackwell native mode
+        if arch_version >= 12.0:
+            xformers_blackwell = 'None'
+        else:
+            xformers_blackwell = '0.0.34'
         dependencies = dict(
             torch_ver = '2.10.0',
             torchvision_ver = '0.25.0',
             torchaudio_ver = '2.10.0',
-            xformers_ver = '0.0.34',
-            pytorchlightning_ver = '2.5.2',
-            lightningfabric_ver = '2.5.2',
-            bitsandbytes_ver = bitsandbytes_default,
+            xformers_ver = xformers_blackwell,
+            bitsandbytes_ver = '0.48.0',
             torch_platform_ver = torchruntime_platform
         )
 
@@ -214,8 +212,6 @@ def dependency_resolver():
             torchvision_ver = "0.20.1",
             torchaudio_ver = "2.5.1",
             xformers_ver = "0.0.29.post1",
-            pytorchlightning_ver = "2.5.1.post0",
-            lightningfabric_ver = "2.5.1",
             bitsandbytes_ver = bitsandbytes_default,
             torch_platform_ver = torchruntime_platform
         )
@@ -226,8 +222,6 @@ def dependency_resolver():
             torchvision_ver = "0.19.1",
             torchaudio_ver = "2.4.1",
             xformers_ver = "0.0.28.post1",
-            pytorchlightning_ver = "2.5.1.post0", # will be compatible with slightly older versions
-            lightningfabric_ver = "2.5.1",
             bitsandbytes_ver = bitsandbytes_default,
             torch_platform_ver = torchruntime_platform
         )
@@ -239,8 +233,6 @@ def dependency_resolver():
             torchvision_ver = "0.18.1",
             torchaudio_ver = "2.3.1",
             xformers_ver = "0.0.27",
-            pytorchlightning_ver = "2.4.0",
-            lightningfabric_ver = "2.4.0",
             bitsandbytes_ver = bitsandbytes_default,
             torch_platform_ver = torchruntime_platform
         )
@@ -252,8 +244,6 @@ def dependency_resolver():
             torchvision_ver = "0.17.2",
             torchaudio_ver = "2.2.2",
             xformers_ver = "0.0.27.post2", # but not MPS compatible
-            pytorchlightning_ver = "2.4.0", # confirm 2.5.1 compatibility when versioning policy updated
-            lightningfabric_ver = "2.4.0",
             bitsandbytes_ver = bitsandbytes_default,
             torch_platform_ver = torchruntime_platform
         )
@@ -265,8 +255,6 @@ def dependency_resolver():
             torchvision_ver = "0.14.1",
             torchaudio_ver = "0.13.1",
             xformers_ver = "0.0.20", # but not compatible with ROCm, rocm6.2.4 only
-            pytorchlightning_ver = "2.2.5",
-            lightningfabric_ver = "2.2.5",
             bitsandbytes_ver = "0.42.0",
             torch_platform_ver = torchruntime_platform
         )
@@ -278,8 +266,6 @@ def dependency_resolver():
             torchvision_ver = torchvision_default,
             torchaudio_ver = torchaudio_default,
             xformers_ver = xformers_default,
-            pytorchlightning_ver = pytorchlightning_default,
-            lightningfabric_ver = lightningfabric_default,
             bitsandbytes_ver = bitsandbytes_default,
             torch_platform_ver = torch_platform_default
         )
@@ -288,7 +274,7 @@ def dependency_resolver():
     return dependencies
 
 
-def delete_torch_dependencies():
+def delete_torch_dependencies(depend_list=None):
     """
     Cleans out older installed PyTorch and related
     dependency folders from site-packages
@@ -299,13 +285,16 @@ def delete_torch_dependencies():
         # cleanly using Pathlib
         library_path = (Path(python_embedded_path) / 'Lib' / 'site-packages').resolve()
 
-        file_paths = [
-            'torch', 'torchaudio',
-            'torchvision', 'xformers',
-            'pytorch_lightning',
-            'lightning-fabric',
-            'bitsandbytes'
-        ]
+        if depend_list is None:
+            file_paths = [
+                'torch', 'torchaudio',
+                'torchvision', 'xformers',
+                'pytorch_lightning',
+                'lightning_fabric',
+                'bitsandbytes'
+            ]
+        else:
+            file_paths = depend_list
 
         for folder_name in file_paths:
             # 1. Clean up the physical package directory

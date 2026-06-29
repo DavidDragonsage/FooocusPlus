@@ -1,6 +1,8 @@
 # from https://github.com/zju-pi/diff-sampler/tree/main/gits-main
 import numpy as np
 import torch
+from typing_extensions import override
+from comfy_api.latest import ComfyExtension, io
 
 def loglinear_interp(t_steps, num_steps):
     """
@@ -162,7 +164,7 @@ NOISE_LEVELS = {
         [14.61464119, 7.49001646, 5.85520077, 4.45427561, 3.46139455, 2.84484982, 2.19988537, 1.72759056, 1.36964464, 1.08895338, 0.86115354, 0.69515091, 0.54755926, 0.43325692, 0.34370604, 0.25053367, 0.17026083, 0.09824532, 0.02916753],
         [14.61464119, 11.54541874, 7.49001646, 5.85520077, 4.45427561, 3.46139455, 2.84484982, 2.19988537, 1.72759056, 1.36964464, 1.08895338, 0.86115354, 0.69515091, 0.54755926, 0.43325692, 0.34370604, 0.25053367, 0.17026083, 0.09824532, 0.02916753],
         [14.61464119, 11.54541874, 7.49001646, 5.85520077, 4.45427561, 3.46139455, 2.84484982, 2.19988537, 1.72759056, 1.36964464, 1.08895338, 0.89115214, 0.72133851, 0.59516323, 0.4783645, 0.38853383, 0.29807833, 0.22545385, 0.17026083, 0.09824532, 0.02916753],
-    ], 
+    ],
     1.15: [
         [14.61464119, 0.83188516, 0.02916753],
         [14.61464119, 1.84880662, 0.59516323, 0.02916753],
@@ -246,7 +248,7 @@ NOISE_LEVELS = {
         [14.61464119, 5.85520077, 2.84484982, 1.72759056, 1.162866, 0.83188516, 0.64427125, 0.52423614, 0.43325692, 0.36617002, 0.32104823, 0.27464288, 0.25053367, 0.22545385, 0.19894916, 0.17026083, 0.13792117, 0.09824532, 0.02916753],
         [14.61464119, 5.85520077, 2.84484982, 1.78698075, 1.24153244, 0.92192322, 0.72133851, 0.57119018, 0.45573691, 0.38853383, 0.34370604, 0.29807833, 0.27464288, 0.25053367, 0.22545385, 0.19894916, 0.17026083, 0.13792117, 0.09824532, 0.02916753],
         [14.61464119, 5.85520077, 2.84484982, 1.78698075, 1.24153244, 0.92192322, 0.72133851, 0.57119018, 0.4783645, 0.41087446, 0.36617002, 0.32104823, 0.29807833, 0.27464288, 0.25053367, 0.22545385, 0.19894916, 0.17026083, 0.13792117, 0.09824532, 0.02916753],
-    ], 
+    ],
     1.35: [
         [14.61464119, 0.69515091, 0.02916753],
         [14.61464119, 0.95350921, 0.34370604, 0.02916753],
@@ -333,25 +335,28 @@ NOISE_LEVELS = {
     ],
 }
 
-class GITSScheduler:
+class GITSScheduler(io.ComfyNode):
     @classmethod
-    def INPUT_TYPES(s):
-        return {"required":
-                    {"coeff": ("FLOAT", {"default": 1.20, "min": 0.80, "max": 1.50, "step": 0.05}),
-                     "steps": ("INT", {"default": 10, "min": 2, "max": 1000}),
-                     "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                      }
-               }
-    RETURN_TYPES = ("SIGMAS",)
-    CATEGORY = "sampling/custom_sampling/schedulers"
+    def define_schema(cls):
+        return io.Schema(
+            node_id="GITSScheduler",
+            category="model/sampling/schedulers",
+            inputs=[
+                io.Float.Input("coeff", default=1.20, min=0.80, max=1.50, step=0.05, advanced=True),
+                io.Int.Input("steps", default=10, min=2, max=1000),
+                io.Float.Input("denoise", default=1.0, min=0.0, max=1.0, step=0.01),
+            ],
+            outputs=[
+                io.Sigmas.Output(),
+            ],
+        )
 
-    FUNCTION = "get_sigmas"
-
-    def get_sigmas(self, coeff, steps, denoise):
+    @classmethod
+    def execute(cls, coeff, steps, denoise):
         total_steps = steps
         if denoise < 1.0:
             if denoise <= 0.0:
-                return (torch.FloatTensor([]),)
+                return io.NodeOutput(torch.FloatTensor([]))
             total_steps = round(steps * denoise)
 
         if steps <= 20:
@@ -362,8 +367,16 @@ class GITSScheduler:
 
         sigmas = sigmas[-(total_steps + 1):]
         sigmas[-1] = 0
-        return (torch.FloatTensor(sigmas), )
+        return io.NodeOutput(torch.FloatTensor(sigmas))
 
-NODE_CLASS_MAPPINGS = {
-    "GITSScheduler": GITSScheduler,
-}
+
+class GITSSchedulerExtension(ComfyExtension):
+    @override
+    async def get_node_list(self) -> list[type[io.ComfyNode]]:
+        return [
+            GITSScheduler,
+        ]
+
+
+async def comfy_entrypoint() -> GITSSchedulerExtension:
+    return GITSSchedulerExtension()

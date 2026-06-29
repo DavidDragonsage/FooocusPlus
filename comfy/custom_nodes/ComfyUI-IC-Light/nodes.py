@@ -7,20 +7,13 @@ import numpy as np
 import torch.nn.functional as F
 from comfy.utils import load_torch_file
 from .utils.convert_unet import convert_iclight_unet
-from .utils.patches import calculate_weight_adjust_channel
 from .utils.image import generate_gradient_image, LightPosition
 from nodes import MAX_RESOLUTION
-from comfy.model_patcher import ModelPatcher
-from comfy import lora
 import model_management
-import logging
-
-from load_file_from_url import load_file_from_url, load_model_for_iclight
 
 class LoadAndApplyICLightUnet:
     @classmethod
     def INPUT_TYPES(s):
-        load_model_for_iclight()
         return {
             "required": {
                 "model": ("MODEL",),
@@ -41,6 +34,8 @@ Used with ICLightConditioning -node
 
     def load(self, model, model_path):
         type_str = str(type(model.model.model_config).__name__)
+        device = model_management.get_torch_device()
+        dtype = model_management.unet_dtype()
         if "SD15" not in type_str:
             raise Exception(f"Attempted to load {type_str} model, IC-Light is only compatible with SD 1.5 models.")
 
@@ -53,33 +48,34 @@ Used with ICLightConditioning -node
             model_clone = model.clone()
 
             iclight_state_dict = load_torch_file(model_full_path)
-            
+
             print("LoadAndApplyICLightUnet: Attempting to add patches with IC-Light Unet weights")
             try:          
                 if 'conv_in.weight' in iclight_state_dict:
                     iclight_state_dict = convert_iclight_unet(iclight_state_dict)
                     in_channels = iclight_state_dict["diffusion_model.input_blocks.0.0.weight"].shape[1]
-                    for key in iclight_state_dict:
-                        model_clone.add_patches({key: (iclight_state_dict[key],)}, 1.0, 1.0)
+                    prefix = ""
                 else:
-                    for key in iclight_state_dict:
-                        model_clone.add_patches({"diffusion_model." + key: (iclight_state_dict[key],)}, 1.0, 1.0)
-
+                    prefix = "diffusion_model."
                     in_channels = iclight_state_dict["input_blocks.0.0.weight"].shape[1]
+                
+                model_clone.model.model_config.unet_config["in_channels"] = in_channels
 
+                patches={
+                    (prefix + key): (
+                        "diff",
+                        [value.to(dtype=dtype, device=device), 
+                        {"pad_weight": key == "diffusion_model.input_blocks.0.0.weight" or key == "input_blocks.0.0.weight"},],
+                    )
+                    for key, value in iclight_state_dict.items()
+                    }
+
+                model_clone.add_patches(patches)
+                    
             except:
                 raise Exception("Could not patch model")
             print("LoadAndApplyICLightUnet: Added LoadICLightUnet patches")
 
-            #Patch ComfyUI's LoRA weight application to accept multi-channel inputs. Thanks @huchenlei
-            try:
-                if hasattr(lora, 'calculate_weight'):
-                    lora.calculate_weight = calculate_weight_adjust_channel(lora.calculate_weight)
-                else:
-                    raise Exception("IC-Light: The 'calculate_weight' function does not exist in 'lora'")
-            except Exception as e:
-                raise Exception(f"IC-Light: Could not patch calculate_weight - {str(e)}")
-            
             # Mimic the existing IP2P class to enable extra_conds
             def bound_extra_conds(self, **kwargs):
                  return ICLight.extra_conds(self, **kwargs)
@@ -87,7 +83,7 @@ Used with ICLightConditioning -node
             model_clone.add_object_patch("extra_conds", new_extra_conds)
             
 
-            model_clone.model.model_config.unet_config["in_channels"] = in_channels        
+            #model_clone.model.model_config.unet_config["in_channels"] = in_channels        
 
             return (model_clone, )
 
@@ -116,6 +112,10 @@ class ICLight:
 
         process_image_in = lambda image: image
         out['c_concat'] = comfy.conds.CONDNoiseShape(process_image_in(image))
+
+        cross_attn = kwargs.get("cross_attn", None)
+        if cross_attn is not None:
+            out['c_crossattn'] = comfy.conds.CONDCrossAttn(cross_attn)
         
         adm = self.encode_adm(**kwargs)
         if adm is not None:

@@ -195,6 +195,30 @@
   cursor: pointer;
 }
 
+.rgthree-dialog.-settings .fieldrow fieldset.rgthree-checklist-group {
+  padding: 0;
+  border: 0;
+  margin: 0;
+
+  > span.rgthree-checklist-item {
+    display: inline-block;
+    white-space: nowrap;
+    padding-right: 6px;
+    vertical-align: middle;
+
+    input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+    }
+
+    label {
+      padding-left: 4px;
+      text-align: left;
+      cursor: pointer;
+    }
+  }
+}
+
 .rgthree-comfyui-settings-row div {
   display: flex;
   flex-direction: row;
@@ -270,7 +294,7 @@ rgthree-progress-bar {
     inset 0px 1px 0px rgba(255, 255, 255, 0.15), inset 0px -1px 0px rgba(0, 0, 0, 0.25), 0px 1px 0px rgba(255, 255, 255, 0.125);
 }
 
-body:not([style*=grid]){
+body:not([style*=grid]):not([class*=grid]) {
   rgthree-progress-bar {
     position: fixed;
     top: 0px;
@@ -286,10 +310,19 @@ body:not([style*=grid]){
 .rgthree-debug-keydowns {
   display: block;
   position: fixed;
-  z-index: 999;
+  z-index: 1050;
   top: 3px;
   right: 8px;
   font-size: 10px;
   color: #fff;
   font-family: sans-serif;
+  pointer-events: none;
+}
+
+
+.rgthree-comfy-about-badge-logo {
+  width: 20px;
+  height: 20px;
+  background: url(/rgthree/logo.svg?bg=transparent&fg=%2393c5fd);
+  background-size: 100% 100%;
 }

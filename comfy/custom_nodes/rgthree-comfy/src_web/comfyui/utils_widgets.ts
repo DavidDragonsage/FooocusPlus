@@ -1,13 +1,16 @@
-import { app } from "scripts/app.js";
 import type {
-  IWidget,
   LGraphNode,
   LGraphCanvas as TLGraphCanvas,
   Vector2,
-  AdjustedMouseEvent,
-  Vector4,
-} from "../typings/litegraph.js";
-import { drawNodeWidget, drawRoundedRectangle, fitString, isLowQuality } from "./utils_canvas.js";
+  ICustomWidget,
+  IWidgetOptions,
+  CanvasPointerEvent,
+} from "@comfyorg/frontend";
+
+import {app} from "scripts/app.js";
+import {drawNodeWidget, drawWidgetButton, fitString, isLowQuality} from "./utils_canvas.js";
+
+type Vector4 = [number, number, number, number];
 
 /**
  * Draws a label on teft, and a value on the right, ellipsizing when out of space.
@@ -19,7 +22,7 @@ export function drawLabelAndValue(
   width: number,
   posY: number,
   height: number,
-  options?: { offsetLeft: number },
+  options?: {offsetLeft: number},
 ) {
   const outerMargin = 15;
   const innerMargin = 10;
@@ -43,45 +46,59 @@ export function drawLabelAndValue(
 export type RgthreeBaseWidgetBounds = {
   /** The bounds, either [x, width] assuming the full height, or [x, y, width, height] if height. */
   bounds: Vector2 | Vector4;
-  onDown?(event: AdjustedMouseEvent, pos: Vector2, node: LGraphNode): boolean | void;
   onDown?(
-    event: AdjustedMouseEvent,
+    event: CanvasPointerEvent,
     pos: Vector2,
     node: LGraphNode,
     bounds: RgthreeBaseWidgetBounds,
   ): boolean | void;
-  onUp?(event: AdjustedMouseEvent, pos: Vector2, node: LGraphNode): boolean | void;
   onUp?(
-    event: AdjustedMouseEvent,
+    event: CanvasPointerEvent,
     pos: Vector2,
     node: LGraphNode,
     bounds: RgthreeBaseWidgetBounds,
   ): boolean | void;
-  onMove?(event: AdjustedMouseEvent, pos: Vector2, node: LGraphNode): boolean | void;
   onMove?(
-    event: AdjustedMouseEvent,
+    event: CanvasPointerEvent,
+    pos: Vector2,
+    node: LGraphNode,
+    bounds: RgthreeBaseWidgetBounds,
+  ): boolean | void;
+  onClick?(
+    event: CanvasPointerEvent,
     pos: Vector2,
     node: LGraphNode,
     bounds: RgthreeBaseWidgetBounds,
   ): boolean | void;
   data?: any;
+  wasMouseClickedAndIsOver?: boolean;
 };
 
 export type RgthreeBaseHitAreas<Keys extends string> = {
   [K in Keys]: RgthreeBaseWidgetBounds;
 };
 
+type NotArray<T> = T extends Array<any> ? never : T;
+
 /**
  * A base widget that handles mouse events more properly.
  */
-export abstract class RgthreeBaseWidget<T> implements IWidget<T, any> {
+export abstract class RgthreeBaseWidget<V extends ICustomWidget["value"]> implements ICustomWidget {
+  // Needed here b/c it was added to ComfyUI's types for IBaseWidget. No idea what they use it for,
+  // or why it's only boolean.
+  [symbol: symbol]: boolean;
+
   // We don't want our value to be an array as a widget will be serialized as an "input" for the API
   // which uses an array value to represent a link. To keep things simpler, we'll avoid using an
   // array at all.
-  abstract value: T extends Array<any> ? never : T;
+  abstract value: NotArray<V>;
 
+  type: ICustomWidget["type"] = "custom";
   name: string;
+  options: IWidgetOptions = {};
+  y: number = 0;
   last_y: number = 0;
+  disabled: boolean = false;
 
   protected mouseDowned: Vector2 | null = null;
   protected isMouseDownedAndOver: boolean = false;
@@ -89,9 +106,14 @@ export abstract class RgthreeBaseWidget<T> implements IWidget<T, any> {
   // protected hitAreas: {[key: string]: RgthreeBaseWidgetBounds} = {};
   protected readonly hitAreas: RgthreeBaseHitAreas<any> = {};
   private downedHitAreasForMove: RgthreeBaseWidgetBounds[] = [];
+  private downedHitAreasForClick: RgthreeBaseWidgetBounds[] = [];
 
   constructor(name: string) {
     this.name = name;
+  }
+
+  serializeValue(node: LGraphNode, index: number): Promise<V> | V {
+    return this.value;
   }
 
   private clickWasWithinBounds(pos: Vector2, bounds: Vector2 | Vector4) {
@@ -101,27 +123,32 @@ export abstract class RgthreeBaseWidget<T> implements IWidget<T, any> {
     if (bounds.length === 2) {
       return clickedX;
     }
-    return clickedX && pos[1] >= bounds[1] && pos[1] <= bounds[1] + bounds[3];
+    return clickedX && pos[1] >= bounds[1] && pos[1] <= bounds[1] + bounds[3]!;
   }
 
-  mouse(event: AdjustedMouseEvent, pos: Vector2, node: LGraphNode) {
+  mouse(event: CanvasPointerEvent, pos: Vector2, node: LGraphNode) {
     const canvas = app.canvas as TLGraphCanvas;
 
     if (event.type == "pointerdown") {
-      this.mouseDowned = [...pos];
+      this.mouseDowned = [...pos] as Vector2;
       this.isMouseDownedAndOver = true;
       this.downedHitAreasForMove.length = 0;
+      this.downedHitAreasForClick.length = 0;
       // Loop over out bounds data and call any specifics.
       let anyHandled = false;
       for (const part of Object.values(this.hitAreas)) {
-        if ((part.onDown || part.onMove) && this.clickWasWithinBounds(pos, part.bounds)) {
+        if (this.clickWasWithinBounds(pos, part.bounds)) {
           if (part.onMove) {
             this.downedHitAreasForMove.push(part);
+          }
+          if (part.onClick) {
+            this.downedHitAreasForClick.push(part);
           }
           if (part.onDown) {
             const thisHandled = part.onDown.apply(this, [event, pos, node, part]);
             anyHandled = anyHandled || thisHandled == true;
           }
+          part.wasMouseClickedAndIsOver = true;
         }
       }
       return this.onMouseDown(event, pos, node) ?? anyHandled;
@@ -132,6 +159,7 @@ export abstract class RgthreeBaseWidget<T> implements IWidget<T, any> {
     if (event.type == "pointerup") {
       if (!this.mouseDowned) return true;
       this.downedHitAreasForMove.length = 0;
+      const wasMouseDownedAndOver = this.isMouseDownedAndOver;
       this.cancelMouseDown();
       let anyHandled = false;
       for (const part of Object.values(this.hitAreas)) {
@@ -139,6 +167,18 @@ export abstract class RgthreeBaseWidget<T> implements IWidget<T, any> {
           const thisHandled = part.onUp.apply(this, [event, pos, node, part]);
           anyHandled = anyHandled || thisHandled == true;
         }
+        part.wasMouseClickedAndIsOver = false;
+      }
+      for (const part of this.downedHitAreasForClick) {
+        if (this.clickWasWithinBounds(pos, part.bounds)) {
+          const thisHandled = part.onClick!.apply(this, [event, pos, node, part]);
+          anyHandled = anyHandled || thisHandled == true;
+        }
+      }
+      this.downedHitAreasForClick.length = 0;
+      if (wasMouseDownedAndOver) {
+        const thisHandled = this.onMouseClick(event, pos, node);
+        anyHandled = anyHandled || thisHandled == true;
       }
       return this.onMouseUp(event, pos, node) ?? anyHandled;
     }
@@ -156,8 +196,13 @@ export abstract class RgthreeBaseWidget<T> implements IWidget<T, any> {
       ) {
         this.isMouseDownedAndOver = false;
       }
-      for (const part of this.downedHitAreasForMove) {
-        part.onMove!.apply(this, [event, pos, node, part]);
+      for (const part of Object.values(this.hitAreas)) {
+        if (this.downedHitAreasForMove.includes(part)) {
+          part.onMove!.apply(this, [event, pos, node, part]);
+        }
+        if (this.downedHitAreasForClick.includes(part)) {
+          part.wasMouseClickedAndIsOver = this.clickWasWithinBounds(pos, part.bounds);
+        }
       }
       return this.onMouseMove(event, pos, node) ?? true;
     }
@@ -172,7 +217,7 @@ export abstract class RgthreeBaseWidget<T> implements IWidget<T, any> {
   }
 
   /** An event that fires when the pointer is pressed down (once). */
-  onMouseDown(event: AdjustedMouseEvent, pos: Vector2, node: LGraphNode): boolean | void {
+  onMouseDown(event: CanvasPointerEvent, pos: Vector2, node: LGraphNode): boolean | void {
     return;
   }
 
@@ -180,7 +225,15 @@ export abstract class RgthreeBaseWidget<T> implements IWidget<T, any> {
    * An event that fires when the pointer is let go. Only fires if this was the widget that was
    * originally pressed down.
    */
-  onMouseUp(event: AdjustedMouseEvent, pos: Vector2, node: LGraphNode): boolean | void {
+  onMouseUp(event: CanvasPointerEvent, pos: Vector2, node: LGraphNode): boolean | void {
+    return;
+  }
+
+  /**
+   * An event that fires when the pointer is let go _over the widget_ and when the widget that was
+   * originally pressed down.
+   */
+  onMouseClick(event: CanvasPointerEvent, pos: Vector2, node: LGraphNode): boolean | void {
     return;
   }
 
@@ -189,7 +242,7 @@ export abstract class RgthreeBaseWidget<T> implements IWidget<T, any> {
    * of the widget. Check `isMouseDownedAndOver` to determine if the mouse is currently over the
    * widget or not.
    */
-  onMouseMove(event: AdjustedMouseEvent, pos: Vector2, node: LGraphNode): boolean | void {
+  onMouseMove(event: CanvasPointerEvent, pos: Vector2, node: LGraphNode): boolean | void {
     return;
   }
 }
@@ -198,47 +251,61 @@ export abstract class RgthreeBaseWidget<T> implements IWidget<T, any> {
  * A better implementation of the LiteGraph button widget.
  */
 export class RgthreeBetterButtonWidget extends RgthreeBaseWidget<string> {
+  override readonly type = "custom";
+
   value: string = "";
-  mouseUpCallback: (event: AdjustedMouseEvent, pos: Vector2, node: LGraphNode) => boolean | void;
+  label: string = "";
+  mouseClickCallback: (event: CanvasPointerEvent, pos: Vector2, node: LGraphNode) => boolean | void;
 
   constructor(
     name: string,
-    mouseUpCallback: (event: AdjustedMouseEvent, pos: Vector2, node: LGraphNode) => boolean | void,
+    mouseClickCallback: (
+      event: CanvasPointerEvent,
+      pos: Vector2,
+      node: LGraphNode,
+    ) => boolean | void,
+    label?: string,
   ) {
     super(name);
-    this.mouseUpCallback = mouseUpCallback;
+    this.mouseClickCallback = mouseClickCallback;
+    this.label = label || name;
   }
 
   draw(ctx: CanvasRenderingContext2D, node: LGraphNode, width: number, y: number, height: number) {
-    drawWidgetButton({ctx, node, width, height, y}, this.name, this.isMouseDownedAndOver);
+    drawWidgetButton(
+      ctx,
+      {size: [width - 30, height], pos: [15, y]},
+      this.label,
+      this.isMouseDownedAndOver,
+    );
   }
 
-  override onMouseUp(event: AdjustedMouseEvent, pos: Vector2, node: LGraphNode) {
-    return this.mouseUpCallback(event, pos, node);
+  override onMouseClick(event: CanvasPointerEvent, pos: Vector2, node: LGraphNode) {
+    return this.mouseClickCallback(event, pos, node);
   }
 }
 
 /**
  * A better implementation of the LiteGraph text widget, including auto ellipsis.
  */
-export class RgthreeBetterTextWidget implements IWidget<string> {
-  name: string;
+export class RgthreeBetterTextWidget extends RgthreeBaseWidget<string> {
   value: string;
 
   constructor(name: string, value: string) {
+    super(name);
     this.name = name;
     this.value = value;
   }
 
   draw(ctx: CanvasRenderingContext2D, node: LGraphNode, width: number, y: number, height: number) {
-    const widgetData = drawNodeWidget(ctx, { width, height, posY: y });
+    const widgetData = drawNodeWidget(ctx, {size: [width, height], pos: [15, y]});
 
     if (!widgetData.lowQuality) {
       drawLabelAndValue(ctx, this.name, this.value, width, y, height);
     }
   }
 
-  mouse(event: MouseEvent, pos: Vector2, node: LGraphNode) {
+  override mouse(event: CanvasPointerEvent, pos: Vector2, node: LGraphNode): boolean {
     const canvas = app.canvas as TLGraphCanvas;
     if (event.type == "pointerdown") {
       canvas.prompt("Label", this.value, (v: string) => (this.value = v), event);
@@ -263,10 +330,10 @@ type RgthreeDividerWidgetOptions = {
 /**
  * A divider widget; can also be used as a spacer if fed a 0 thickness.
  */
-export class RgthreeDividerWidget implements IWidget<null> {
-  options = { serialize: false };
-  value = null;
-  name = "divider";
+export class RgthreeDividerWidget extends RgthreeBaseWidget<{}> {
+  override value = {};
+  override options = {serialize: false};
+  override readonly type = "custom";
 
   private readonly widgetOptions: RgthreeDividerWidgetOptions = {
     marginTop: 7,
@@ -278,6 +345,7 @@ export class RgthreeDividerWidget implements IWidget<null> {
   };
 
   constructor(widgetOptions?: Partial<RgthreeDividerWidgetOptions>) {
+    super("divider");
     Object.assign(this.widgetOptions, widgetOptions || {});
   }
 
@@ -307,25 +375,30 @@ export type RgthreeLabelWidgetOptions = {
   color?: string;
   italic?: boolean;
   size?: number;
+  text?: string | (() => string); // Text, or fall back to the name.
 
   /** A label to put on the right side. */
   actionLabel?: "__PLUS_ICON__" | string;
-  actionCallback?: (event: PointerEvent) => void;
+  actionCallback?: (event: PointerEvent | CanvasPointerEvent) => void;
 };
 
 /**
  * A simple label widget, drawn with no background.
  */
-export class RgthreeLabelWidget implements IWidget<null> {
-  options = { serialize: false };
-  value = null;
-  name: string;
+export class RgthreeLabelWidget extends RgthreeBaseWidget<string> {
+  override readonly type = "custom";
+  override options = {serialize: false};
+  value = "";
 
   private readonly widgetOptions: RgthreeLabelWidgetOptions = {};
   private posY: number = 0;
 
   constructor(name: string, widgetOptions?: RgthreeLabelWidgetOptions) {
-    this.name = name;
+    super(name);
+    Object.assign(this.widgetOptions, widgetOptions);
+  }
+
+  update(widgetOptions: RgthreeLabelWidgetOptions) {
     Object.assign(this.widgetOptions, widgetOptions);
   }
 
@@ -338,6 +411,11 @@ export class RgthreeLabelWidget implements IWidget<null> {
   ) {
     this.posY = posY;
     ctx.save();
+
+    let text = this.widgetOptions.text ?? this.name;
+    if (typeof text === "function") {
+      text = text();
+    }
 
     ctx.textAlign = this.widgetOptions.align || "left";
     ctx.fillStyle = this.widgetOptions.color || LiteGraph.WIDGET_TEXT_COLOR;
@@ -353,9 +431,9 @@ export class RgthreeLabelWidget implements IWidget<null> {
     ctx.textBaseline = "middle";
 
     if (this.widgetOptions.align === "center") {
-      ctx.fillText(this.name, node.size[0] / 2, midY);
+      ctx.fillText(text, node.size[0] / 2, midY);
     } else {
-      ctx.fillText(this.name, 15, midY);
+      ctx.fillText(text, 15, midY);
     } // TODO(right);
 
     ctx.font = oldFont;
@@ -374,7 +452,7 @@ export class RgthreeLabelWidget implements IWidget<null> {
     ctx.restore();
   }
 
-  mouse(event: PointerEvent, nodePos: Vector2, node: LGraphNode) {
+  override mouse(event: CanvasPointerEvent, nodePos: Vector2, node: LGraphNode): boolean {
     if (
       event.type !== "pointerdown" ||
       isLowQuality() ||
@@ -395,67 +473,34 @@ export class RgthreeLabelWidget implements IWidget<null> {
 }
 
 /** An invisible widget. */
-export class RgthreeInvisibleWidget<T> implements IWidget<T> {
-  name: string;
-  type: string;
-  value: T;
-  serializeValue: IWidget['serializeValue'] = undefined;
+export class RgthreeInvisibleWidget<T extends ICustomWidget["value"]> extends RgthreeBaseWidget<T> {
+  override readonly type = "custom";
 
-  constructor(name: string, type: string, value: T, serializeValueFn: ()=> T) {
-    this.name = name;
-    this.type = type;
+  value: NotArray<T>;
+  private serializeValueFn?: (node: LGraphNode, index: number) => Promise<T> | T;
+
+  constructor(
+    name: string,
+    type: string,
+    value: NotArray<T>,
+    serializeValueFn?: (node: LGraphNode, index: number) => Promise<T> | T,
+  ) {
+    super(name);
+    // this.type = type;
     this.value = value;
-    if (serializeValueFn) {
-      this.serializeValue = serializeValueFn
-    }
-  }
-  draw() { return; }
-  computeSize(width: number) : Vector2 { return [0, 0]; }
-}
-
-
-type DrawContext = {
-  ctx: CanvasRenderingContext2D,
-  node: LGraphNode,
-  width: number,
-  y: number,
-  height: number,
-}
-
-/**
- * Draws a better button.
- */
-export function drawWidgetButton(drawCtx: DrawContext, text: string, isMouseDownedAndOver: boolean = false) {
-  // First, add a shadow if we're not down or lowquality.
-  if (!isLowQuality() && !isMouseDownedAndOver) {
-    drawRoundedRectangle(drawCtx.ctx, {
-      width: drawCtx.width - 30 - 2,
-      height: drawCtx.height,
-      posY: drawCtx.y + 1,
-      posX: 15 + 1,
-      borderRadius: 4,
-      colorBackground: "#000000aa",
-      colorStroke: "#000000aa",
-    });
+    this.serializeValueFn = serializeValueFn;
   }
 
-  drawRoundedRectangle(drawCtx.ctx, {
-    width: drawCtx.width - 30,
-    height: drawCtx.height,
-    posY: drawCtx.y + (isMouseDownedAndOver ? 1 : 0),
-    posX: 15,
-    borderRadius: isLowQuality() ? 0 : 4,
-    colorBackground: isMouseDownedAndOver ? "#444" : LiteGraph.WIDGET_BGCOLOR,
-  });
+  draw() {
+    return;
+  }
+  computeSize(width: number): Vector2 {
+    return [0, 0];
+  }
 
-  if (!isLowQuality()) {
-    drawCtx.ctx.textBaseline = "middle";
-    drawCtx.ctx.textAlign = "center";
-    drawCtx.ctx.fillStyle = LiteGraph.WIDGET_TEXT_COLOR;
-    drawCtx.ctx.fillText(
-      text,
-      drawCtx.node.size[0] / 2,
-      drawCtx.y + drawCtx.height / 2 + (isMouseDownedAndOver ? 1 : 0),
-    );
+  override serializeValue(node: LGraphNode, index: number): T | Promise<T> {
+    return this.serializeValueFn != null
+      ? this.serializeValueFn(node, index)
+      : super.serializeValue(node, index);
   }
 }

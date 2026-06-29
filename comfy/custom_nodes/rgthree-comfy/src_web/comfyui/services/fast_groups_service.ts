@@ -1,11 +1,12 @@
-import { app } from "scripts/app.js";
-import type { BaseFastGroupsModeChanger } from "../fast_groups_muter.js";
-import {
-  type LGraph as TLGraph,
-  type LGraphCanvas as TLGraphCanvas,
-  LGraphGroup,
-  Vector4,
-} from "typings/litegraph.js";
+import type {LGraphGroup as TLGraphGroup} from "@comfyorg/frontend";
+import type {BaseFastGroupsModeChanger} from "../fast_groups_muter.js";
+
+import {app} from "scripts/app.js";
+import {getGraphDependantNodeKey, getGroupNodes, reduceNodesDepthFirst} from "../utils.js";
+
+type Vector4 = [number, number, number, number];
+
+
 
 /**
  * A service that keeps global state that can be shared by multiple FastGroupsMuter or
@@ -17,9 +18,9 @@ class FastGroupsService {
   private msLastAlpha = 0;
   private msLastPosition = 0;
 
-  private groupsUnsorted: LGraphGroup[] = [];
-  private groupsSortedAlpha: LGraphGroup[] = [];
-  private groupsSortedPosition: LGraphGroup[] = [];
+  private groupsUnsorted: TLGraphGroup[] = [];
+  private groupsSortedAlpha: TLGraphGroup[] = [];
+  private groupsSortedPosition: TLGraphGroup[] = [];
 
   private readonly fastGroupNodes: BaseFastGroupsModeChanger[] = [];
 
@@ -27,7 +28,7 @@ class FastGroupsService {
   private runScheduleTimeout: number | null = null;
   private runScheduleAnimation: number | null = null;
 
-  private cachedNodeBoundings: { [key: number]: Vector4 } | null = null;
+  private cachedNodeBoundings: {[key: string]: Vector4} | null = null;
 
   constructor() {
     // Don't need to do anything, wait until a signal.
@@ -94,10 +95,23 @@ class FastGroupsService {
    */
   getBoundingsForAllNodes() {
     if (!this.cachedNodeBoundings) {
-      this.cachedNodeBoundings = {};
-      for (const node of app.graph._nodes) {
-        this.cachedNodeBoundings[node.id] = node.getBounding();
-      }
+      this.cachedNodeBoundings = reduceNodesDepthFirst(
+        app.graph._nodes,
+        (node, acc) => {
+          let bounds = node.getBounding();
+          // If the bounds are zero'ed out, then we could be a subgraph that hasn't rendered yet and
+          // need to update them.
+          if (bounds[0] === 0 && bounds[1] === 0 && bounds[2] === 0 && bounds[3] === 0) {
+            const ctx = node.graph?.primaryCanvas?.canvas.getContext("2d");
+            if (ctx) {
+              node.updateArea(ctx);
+              bounds = node.getBounding();
+            }
+          }
+          acc[getGraphDependantNodeKey(node)] = bounds as Vector4;
+        },
+        {} as {[key: string]: Vector4},
+      );
       setTimeout(() => {
         this.cachedNodeBoundings = null;
       }, 50);
@@ -106,20 +120,38 @@ class FastGroupsService {
   }
 
   /**
-   * This overrides `LGraphGroup.prototype.recomputeInsideNodes` to be much more efficient when
+   * This overrides `TLGraphGroup.prototype.recomputeInsideNodes` to be much more efficient when
    * calculating for many groups at once (only compute all nodes once in `getBoundingsForAllNodes`).
    */
-  recomputeInsideNodesForGroup(group: LGraphGroup) {
+  recomputeInsideNodesForGroup(group: TLGraphGroup) {
+    // If the canvas is currently being dragged (includes if a group is being dragged around) then
+    // don't recompute anything.
+    if (app.canvas.isDragging) return;
     const cachedBoundings = this.getBoundingsForAllNodes();
-    const nodes = group.graph._nodes;
-    group._nodes.length = 0;
+    const nodes = group.graph!.nodes;
+    group._children.clear();
+    group.nodes.length = 0;
 
     for (const node of nodes) {
-      const node_bounding = cachedBoundings[node.id];
-      if (!node_bounding || !LiteGraph.overlapBounding(group._bounding, node_bounding)) {
-        continue;
+      const nodeBounding = cachedBoundings[getGraphDependantNodeKey(node)];
+      const nodeCenter =
+        nodeBounding &&
+        ([nodeBounding[0] + nodeBounding[2] * 0.5, nodeBounding[1] + nodeBounding[3] * 0.5] as [
+          number,
+          number,
+        ]);
+      if (nodeCenter) {
+        const grouBounds = group._bounding as unknown as [number, number, number, number];
+        if (
+          nodeCenter[0] >= grouBounds[0] &&
+          nodeCenter[0] < grouBounds[0] + grouBounds[2] &&
+          nodeCenter[1] >= grouBounds[1] &&
+          nodeCenter[1] < grouBounds[1] + grouBounds[3]
+        ) {
+          group._children.add(node);
+          group.nodes.push(node);
+        }
       }
-      group._nodes.push(node);
     }
   }
 
@@ -129,18 +161,24 @@ class FastGroupsService {
    * each time). So, we'll do our own dang thing, once.
    */
   private getGroupsUnsorted(now: number) {
-    const canvas = app.canvas as TLGraphCanvas;
-    const graph = app.graph as TLGraph;
+    const canvas = app.canvas;
+    const graph = canvas.getCurrentGraph() ?? app.graph;
 
     if (
       // Don't recalculate nodes if we're moving a group (added by ComfyUI in app.js)
+      // TODO: This doesn't look available anymore... ?
       !canvas.selected_group_moving &&
       (!this.groupsUnsorted.length || now - this.msLastUnsorted > this.msThreshold)
     ) {
       this.groupsUnsorted = [...graph._groups];
+      const subgraphs = graph.subgraphs?.values();
+      if (subgraphs) {
+        let s;
+        while ((s = subgraphs.next().value)) this.groupsUnsorted.push(...(s.groups ?? []));
+      }
       for (const group of this.groupsUnsorted) {
         this.recomputeInsideNodesForGroup(group);
-        (group as any)._rgthreeHasAnyActiveNode = group._nodes.some(
+        group.rgthree_hasAnyActiveNode = getGroupNodes(group).some(
           (n) => n.mode === LiteGraph.ALWAYS,
         );
       }
@@ -150,7 +188,6 @@ class FastGroupsService {
   }
 
   private getGroupsAlpha(now: number) {
-    const graph = app.graph as TLGraph;
     if (!this.groupsSortedAlpha.length || now - this.msLastAlpha > this.msThreshold) {
       this.groupsSortedAlpha = [...this.getGroupsUnsorted(now)].sort((a, b) => {
         return a.title.localeCompare(b.title);
@@ -161,7 +198,6 @@ class FastGroupsService {
   }
 
   private getGroupsPosition(now: number) {
-    const graph = app.graph as TLGraph;
     if (!this.groupsSortedPosition.length || now - this.msLastPosition > this.msThreshold) {
       this.groupsSortedPosition = [...this.getGroupsUnsorted(now)].sort((a, b) => {
         // Sort by y, then x, clamped to 30.

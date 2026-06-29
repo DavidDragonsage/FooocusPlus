@@ -1,6 +1,6 @@
-import { app } from "scripts/app.js";
+import {app} from "scripts/app.js";
 import { RgthreeDialog, RgthreeDialogOptions } from "rgthree/common/dialog.js";
-import { createElement as $el, query as $$ } from "rgthree/common/utils_dom.js";
+import { createElement as $el, queryAll as $$ } from "rgthree/common/utils_dom.js";
 import { checkmark, logoRgthree } from "rgthree/common/media/svgs.js";
 import { LogLevel, rgthree } from "./rgthree.js";
 import { SERVICE as CONFIG_SERVICE } from "./services/config_service.js";
@@ -12,6 +12,11 @@ enum ConfigType {
   STRING,
   NUMBER,
   ARRAY,
+}
+
+enum ConfigInputType {
+  UNKNOWN,
+  CHECKLIST, // Which is a multiselect array.
 }
 
 const TYPE_TO_STRING = {
@@ -26,6 +31,7 @@ type ConfigurationSchema = {
   key: string;
   type: ConfigType;
   label: string;
+  inputType?: ConfigInputType,
   options?: string[] | number[] | ConfigurationSchemaOption[];
   description?: string;
   subconfig?: ConfigurationSchema[];
@@ -40,14 +46,6 @@ type ConfigurationSchemaOption = { value: any; label: string };
  */
 const CONFIGURABLE: { [key: string]: ConfigurationSchema[] } = {
   features: [
-    {
-      key: "features.patch_recursive_execution",
-      type: ConfigType.BOOLEAN,
-      label: "Optimize ComfyUI's Execution",
-      description:
-        "Patches ComfyUI's backend execution making complex workflows 1000's of times faster." +
-        "<br>⚠️ Disable if execution seems broken due to forward ComfyUI changes.",
-    },
     {
       key: "features.progress_bar.enabled",
       type: ConfigType.BOOLEAN,
@@ -122,16 +120,17 @@ const CONFIGURABLE: { [key: string]: ConfigurationSchema[] } = {
       key: "features.group_header_fast_toggle.enabled",
       type: ConfigType.BOOLEAN,
       label: "Show fast toggles in Group Headers",
-      description: "Show quick toggles in Groups' Headers to quickly mute and/or bypass.",
+      description: "Show quick toggles in Groups' Headers to quickly mute, bypass or queue.",
       subconfig: [
         {
           key: "features.group_header_fast_toggle.toggles",
           type: ConfigType.ARRAY,
           label: "Which toggles to show.",
+          inputType: ConfigInputType.CHECKLIST,
           options: [
-            { value: ["mute"], label: "mute only" },
-            { value: ["bypass"], label: "bypass only" },
-            { value: ["mute", "bypass"], label: "mute and bypass" },
+            { value: "queue", label: "queue" },
+            { value: "bypass", label: "bypass" },
+            { value: "mute", label: "mute" },
           ],
         },
         {
@@ -144,6 +143,14 @@ const CONFIGURABLE: { [key: string]: ConfigurationSchema[] } = {
           ],
         },
       ],
+    },
+  ],
+  power_lora_loader: [
+    {
+      key: "nodes.power_lora_loader.show_info_badge",
+      type: ConfigType.BOOLEAN,
+      label: "Show info badge/button",
+      description: "Show an info badge/button on each lora row to signal and open lora details.",
     },
   ],
   advanced: [
@@ -207,18 +214,42 @@ function fieldrow(item: ConfigurationSchema) {
 
   let input;
   if (item.options?.length) {
-    input = $el<HTMLSelectElement>(`select[id="${item.key}"]`, {
-      parent: container,
-      children: item.options.map((o) => {
-        const label = (o as ConfigurationSchemaOption).label || String(o);
-        const value = (o as ConfigurationSchemaOption).value || o;
-        const valueSerialized = JSON.stringify({ value: value });
-        return $el<HTMLOptionElement>(`option[value="${valueSerialized}"]`, {
-          text: label,
-          selected: valueSerialized === JSON.stringify({ value: initialValue }),
-        });
-      }),
-    });
+    if (item.inputType === ConfigInputType.CHECKLIST) {
+      const initialValueList = initialValue || [];
+      input = $el<HTMLSelectElement>(`fieldset.rgthree-checklist-group[id="${item.key}"]`, {
+        parent: container,
+        children: item.options.map((o) => {
+          const label = (o as ConfigurationSchemaOption).label || String(o);
+          const value = (o as ConfigurationSchemaOption).value || o;
+          const id = `${item.key}_${value}`;
+          return $el<HTMLSpanElement>(`span.rgthree-checklist-item`, {
+            children: [
+              $el<HTMLInputElement>(`input[type="checkbox"][value="${value}"]`, {
+                id,
+                checked: initialValueList.includes(value),
+              }),
+              $el<HTMLInputElement>(`label`, {
+                for: id,
+                text: label,
+              })
+            ]
+          });
+        }),
+      });
+    } else {
+      input = $el<HTMLSelectElement>(`select[id="${item.key}"]`, {
+        parent: container,
+        children: item.options.map((o) => {
+          const label = (o as ConfigurationSchemaOption).label || String(o);
+          const value = (o as ConfigurationSchemaOption).value || o;
+          const valueSerialized = JSON.stringify({ value: value });
+          return $el<HTMLOptionElement>(`option[value="${valueSerialized}"]`, {
+            text: label,
+            selected: valueSerialized === JSON.stringify({ value: initialValue }),
+          });
+        }),
+      });
+    }
   } else if (item.type === ConfigType.BOOLEAN) {
     container.classList.toggle("-checked", !!initialValue);
     input = $el<HTMLInputElement>(`input[type="checkbox"][id="${item.key}"]`, {
@@ -245,6 +276,7 @@ export class RgthreeConfigDialog extends RgthreeDialog {
     content.appendChild(RgthreeConfigDialog.buildFieldset(CONFIGURABLE["features"]!, "Features"));
     content.appendChild(RgthreeConfigDialog.buildFieldset(CONFIGURABLE["menus"]!, "Menus"));
     content.appendChild(RgthreeConfigDialog.buildFieldset(CONFIGURABLE["groups"]!, "Groups"));
+    content.appendChild(RgthreeConfigDialog.buildFieldset(CONFIGURABLE["power_lora_loader"]!, "Power Lora Loader"));
     content.appendChild(RgthreeConfigDialog.buildFieldset(CONFIGURABLE["advanced"]!, "Advanced"));
 
     content.addEventListener("input", (e) => {
@@ -329,7 +361,7 @@ export class RgthreeConfigDialog extends RgthreeDialog {
       const name = el.dataset["name"]!;
       const type = el.dataset["type"]!;
       const initialValue = CONFIG_SERVICE.getConfigValue(name);
-      let currentValueEl = $$("input, textarea, select", el)[0] as HTMLInputElement;
+      let currentValueEl = $$("fieldset.rgthree-checklist-group, input, textarea, select", el)[0] as HTMLInputElement;
       let currentValue: any = null;
       if (type === String(ConfigType.BOOLEAN)) {
         currentValue = currentValueEl.checked;
@@ -339,6 +371,13 @@ export class RgthreeConfigDialog extends RgthreeDialog {
         currentValue = currentValueEl?.value;
         if (currentValueEl.nodeName === "SELECT") {
           currentValue = JSON.parse(currentValue).value;
+        } else if (currentValueEl.classList.contains('rgthree-checklist-group')) {
+          currentValue = [];
+          for (const check of $$<HTMLInputElement>('input[type="checkbox"]', currentValueEl)) {
+            if (check.checked) {
+              currentValue.push(check.value);
+            }
+          }
         } else if (type === String(ConfigType.NUMBER)) {
           currentValue = Number(currentValue) || initialValue;
         }
@@ -353,6 +392,7 @@ export class RgthreeConfigDialog extends RgthreeDialog {
 
 app.ui.settings.addSetting({
   id: "rgthree.config",
+  defaultValue: null,
   name: "Open rgthree-comfy config",
   type: () => {
     // Adds a row to open the dialog from the ComfyUI settings.

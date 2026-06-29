@@ -17,6 +17,7 @@
 """
 
 import torch
+import logging
 from . import model_base
 from . import utils
 from . import latent_formats
@@ -49,6 +50,8 @@ class BASE:
 
     manual_cast_dtype = None
     custom_operations = None
+    quant_config = None  # quantization configuration for mixed precision
+    optimizations = {"fp8": False}
 
     @classmethod
     def matches(s, unet_config, state_dict=None):
@@ -71,6 +74,7 @@ class BASE:
         self.unet_config = unet_config.copy()
         self.sampling_settings = self.sampling_settings.copy()
         self.latent_format = self.latent_format()
+        self.optimizations = self.optimizations.copy()
         for x in self.unet_extra_config:
             self.unet_config[x] = self.unet_extra_config[x]
 
@@ -114,3 +118,7 @@ class BASE:
     def set_inference_dtype(self, dtype, manual_cast_dtype):
         self.unet_config['dtype'] = dtype
         self.manual_cast_dtype = manual_cast_dtype
+
+    def __getattr__(self, name):
+        logging.warning("\nWARNING, you accessed {} from the model config object which doesn't exist. Please fix your code.\n".format(name))
+        return None

@@ -1,3 +1,7 @@
+import datetime
+import time
+from .pyproject import NAME
+
 # https://stackoverflow.com/questions/4842424/list-of-ansi-color-escape-sequences
 # https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit
 COLORS = {
@@ -18,7 +22,7 @@ COLORS = {
   'BRIGHT_CYAN': '\33[96m',
   'BRIGHT_WHITE': '\33[97m',
   # Styles.
-  'RESET': '\33[00m',
+  'RESET': '\33[0m',  # Note, Portainer doesn't like 00 here, so we'll use 0. Should be fine...
   'BOLD': '\33[01m',
   'NORMAL': '\33[22m',
   'ITALIC': '\33[03m',
@@ -56,6 +60,11 @@ def log_node_info(node_name, message, msg_color='RESET'):
   _log_node("CYAN", node_name, message, msg_color=msg_color)
 
 
+def log_node_error(node_name, message, msg_color='RESET'):
+  """Logs an info message."""
+  _log_node("RED", node_name, message, msg_color=msg_color)
+
+
 def log_node_warn(node_name, message, msg_color='RESET'):
   """Logs an warn message."""
   _log_node("YELLOW", node_name, message, msg_color=msg_color)
@@ -70,12 +79,22 @@ def _log_node(color, node_name, message, msg_color='RESET'):
   """Logs for a node message."""
   log(message, color=color, prefix=node_name.replace(" (rgthree)", ""), msg_color=msg_color)
 
+LOGGED = {}
 
-def log(message, color=None, msg_color=None, prefix=None):
+def log(message, color=None, msg_color=None, prefix=None, id=None, at_most_secs=None):
   """Basic logging."""
+  now = int(time.time())
+  if id:
+    if at_most_secs is None:
+      raise ValueError('at_most_secs should be set if an id is set.')
+    if id in LOGGED:
+      last_logged = LOGGED[id]
+      if now < last_logged + at_most_secs:
+        return
+    LOGGED[id] = now
   color = COLORS[color] if color is not None and color in COLORS else COLORS["BRIGHT_GREEN"]
   msg_color = COLORS[msg_color] if msg_color is not None and msg_color in COLORS else ''
   prefix = f'[{prefix}]' if prefix is not None else ''
-  msg = f'{color}[rgthree]{prefix}'
+  msg = f'{color}[{NAME}]{prefix}'
   msg += f'{msg_color} {message}{COLORS["RESET"]}'
   print(msg)

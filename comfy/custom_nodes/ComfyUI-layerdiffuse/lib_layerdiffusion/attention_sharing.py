@@ -4,8 +4,9 @@ import functools
 import torch
 import einops
 
-from comfy import model_management, utils
+from comfy import model_management
 from comfy.ldm.modules.attention import optimized_attention
+from comfy.model_patcher import ModelPatcher
 
 
 module_mapping_sd15 = {
@@ -325,19 +326,18 @@ class HookerLayers(torch.nn.Module):
 
 
 class AttentionSharingPatcher(torch.nn.Module):
-    def __init__(self, unet, frames=2, use_control=True, rank=256):
+    def __init__(self, unet: ModelPatcher, frames=2, use_control=True, rank=256):
         super().__init__()
-        model_management.unload_model_clones(unet)
 
         units = []
         for i in range(32):
-            real_key = module_mapping_sd15[i]
-            attn_module = utils.get_attr(unet.model.diffusion_model, real_key)
+            key = "diffusion_model." + module_mapping_sd15[i]
+            attn_module = unet.get_model_object(key)
             u = AttentionSharingUnit(
                 attn_module, frames=frames, use_control=use_control, rank=rank
             )
             units.append(u)
-            unet.add_object_patch("diffusion_model." + real_key, u)
+            unet.add_object_patch(key, u)
 
         self.hookers = HookerLayers(units)
 

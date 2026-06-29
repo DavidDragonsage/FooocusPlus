@@ -1,7 +1,10 @@
-import { tryToGetWorkflowDataFromEvent } from "rgthree/common/utils_workflow.js";
-import { app } from "scripts/app.js";
-import type { ComfyNode, ComfyNodeConstructor, ComfyObjectInfo } from "typings/comfy.js";
-import { SERVICE as CONFIG_SERVICE } from "./services/config_service.js";
+import type {INodeSlot, LGraphNode, LGraphNodeConstructor} from "@comfyorg/frontend";
+import type {ComfyNodeDef} from "typings/comfy.js";
+
+import {app} from "scripts/app.js";
+import {tryToGetWorkflowDataFromEvent} from "rgthree/common/utils_workflow.js";
+import {SERVICE as CONFIG_SERVICE} from "./services/config_service.js";
+import {NodeTypesString} from "./constants.js";
 
 /**
  * Registers the GroupHeaderToggles which places a mute and/or bypass icons in groups headers for
@@ -9,7 +12,7 @@ import { SERVICE as CONFIG_SERVICE } from "./services/config_service.js";
  */
 app.registerExtension({
   name: "rgthree.ImportIndividualNodes",
-  async beforeRegisterNodeDef(nodeType: ComfyNodeConstructor, nodeData: ComfyObjectInfo) {
+  async beforeRegisterNodeDef(nodeType: typeof LGraphNode, nodeData: ComfyNodeDef) {
     const onDragOver = nodeType.prototype.onDragOver;
     nodeType.prototype.onDragOver = function (e: DragEvent) {
       let handled = onDragOver?.apply?.(this, [...arguments] as any);
@@ -30,37 +33,53 @@ app.registerExtension({
   },
 });
 
-export function importIndividualNodesInnerOnDragOver(node: ComfyNode, e: DragEvent): boolean {
+export function importIndividualNodesInnerOnDragOver(node: LGraphNode, e: DragEvent): boolean {
   return (
     (node.widgets?.length && !!CONFIG_SERVICE.getFeatureValue("import_individual_nodes.enabled")) ||
     false
   );
 }
 
-export async function importIndividualNodesInnerOnDragDrop(node: ComfyNode, e: DragEvent) {
+export async function importIndividualNodesInnerOnDragDrop(node: LGraphNode, e: DragEvent) {
   if (!node.widgets?.length || !CONFIG_SERVICE.getFeatureValue("import_individual_nodes.enabled")) {
     return false;
   }
 
+  const dynamicWidgetLengthNodes = [NodeTypesString.POWER_LORA_LOADER];
+
   let handled = false;
-  const { workflow, prompt } = await tryToGetWorkflowDataFromEvent(e);
-  if (!handled && workflow) {
-    const exact = (workflow.nodes || []).find((n) => n.id === node.id && n.type === node.type);
-    if (
-      exact &&
-      exact.widgets_values?.length &&
-      confirm(
-        "Found a node match from embedded workflow (same id & type) in this workflow. Would you like to set the widget values?",
-      )
-    ) {
-      node.configure({ widgets_values: [...(exact?.widgets_values || [])] } as any);
-      handled = true;
-    }
-  }
-  if (!handled) {
+  const {workflow, prompt} = await tryToGetWorkflowDataFromEvent(e);
+  const exact = (workflow?.nodes || []).find(
+    (n: any) =>
+      n.id === node.id &&
+      n.type === node.type &&
+      (dynamicWidgetLengthNodes.includes(node.type) ||
+        n.widgets_values?.length === node.widgets_values?.length),
+  );
+  if (!exact) {
+    // If we tried, but didn't find an exact match, then allow user to stop the default behavior.
     handled = !confirm(
-      "No exact match found in workflow. Would you like to replace the whole workflow?",
+      "[rgthree-comfy] Could not find a matching node (same id & type) in the dropped workflow." +
+        " Would you like to continue with the default drop behaviour instead?",
     );
+  } else if (!exact.widgets_values?.length) {
+    handled = !confirm(
+      "[rgthree-comfy] Matching node found (same id & type) but there's no widgets to set." +
+        " Would you like to continue with the default drop behaviour instead?",
+    );
+  } else if (
+    confirm(
+      "[rgthree-comfy] Found a matching node (same id & type) in the dropped workflow." +
+        " Would you like to set the widget values?",
+    )
+  ) {
+    node.configure({
+      // Title is overridden if it's not supplied; set it to the current then.
+      title: node.title,
+      widgets_values: [...(exact?.widgets_values || [])],
+      mode: exact.mode,
+    } as any);
+    handled = true;
   }
   return handled;
 }

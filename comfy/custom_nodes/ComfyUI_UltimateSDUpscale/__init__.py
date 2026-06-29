@@ -1,5 +1,35 @@
+import logging
 import sys
 import os
+
+logger = logging.getLogger(__name__)
+
+# Check for original USDU script
+current_dir = os.path.dirname(os.path.realpath(__file__))
+repos_dir = os.path.join(current_dir, "repositories")
+usdu_dir = os.path.join(repos_dir, "ultimate_sd_upscale")
+if not len(os.listdir(usdu_dir)):
+    logger.info("Original USDU script not found, downloading it from https://github.com/Coyote-A/ultimate-upscale-for-automatic1111")
+    import urllib.request
+    import zipfile
+    import shutil
+
+    url = "https://github.com/Coyote-A/ultimate-upscale-for-automatic1111/archive/master.zip"
+    zip_path = os.path.join(current_dir, "usdu_temp.zip")
+
+    urllib.request.urlretrieve(url, zip_path)
+
+    with zipfile.ZipFile(zip_path, "r") as zip_ref:
+        top_folder = zip_ref.namelist()[0].split('/')[0] + '/'
+        for member in zip_ref.namelist():
+            if member.startswith(top_folder) and not member.endswith('/'):
+                target_path = os.path.join(usdu_dir, member[len(top_folder):])
+                os.makedirs(os.path.dirname(target := os.path.join(usdu_dir, member[len(top_folder):])), exist_ok=True)
+                with zip_ref.open(member) as source, open(target, 'wb') as target_file:
+                    shutil.copyfileobj(fsrc=zip_ref.open(member), fdst=target_file)
+
+    os.remove(zip_path)
+    logger.info("Original USDU script downloaded successfully")
 
 # Remove other custom_node paths from sys.path to avoid conflicts
 custom_node_paths = [path for path in sys.path if "custom_node" in path]
@@ -29,7 +59,9 @@ for module in modules_used:
         original_imported_modules[module] = sys.modules.pop(module)
 
 # Proceed with node setup
-from .nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
+from .usdu_nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
+
+WEB_DIRECTORY = "./js"
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]
 
 # Clean up imports

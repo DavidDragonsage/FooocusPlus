@@ -467,16 +467,19 @@ def reset_layout_params(
     default_model = preset_prepared.get('base_model')
     previous_default_models = preset_prepared.get('previous_default_models', [])
     checkpoint_downloads = preset_prepared.get('checkpoint_downloads', {})
+
     embeddings_downloads = preset_prepared.get('embeddings_downloads', {})
     lora_downloads = preset_prepared.get('lora_downloads', {})
     vae_downloads = preset_prepared.get('vae_downloads', {})
+    # New: Extract the text encoder downloads
+    clip_downloads = preset_prepared.get('clip_downloads', {})
 
     state_params.update({"__prompt": prompt})
     state_params.update({"__negative_prompt": negative_prompt})
 
     model_dtype = preset_prepared.get('engine', {}).get('backend_params', {}).get('base_model_dtype', '')
 
-    download_models(default_model, previous_default_models, checkpoint_downloads, embeddings_downloads, lora_downloads, vae_downloads)
+    download_models(default_model, previous_default_models, checkpoint_downloads, embeddings_downloads, lora_downloads, vae_downloads, clip_downloads)
 
     preset_url = preset_prepared.get('reference', get_preset_inc_url(preset))
     state_params.update({"__preset_url":preset_url})
@@ -502,7 +505,7 @@ def reset_layout_params(
     return results
 
 
-def download_models(default_model, previous_default_models, checkpoint_downloads, embeddings_downloads, lora_downloads, vae_downloads):
+def download_models(default_model, previous_default_models, checkpoint_downloads, embeddings_downloads, lora_downloads, vae_downloads, clip_downloads=None):
     if args.disable_preset_download:
         interpret('[UI Support] Skipped model download')
         return default_model, checkpoint_downloads
@@ -528,6 +531,12 @@ def download_models(default_model, previous_default_models, checkpoint_downloads
         load_file_from_url(url=url, model_dir=model_dir, file_name=os.path.basename(file_name))
     for file_name, url in vae_downloads.items():
         load_file_from_url(url=url, model_dir=config.path_vae, file_name=file_name)
+    # New: Auto-download text encoders into
+    # UserDir/models/clip/
+    if clip_downloads:
+        for file_name, url in clip_downloads.items():
+            load_file_from_url(url=url, model_dir=config.path_clip, file_name=file_name)
+
     return default_model, checkpoint_downloads
 
 

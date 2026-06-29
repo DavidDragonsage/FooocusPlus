@@ -1,19 +1,17 @@
-import { app } from "scripts/app.js";
-import { ComfyWidgets } from "scripts/widgets.js";
-import type { LGraphNode as TLGraphNode } from "typings/litegraph.js";
-import type { ComfyApp, ComfyNodeConstructor, ComfyObjectInfo } from "typings/comfy.js";
-import { addConnectionLayoutSupport } from "./utils.js";
-import { rgthree } from "./rgthree.js";
+import type {LGraphNodeConstructor, LGraphNode as TLGraphNode} from "@comfyorg/frontend";
+import type {ComfyNodeDef} from "typings/comfy.js";
+import type {ComfyApp} from "@comfyorg/frontend";
+
+import {app} from "scripts/app.js";
+import {ComfyWidgets} from "scripts/widgets.js";
+import {addConnectionLayoutSupport} from "./utils.js";
+import {rgthree} from "./rgthree.js";
 
 let hasShownAlertForUpdatingInt = false;
 
 app.registerExtension({
   name: "rgthree.DisplayAny",
-  async beforeRegisterNodeDef(
-    nodeType: ComfyNodeConstructor,
-    nodeData: ComfyObjectInfo,
-    app: ComfyApp,
-  ) {
+  async beforeRegisterNodeDef(nodeType: typeof LGraphNode, nodeData: ComfyNodeDef, app: ComfyApp) {
     if (nodeData.name === "Display Any (rgthree)" || nodeData.name === "Display Int (rgthree)") {
       const onNodeCreated = nodeType.prototype.onNodeCreated;
       nodeType.prototype.onNodeCreated = function () {
@@ -22,7 +20,7 @@ app.registerExtension({
         (this as any).showValueWidget = ComfyWidgets["STRING"](
           this,
           "output",
-          ["STRING", { multiline: true }],
+          ["STRING", {multiline: true}],
           app,
         ).widget;
         (this as any).showValueWidget.inputEl!.readOnly = true;
@@ -43,7 +41,7 @@ app.registerExtension({
         };
       };
 
-      addConnectionLayoutSupport(nodeType, app, [["Left"], ["Right"]]);
+      addConnectionLayoutSupport(nodeType as LGraphNodeConstructor, app, [["Left"], ["Right"]]);
 
       const onExecuted = nodeType.prototype.onExecuted;
       nodeType.prototype.onExecuted = function (message: any) {

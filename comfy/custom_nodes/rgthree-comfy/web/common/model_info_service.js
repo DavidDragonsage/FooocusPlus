@@ -1,53 +1,72 @@
 import { rgthreeApi } from "./rgthree_api.js";
 import { api } from "../../scripts/api.js";
-class ModelInfoService extends EventTarget {
+class BaseModelInfoService extends EventTarget {
     constructor() {
         super();
-        this.loraToInfo = new Map();
-        api.addEventListener("rgthree-refreshed-lora-info", this.handleLoraAsyncUpdate.bind(this));
+        this.fileToInfo = new Map();
+        this.init();
     }
-    setFreshLoraData(file, info) {
-        this.loraToInfo.set(file, info);
-        this.dispatchEvent(new CustomEvent("rgthree-model-service-lora-details", { detail: { lora: info } }));
+    init() {
+        api.addEventListener(this.apiRefreshEventString, this.handleAsyncUpdate.bind(this));
     }
-    async getLora(file, refresh = false, light = false) {
-        if (this.loraToInfo.has(file) && !refresh) {
-            return this.loraToInfo.get(file);
+    async getInfo(file, refresh, light) {
+        if (this.fileToInfo.has(file) && !refresh) {
+            return this.fileToInfo.get(file);
         }
-        return this.fetchLora(file, refresh, light);
+        return this.fetchInfo(file, refresh, light);
     }
-    async fetchLora(file, refresh = false, light = false) {
-        let info = null;
-        if (!refresh) {
-            info = await rgthreeApi.getLorasInfo(file, light);
-        }
-        else {
-            info = await rgthreeApi.refreshLorasInfo(file);
-        }
-        if (!light) {
-            this.loraToInfo.set(file, info);
-        }
-        return info;
+    async refreshInfo(file) {
+        return this.fetchInfo(file, true);
     }
-    async refreshLora(file) {
-        return this.fetchLora(file, true);
-    }
-    async clearLoraFetchedData(file) {
-        await rgthreeApi.clearLorasInfo(file);
-        this.loraToInfo.delete(file);
+    async clearFetchedInfo(file) {
+        await rgthreeApi.clearModelsInfo({ type: this.modelInfoType, files: [file] });
+        this.fileToInfo.delete(file);
         return null;
     }
-    async saveLoraPartial(file, data) {
-        let info = await rgthreeApi.saveLoraInfo(file, data);
-        this.loraToInfo.set(file, info);
+    async savePartialInfo(file, data) {
+        let info = await rgthreeApi.saveModelInfo(this.modelInfoType, file, data);
+        this.fileToInfo.set(file, info);
         return info;
     }
-    handleLoraAsyncUpdate(event) {
+    handleAsyncUpdate(event) {
         var _a;
         const info = (_a = event.detail) === null || _a === void 0 ? void 0 : _a.data;
         if (info === null || info === void 0 ? void 0 : info.file) {
-            this.setFreshLoraData(info.file, info);
+            this.setFreshInfo(info.file, info);
         }
     }
+    async fetchInfo(file, refresh = false, light = false) {
+        var _a;
+        let info = null;
+        if (!refresh) {
+            info = await rgthreeApi.getModelsInfo({ type: this.modelInfoType, files: [file], light });
+        }
+        else {
+            info = await rgthreeApi.refreshModelsInfo({ type: this.modelInfoType, files: [file] });
+        }
+        info = (_a = info === null || info === void 0 ? void 0 : info[0]) !== null && _a !== void 0 ? _a : null;
+        if (!light) {
+            this.fileToInfo.set(file, info);
+        }
+        return info;
+    }
+    setFreshInfo(file, info) {
+        this.fileToInfo.set(file, info);
+    }
 }
-export const SERVICE = new ModelInfoService();
+class LoraInfoService extends BaseModelInfoService {
+    constructor() {
+        super(...arguments);
+        this.apiRefreshEventString = "rgthree-refreshed-loras-info";
+        this.modelInfoType = 'loras';
+    }
+}
+class CheckpointInfoService extends BaseModelInfoService {
+    constructor() {
+        super(...arguments);
+        this.apiRefreshEventString = "rgthree-refreshed-checkpoints-info";
+        this.modelInfoType = 'checkpoints';
+    }
+}
+export const LORA_INFO_SERVICE = new LoraInfoService();
+export const CHECKPOINT_INFO_SERVICE = new CheckpointInfoService();

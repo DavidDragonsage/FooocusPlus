@@ -1,7 +1,6 @@
 __version__ = "1.0.0"
 
-from .modeling_bert import (BertConfig, BertModel,
-                       load_tf_weights_in_bert)
+from .modeling_bert import (BertConfig, BertModel)
 
 from .modeling_graphormer import Graphormer
 

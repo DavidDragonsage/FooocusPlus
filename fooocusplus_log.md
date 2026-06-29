@@ -1,3 +1,48 @@
+# 1.1.2 Comfy Upgrade & Z-Image Turbo Support
+
+* upgraded Comfy from 1dba801 to 0.26.0
+* introduced Z-Image Turbo DIT support
+  * the preset & workflow are from Thomas Gaud (modified)
+  * the ZI-TurboDIT preset is in the Alternative category
+* Comfy Node Maintenance Report:
+  * Removed AIGODLIKE-COMFYUI-TRANSLATION
+  * Removed ComfyUI-SUPIR
+  * Removed ComfyUI_bnb_nf4_fp4_Loaders
+  * Removed simpleai-seamless-tiled
+  * Updated comfyui_controlnet_aux-main
+  * Updated ComfyUI_UltimateSDUpscale
+  * Updated ComfyUI-Advanced-ControlNet
+  * Updated ComfyUI-Easy-Use
+  * Updated ComfyUI-GGUF
+  * Update ComfyUI-IC-Light
+  * Updated ComfyUI-KJNodes
+  * Updated ComfyUI-layerdiffuse
+  * Updated rgthree-comfy
+  * Added comfyui-cache-dit
+* Comfy Workflow Maintenance Report:
+  * Removed flux_base_nf4
+  * Removed flux_base_nf4_2
+  * Removed seamlesstiled
+  * Added ZIT_SIMPLE_DIT
+  * Renamed ZIT_SIMPLE_DIT to ZIT_DIT_TG
+  * Renamed SD_SIMPLE to sd15_TG
+* updated requirements_version.txt for Comfy
+  * but omitted PyOpenGL & glfw for 3-D modeling
+* added comfy_patch for compatibility with FooocusPlus
+* removed PyTorchLightning & Fabric which are now redundant
+* Comfy does not support bnb-nf4 Flux models
+  * replaced their presets with FP8 versions
+  * also introduced the Flux1Diverse FP8 preset
+* removed the unsupported Comfy TileJuggXI Tiling preset
+* introduced native tiling, applicable to any SDXL model
+  * enable from the Advanced tab Image Control accordion
+* upgraded IC-Light to the latest version
+* added clip_download support throughout the repo.
+* improved startup logic for newly released versions
+* Hotfix0
+<br/><br/>
+
+
 # 1.1.1 IMPORTANT: Click "Check Performance" under the Extras tab!
 
 * introduced full support for Blackwell 50xx GPUs
@@ -82,7 +127,7 @@
   * Image Prompt
   * Inpainting
   * Outpainting
-  * Upscale and Variation (UOV)
+  * Upscale or Variation (UOV)
 * improved the Mix Image Prompt functions
 * Image Prompt now has a "Clear Image Prompts" selector
 * moved the ControlNet sliders to the Image Prompt section
@@ -102,7 +147,13 @@
   * the user config.txt setting may need to be adjusted
 * image buffers are no longer auto-cleared
   * this prevents "dead" images in Input Image modes
-* Hotfix0
+* Hotfix4: Eliminated a possible security issue with HyDiT
+  * rewrote the HunyuanDiT hydit_task.py module
+  * for Linux, set all requirements to specific versions
+* Hotfix3: Clarified Check Performance popup
+* Hotfix2: debugged Blackwell 50xx generation problem
+  * debugged divide-by-zero in Performance Metrics calculation
+* Hotfix1: Corrected updating error
 <br/><br/>
 
 

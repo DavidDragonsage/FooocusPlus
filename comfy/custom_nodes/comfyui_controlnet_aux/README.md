@@ -26,7 +26,7 @@ If you can't run **install.bat** (e.g. you are a Linux user). Open the CMD/Shell
   - Run `git clone https://github.com/Fannovel16/comfyui_controlnet_aux/`
   - Navigate to your `comfyui_controlnet_aux` folder
     - Portable/venv:
-       - Run `path/to/ComfUI/python_embedded/python.exe -s -m pip install -r requirements.txt`
+       - Run `path/to/ComfUI/python_embeded/python.exe -s -m pip install -r requirements.txt`
 	- With system python
 	   - Run `pip install -r requirements.txt`
   - Start ComfyUI
@@ -240,7 +240,7 @@ Note that if this is your first time using ComfyUI, please test if it can run on
 * diffusion_edge: Either [hr16/Diffusion-Edge/diffusion_edge_indoor.pt](https://huggingface.co/hr16/Diffusion-Edge/blob/main/diffusion_edge_indoor.pt), [hr16/Diffusion-Edge/diffusion_edge_urban.pt](https://huggingface.co/hr16/Diffusion-Edge/blob/main/diffusion_edge_urban.pt) or [hr16/Diffusion-Edge/diffusion_edge_natrual.pt](https://huggingface.co/hr16/Diffusion-Edge/blob/main/diffusion_edge_natrual.pt)
 * unimatch: Either [hr16/Unimatch/gmflow-scale2-regrefine6-mixdata.pth](https://huggingface.co/hr16/Unimatch/blob/main/gmflow-scale2-regrefine6-mixdata.pth), [hr16/Unimatch/gmflow-scale2-mixdata.pth](https://huggingface.co/hr16/Unimatch/blob/main/gmflow-scale2-mixdata.pth) or [hr16/Unimatch/gmflow-scale1-mixdata.pth](https://huggingface.co/hr16/Unimatch/blob/main/gmflow-scale1-mixdata.pth)
 * zoe_depth_anything: Either [LiheYoung/Depth-Anything/checkpoints_metric_depth/depth_anything_metric_depth_indoor.pt](https://huggingface.co/spaces/LiheYoung/Depth-Anything/blob/main/checkpoints_metric_depth/depth_anything_metric_depth_indoor.pt) or [LiheYoung/Depth-Anything/checkpoints_metric_depth/depth_anything_metric_depth_outdoor.pt](https://huggingface.co/spaces/LiheYoung/Depth-Anything/blob/main/checkpoints_metric_depth/depth_anything_metric_depth_outdoor.pt)
-# 1500 Stars 😄
+# 2000 Stars 😄
 <a href="https://star-history.com/#Fannovel16/comfyui_controlnet_aux&Date">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Fannovel16/comfyui_controlnet_aux&type=Date&theme=dark" />

@@ -2,10 +2,13 @@ import torch
 from torch import einsum
 import torch.nn.functional as F
 import math
+from typing_extensions import override
 
 from einops import rearrange, repeat
 from comfy.ldm.modules.attention import optimized_attention
 import comfy.samplers
+from comfy_api.latest import ComfyExtension, io
+
 
 # from comfy/ldm/modules/attention.py
 # but modified to return attention scores as well as output
@@ -57,12 +60,24 @@ def create_blur_map(x0, attn, sigma=3.0, threshold=1.0):
     attn = attn.reshape(b, -1, hw1, hw2)
     # Global Average Pool
     mask = attn.mean(1, keepdim=False).sum(1, keepdim=False) > threshold
-    ratio = 2**(math.ceil(math.sqrt(lh * lw / hw1)) - 1).bit_length()
-    mid_shape = [math.ceil(lh / ratio), math.ceil(lw / ratio)]
+
+    total = mask.shape[-1]
+    x = round(math.sqrt((lh / lw) * total))
+    xx = None
+    for i in range(0, math.floor(math.sqrt(total) / 2)):
+        for j in [(x + i), max(1, x - i)]:
+            if total % j == 0:
+                xx = j
+                break
+        if xx is not None:
+            break
+
+    x = xx
+    y = total // x
 
     # Reshape
     mask = (
-        mask.reshape(b, *mid_shape)
+        mask.reshape(b, x, y)
         .unsqueeze(1)
         .type(attn.dtype)
     )
@@ -92,19 +107,26 @@ def gaussian_blur_2d(img, kernel_size, sigma):
     img = F.conv2d(img, kernel2d, groups=img.shape[-3])
     return img
 
-class SelfAttentionGuidance:
+class SelfAttentionGuidance(io.ComfyNode):
     @classmethod
-    def INPUT_TYPES(s):
-        return {"required": { "model": ("MODEL",),
-                             "scale": ("FLOAT", {"default": 0.5, "min": -2.0, "max": 5.0, "step": 0.01}),
-                             "blur_sigma": ("FLOAT", {"default": 2.0, "min": 0.0, "max": 10.0, "step": 0.1}),
-                              }}
-    RETURN_TYPES = ("MODEL",)
-    FUNCTION = "patch"
+    def define_schema(cls):
+        return io.Schema(
+            node_id="SelfAttentionGuidance",
+            display_name="Self-Attention Guidance",
+            category="experimental",
+            inputs=[
+                io.Model.Input("model"),
+                io.Float.Input("scale", default=0.5, min=-2.0, max=5.0, step=0.01),
+                io.Float.Input("blur_sigma", default=2.0, min=0.0, max=10.0, step=0.1, advanced=True),
+            ],
+            outputs=[
+                io.Model.Output(),
+            ],
+            is_experimental=True,
+        )
 
-    CATEGORY = "_for_testing"
-
-    def patch(self, model, scale, blur_sigma):
+    @classmethod
+    def execute(cls, model, scale, blur_sigma):
         m = model.clone()
 
         attn_scores = None
@@ -158,12 +180,16 @@ class SelfAttentionGuidance:
         # unet.mid_block.attentions[0].transformer_blocks[0].attn1.patch
         m.set_model_attn1_replace(attn_and_record, "middle", 0, 0)
 
-        return (m, )
+        return io.NodeOutput(m)
 
-NODE_CLASS_MAPPINGS = {
-    "SelfAttentionGuidance": SelfAttentionGuidance,
-}
 
-NODE_DISPLAY_NAME_MAPPINGS = {
-    "SelfAttentionGuidance": "Self-Attention Guidance",
-}
+class SagExtension(ComfyExtension):
+    @override
+    async def get_node_list(self) -> list[type[io.ComfyNode]]:
+        return [
+            SelfAttentionGuidance,
+        ]
+
+
+async def comfy_entrypoint() -> SagExtension:
+    return SagExtension()

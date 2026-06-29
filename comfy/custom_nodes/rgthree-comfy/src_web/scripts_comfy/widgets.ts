@@ -1,19 +1,18 @@
-import type { LGraphNode } from "typings/litegraph.js";
-import type { ComfyApp, ComfyWidget } from "../typings/comfy.js";
+import type {ComfyApp, IStringWidget, IComboWidget, IWidget, LGraphNode} from "@comfyorg/frontend";
 
-type ComfyWidgetFn = (
+type ComfyWidgetFn<WidgetType extends IWidget> = (
   node: LGraphNode,
   inputName: string,
   inputData: any,
   app: ComfyApp,
-) => { widget: ComfyWidget };
+) => {widget: WidgetType};
 
 /**
  * A dummy ComfyWidgets that we can import from our code, which we'll rewrite later to the comfyui
  * hosted widgets.js
  */
 export declare const ComfyWidgets: {
-  COMBO: ComfyWidgetFn;
-  STRING: ComfyWidgetFn;
-  [key: string]: ComfyWidgetFn;
+  COMBO: ComfyWidgetFn<IComboWidget>;
+  STRING: ComfyWidgetFn<IStringWidget>;
+  [key: string]: ComfyWidgetFn<IWidget>;
 };

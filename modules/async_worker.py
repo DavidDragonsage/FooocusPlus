@@ -91,13 +91,18 @@ def build_image_type(async_task, base_type, update_global=True):
         inpaint_method = getattr(async_task, 'inpaint_mode', 'Inpaint Default: Blend')
         final_type = f'{inpaint_method} (Engine: {engine})'
 
-    # Append FreeU details if enabled in the frozen task
+    # Append FreeU details if enabled and not already present (Non-Duplication Guard)
     if getattr(async_task, 'freeu_enabled', False):
-        preset = getattr(async_task, 'freeu_preset_name', flags.DEFAULT_FREEU_KEY)
-        is_modified = getattr(async_task, 'freeu_modified', False)
-        mod_suffix = ", Modified" if is_modified else ""
-        # The extended type information is parenthetical:
-        final_type = f"{final_type} with FreeU ({preset}{mod_suffix})"
+        if 'with FreeU' not in final_type:
+            preset = getattr(async_task, 'freeu_preset_name', flags.DEFAULT_FREEU_KEY)
+            is_modified = getattr(async_task, 'freeu_modified', False)
+            mod_suffix = ", Modified" if is_modified else ""
+            final_type = f"{final_type} with FreeU ({preset}{mod_suffix})"
+
+    # Append Seamless Tiling if enabled and not already present (Non-Duplication Guard)
+    if getattr(async_task, 'seamless_tiling', False):
+        if 'Seamless Tiling' not in final_type:
+            final_type = f"{final_type} / Seamless Tiling"
 
     # Only modify the global variable if explicitly requested
     if update_global:
@@ -395,6 +400,8 @@ class AsyncTask:
 
         self.inpaint_mode = getattr(common, 'inpaint_mode', 'Inpaint Modify/Replace')
 
+        self.seamless_tiling = getattr(common, 'seamless_tiling', False)
+
         # Determine the initial base Image Type
         # based on frozen parameters
         if self.iclight_enable:
@@ -544,6 +551,16 @@ def worker():
                 return imgs, [], current_progress
 
         else:
+
+            if pipeline.model_base is not None:
+                # Resolve the active inner model
+                active_model = getattr(pipeline.model_base,
+                    'inner_model', pipeline.model_base)
+                use_tiling = getattr(async_task,
+                    'seamless_tiling', False)
+                util.apply_native_tiling(active_model,
+                    enable=use_tiling)
+
             if 'cn' in goals:
                 for cn_flag, cn_path in [
                     (flags.cn_canny, controlnet_canny_path),

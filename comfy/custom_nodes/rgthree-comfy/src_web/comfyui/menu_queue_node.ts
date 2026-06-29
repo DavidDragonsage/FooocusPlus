@@ -1,25 +1,18 @@
-import { app } from "scripts/app.js";
 import type {
+  IContextMenuValue,
   LGraphCanvas as TLGraphCanvas,
-  ContextMenuItem,
   LGraphNode,
-} from "typings/litegraph.js";
-import type { ComfyNodeConstructor, ComfyObjectInfo } from "typings/comfy.js";
-import { rgthree } from "./rgthree.js";
-import { SERVICE as CONFIG_SERVICE } from "./services/config_service.js";
+} from "@comfyorg/frontend";
+import type {ComfyNodeDef} from "typings/comfy.js";
 
-function getOutputNodes(nodes: LGraphNode[]) {
-  return (
-    nodes?.filter((n) => {
-      return (
-        n.mode != LiteGraph.NEVER &&
-        ((n.constructor as any).nodeData as ComfyObjectInfo)?.output_node
-      );
-    }) || []
-  );
-}
+import {app} from "scripts/app.js";
+import {rgthree} from "./rgthree.js";
+import {getGroupNodes, getOutputNodes} from "./utils.js";
+import {SERVICE as CONFIG_SERVICE} from "./services/config_service.js";
 
-function showQueueNodesMenuIfOutputNodesAreSelected(existingOptions: ContextMenuItem[]) {
+function showQueueNodesMenuIfOutputNodesAreSelected(
+  existingOptions: (IContextMenuValue<unknown> | null)[],
+) {
   if (CONFIG_SERVICE.getConfigValue("features.menu_queue_selected_nodes") === false) {
     return;
   }
@@ -28,7 +21,7 @@ function showQueueNodesMenuIfOutputNodesAreSelected(existingOptions: ContextMenu
     content: `Queue Selected Output Nodes (rgthree) &nbsp;`,
     className: "rgthree-contextmenu-item",
     callback: () => {
-      rgthree.queueOutputNodes(outputNodes.map((n) => n.id));
+      rgthree.queueOutputNodes(outputNodes);
     },
     disabled: !outputNodes.length,
   };
@@ -39,23 +32,25 @@ function showQueueNodesMenuIfOutputNodesAreSelected(existingOptions: ContextMenu
   existingOptions.splice(idx, 0, menuItem);
 }
 
-function showQueueGroupNodesMenuIfGroupIsSelected(existingOptions: ContextMenuItem[]) {
+function showQueueGroupNodesMenuIfGroupIsSelected(
+  existingOptions: (IContextMenuValue<unknown> | null)[],
+) {
   if (CONFIG_SERVICE.getConfigValue("features.menu_queue_selected_nodes") === false) {
     return;
   }
   const group =
-    rgthree.lastAdjustedMouseEvent &&
-    app.graph.getGroupOnPos(
-      rgthree.lastAdjustedMouseEvent.canvasX,
-      rgthree.lastAdjustedMouseEvent.canvasY,
+    rgthree.lastCanvasMouseEvent &&
+    (app.canvas.getCurrentGraph() || app.graph).getGroupOnPos(
+      rgthree.lastCanvasMouseEvent.canvasX,
+      rgthree.lastCanvasMouseEvent.canvasY,
     );
 
-  const outputNodes = group && getOutputNodes(group._nodes);
+  const outputNodes: LGraphNode[] | null = (group && getOutputNodes(getGroupNodes(group))) || null;
   const menuItem = {
     content: `Queue Group Output Nodes (rgthree) &nbsp;`,
     className: "rgthree-contextmenu-item",
     callback: () => {
-      outputNodes && rgthree.queueOutputNodes(outputNodes.map((n) => n.id));
+      outputNodes && rgthree.queueOutputNodes(outputNodes);
     },
     disabled: !outputNodes?.length,
   };
@@ -73,15 +68,16 @@ function showQueueGroupNodesMenuIfGroupIsSelected(existingOptions: ContextMenuIt
  */
 app.registerExtension({
   name: "rgthree.QueueNode",
-  async beforeRegisterNodeDef(nodeType: ComfyNodeConstructor, nodeData: ComfyObjectInfo) {
+  async beforeRegisterNodeDef(nodeType: typeof LGraphNode, nodeData: ComfyNodeDef) {
     const getExtraMenuOptions = nodeType.prototype.getExtraMenuOptions;
     nodeType.prototype.getExtraMenuOptions = function (
       canvas: TLGraphCanvas,
-      options: ContextMenuItem[],
-    ) {
-      getExtraMenuOptions ? getExtraMenuOptions.apply(this, arguments) : undefined;
+      options: (IContextMenuValue<unknown> | null)[],
+    ): (IContextMenuValue<unknown> | null)[] {
+      const extraOptions = getExtraMenuOptions?.call(this, canvas, options) ?? [];
       showQueueNodesMenuIfOutputNodesAreSelected(options);
       showQueueGroupNodesMenuIfGroupIsSelected(options);
+      return extraOptions;
     };
   },
 

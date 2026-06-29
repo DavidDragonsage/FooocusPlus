@@ -1,6 +1,7 @@
-import type { INodeOutputSlot, LGraphNode } from "typings/litegraph.js";
-import { rgthree } from "./rgthree.js";
-import { BaseAnyInputConnectedNode } from "./base_any_input_connected_node.js";
+import type {INodeOutputSlot, LGraphNode} from "@comfyorg/frontend";
+
+import {rgthree} from "./rgthree.js";
+import {BaseAnyInputConnectedNode} from "./base_any_input_connected_node.js";
 import {
   PassThroughFollowing,
   getConnectedInputNodes,
@@ -25,12 +26,12 @@ export class BaseCollectorNode extends BaseAnyInputConnectedNode {
   }
 
   override clone() {
-    const cloned = super.clone();
+    const cloned = super.clone()!;
     return cloned;
   }
 
-  override handleLinkedNodesStabilization(linkedNodes: LGraphNode[]): void {
-    // No-op, no widgets.
+  override handleLinkedNodesStabilization(linkedNodes: LGraphNode[]) {
+    return false; // No-op, no widgets.
   }
 
   /**

@@ -8,7 +8,7 @@ import random
 import re
 import time
 import args_manager as args
-import comfy.comfy_version
+import comfy.comfyui_version
 import common
 import enhanced.superprompter
 import ldm_patched.modules.model_management as model_management
@@ -57,6 +57,15 @@ from modules.ui_gradio_extensions import reload_javascript
 from modules.util import is_json, recover_images
 
 allow_inpaint_max = False
+
+btn_torch_value = interpret(
+    'Reconfigure', 'PyTorch', silent = True)
+
+btn_cancel_value = interpret(
+    'Cancel',silent = True)
+
+btn_close_value = interpret(
+    'Close',silent = True)
 
 interpret('[UI] Initializing the user interface...')
 print()
@@ -325,23 +334,34 @@ with common.GRADIO_ROOT:
                 elem_classes='perf_modal_box') as perf_modal_box:
                 with gr.Row():
                     # Displays either status information or the upgrade confirmation text
-                    perf_modal_msg = gr.Markdown(value='')
+                    perf_modal_header_msg = gr.Markdown(value='')
 
-                with gr.Row():
-                    # Informational Close / OK button (Single Option)
+                # Action Buttons Row
+                # placed DIRECTLY below the question
+                with gr.Row(elem_classes='elem_centre'):
+                    # Action Confirmation Buttons (Two Options)
+                    perf_upgrade_btn = gr.Button(
+                        value=btn_torch_value,
+                        elem_classes='torch_note_button',
+                        visible=False, scale=1
+                    )
+                    perf_cancel_btn = gr.Button(
+                        value=btn_close_value,
+                        elem_classes='torch_note_button',
+                        visible=False, scale=1
+                    )
+
+                # Metrics Message
+                # Optional, placed below the action buttons
+                perf_modal_metrics_msg = gr.Markdown(value='')
+
+                # Informational OK Row
+                # placed at the very bottom, below the metrics
+                with gr.Row(elem_classes='elem_centre'):
                     perf_ok_btn = gr.Button(
                         value='OK',
                         elem_classes='torch_note_button',
                         visible=False)
-                    # Action Confirmation Buttons (Two Options)
-                    perf_upgrade_btn = gr.Button(
-                        value='OK',
-                        elem_classes='torch_note_button',
-                        visible=False, scale=1)
-                    perf_cancel_btn = gr.Button(
-                        value='Cancel',
-                        elem_classes='torch_note_button',
-                        visible=False, scale=1)
 
             with gr.Group(visible=False,
                 elem_classes=['remove_torch_box']) as remove_torch_modal_box:
@@ -352,11 +372,11 @@ with common.GRADIO_ROOT:
                 with gr.Row():
                     # Action Confirmation Buttons (Two Options)
                     remove_torch_proceed_btn = gr.Button(
-                        value='OK',
+                        value=btn_torch_value,
                         elem_classes='torch_note_button',
                         visible=False, scale=1)
                     remove_torch_cancel_btn = gr.Button(
-                        value='Cancel',
+                        value=btn_cancel_value,
                         elem_classes='torch_note_button',
                         visible=False, scale=1)
 
@@ -1761,6 +1781,15 @@ with common.GRADIO_ROOT:
                         gr.HTML('<font size="3"><a href="https://github.com/DavidDragonsage/FooocusPlus/wiki/Image-Recovery" target="_blank">\U0001F4DA Image Recovery</a>')
 
                     with gr.Group():
+
+                        seamless_tiling_checkbox = gr.Checkbox(
+                            label='Use Seamless Tiling',
+                            value=False,
+                            info='Generate seamless repeating textures with any SDXL base model')
+
+                        with gr.Row(elem_classes='elem_centre'):
+                            gr.HTML('<font size="3" style="margin-left: 12px; display: inline-block;"><a href="https://github.com/DavidDragonsage/FooocusPlus/wiki/Seamless-Tiling" target="_blank">\U0001F4DA Seamless Tiling</a>')
+
                         output_format = gr.Radio(
                             label='Image Format',
                             choices=flags.OutputFormat.list(),
@@ -2120,7 +2149,7 @@ with common.GRADIO_ROOT:
                     Smart Memory: {smart_memory}<br>\
                     Video System: {video_system}<br>\
                     Python {platform.python_version()}, Library {version.get_library_ver()}, \
-                    Comfy {comfy.comfy_version.version}<br>\
+                    Comfy {comfy.comfyui_version.__version__}<br>\
                     Gradio {gr.__version__}, Torch {torch_ver}{cuda_ver}, Xformers {xformers_ver}<br>\
                     FooocusPlus {fooocusplus_ver}, Hotfix {hotfix}')
 
@@ -2746,11 +2775,19 @@ with common.GRADIO_ROOT:
 
     # Performance Check Handlers
 
-    # 1. Trigger the Performance Check (Conditional Dialog)
+    # 1. Trigger the Performance Check
+    # Conditional Dialog
     perform_btn.click(
         fn=UIU.check_performance_handler,
         inputs=None,
-        outputs=[perf_modal_box, perf_modal_msg, perf_ok_btn, perf_upgrade_btn, perf_cancel_btn],
+        outputs=[
+            perf_modal_box,
+            perf_modal_header_msg,
+            perf_modal_metrics_msg,
+            perf_ok_btn,
+            perf_upgrade_btn,
+            perf_cancel_btn
+        ],
         queue=False, show_progress=False
     )
 
@@ -2770,11 +2807,19 @@ with common.GRADIO_ROOT:
         queue=False, show_progress=False
     )
 
-    # 4. Action Confirmation (Execute Upgrade, then show final OK instructions)
+    # 4. Action Confirmation
+    # Execute Upgrade, then show final OK instructions
     perf_upgrade_btn.click(
         fn=UIU.execute_cuda13_upgrade,
         inputs=None,
-        outputs=[perf_modal_msg, perf_ok_btn, perf_upgrade_btn, perf_cancel_btn],
+        outputs=[
+            perf_modal_box,
+            perf_modal_header_msg,
+            perf_modal_metrics_msg,
+            perf_ok_btn,
+            perf_upgrade_btn,
+            perf_cancel_btn
+        ],
         queue=False, show_progress=False
     )
 
@@ -4860,6 +4905,17 @@ with common.GRADIO_ROOT:
     # Image Control Event Handlers & Helpers
 
     recover_images_button.click(recover_images, None, None)
+
+    def seamless_tiling_checkbox_change(arg_tiling):
+        common.seamless_tiling = arg_tiling
+        return gr.update(
+            value=common.seamless_tiling)
+
+    seamless_tiling_checkbox.change(
+        fn=seamless_tiling_checkbox_change,
+        inputs=seamless_tiling_checkbox,
+        outputs=seamless_tiling_checkbox,
+        queue=False, show_progress=False)
 
     def output_format_change(arg_format):
         config.default_output_format = arg_format

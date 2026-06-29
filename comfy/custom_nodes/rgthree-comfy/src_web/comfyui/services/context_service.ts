@@ -1,9 +1,8 @@
 import type {DynamicContextNodeBase} from "../dynamic_context_base.js";
 
-import {app} from "scripts/app.js";
 import {NodeTypesString} from "../constants.js";
 import {getConnectedOutputNodesAndFilterPassThroughs} from "../utils.js";
-import {INodeInputSlot, INodeOutputSlot, INodeSlot, LGraphNode} from "typings/litegraph.js";
+import {INodeInputSlot, INodeOutputSlot, INodeSlot, LGraphNode} from "@comfyorg/frontend";
 
 export let SERVICE: ContextService;
 
@@ -35,7 +34,6 @@ export type InputMutation = {
 };
 
 export class ContextService {
-
   constructor() {
     if (SERVICE) {
       throw new Error("ContextService was already instantiated.");

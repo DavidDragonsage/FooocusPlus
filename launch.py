@@ -1,43 +1,34 @@
 import sys
+import importlib
 import common
-
-# --- The 1.1.1 Update Shield ---
-try:
-    # check for the renamed variable
-    # that causes the 1.1.0 update crash:
-    _ = common.resolution
-except AttributeError:
-    print("\n" + "!" * 60)
-    print("  FOOOCUSPLUS UPDATE IN PROGRESS")
-    print("  Please close this window and restart FooocusPlus")
-    print("  to finalize the 1.1.0 installation.")
-    print("!" * 60 + "\n")
-    sys.exit()
-
 import enhanced.version as version
+
+# Force-reload these modules immediately to
+# avoid stale cache problems when updating
+importlib.reload(common)
+importlib.reload(version)
+
 fooocusplus_ver, hotfix, hotfix_title = version.get_fooocusplus_ver()
-"""
-# For future use:
-# THE GLOBAL TRAP (The Gatekeeper)
-# If we just updated, 'common' might be the new file,
-# but if Python is confused by cached bytecode or a
-# partial load,  we check if the code "thinks"
-# it's the right version.
+
+# THE GLOBAL TRAP (The Gatekeeper Update Shield)
+# If we just updated and somehow the importlib
+# reload of common and version did not work,
+# this fallback forces the user to restart FooocusPlus
 if getattr(common, 'REQUIRED_VERSION', None) != fooocusplus_ver:
     print("\n" + "="*60)
-    print(f" FOOOCUSPLUS UPDATE IN PROGRESS: {version_info.current_version}")
+    print(f" FOOOCUSPLUS UPDATE IN PROGRESS: {fooocusplus_ver}")
     print(" " + "-"*58)
     print(" To complete the upgrade")
     print(" please close this window and restart FooocusPlus")
     print("="*60 + "\n")
-    import sys
     sys.exit()
-"""
+
 
 import os
 import ssl
 from pathlib import Path
 from common import ROOT
+from backend_base.comfy_patch import apply_comfy_patch
 
 print('[System ARGV] ' + str(sys.argv))
 print(f'Root {ROOT}')
@@ -55,6 +46,10 @@ if not version.get_required_library():
     print()
     quit()
 
+print()
+print('Checking for required library files and patches...')
+apply_comfy_patch()
+
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
 # Gradio is no longer allowed to call home:
@@ -65,28 +60,19 @@ os.environ["NO_ALBUMENTATIONS_UPDATE"] = "True"
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
-import comfy.comfy_version
+import comfy.comfyui_version
 
-try:
-    from modules.launch_requirements import is_installed, \
-        python, run_pip_url, requirements_met, windows_patch, \
-        git_clone, index_url, target_path_install, met_diff
+from modules.launch_requirements import is_installed, \
+    python, run_pip_url, requirements_met, windows_patch, \
+    git_clone, index_url, target_path_install, met_diff
 
-    from launch_support import delete_torch_dependencies, \
-        dependency_resolver, read_torch_base, \
-        write_torch_base
+from launch_support import delete_torch_dependencies, \
+    dependency_resolver, read_torch_base, \
+    write_torch_base
 
-    from modules.launch_util import is_win32_standalone_build, \
-        python_embedded_path, run, run_pip, \
-        verify_installed_version, win32_root
-
-    print()
-    print('Checking for required library files...')
-
-except:
-    print('Please restart FooocusPlus to complete the update')
-    print()
-    quit()
+from modules.launch_util import is_win32_standalone_build, \
+    python_embedded_path, run, run_pip, \
+    verify_installed_version, win32_root
 
 windows_patch()
 requirements_file = os.environ.get('REQS_FILE', "requirements_versions.txt")
@@ -133,17 +119,20 @@ def prepare_environment():
     torchvision_ver = torch_dict['torchvision_ver']
     torchaudio_ver = torch_dict['torchaudio_ver']
     xformers_ver = torch_dict['xformers_ver']
-    pytorchlightning_ver = torch_dict['pytorchlightning_ver']
-    lightningfabric_ver = torch_dict['lightningfabric_ver']
     bitsandbytes_ver = torch_dict['bitsandbytes_ver']
     torch_platform_ver = torch_dict['torch_platform_ver']
 
     torch_base_ver = read_torch_base()
 
+    # For Blackwell architectures where xformers is disabled,
+    # force native PyTorch attention
+    if xformers_ver == 'None':
+        args.attention_pytorch = True
+
     print()
     interpret('Program Versions:')
     print(f"Python {sys.version}")
-    print(f"Python Library {version.get_library_ver()}, Comfy Version: {comfy.comfy_version.version}")
+    print(f"Python Library {version.get_library_ver()}, Comfy Version: {comfy.comfyui_version.__version__}")
     if torch_ver == torch_base_ver:
         from backend_base.__init__ import get_torch_xformers_cuda_version as get_torch_info
         torch_info, xformers_info, cuda_info = get_torch_info()
@@ -188,13 +177,14 @@ def prepare_environment():
         cmds = get_install_commands(torch_platform_ver, packages)
         cmds = get_pip_commands(cmds)
         run_commands(cmds)
+    else:
+        delete_torch_dependencies(['pytorch_lightning',
+            'lightning_fabric'])
 
-    verify_installed_version('pytorch-lightning', pytorchlightning_ver, False)
-    verify_installed_version('lightning-fabric', lightningfabric_ver, False)
     verify_installed_version('bitsandbytes', bitsandbytes_ver, False)
     print()
 
-    if REINSTALL_ALL or not is_installed("xformers"):
+    if xformers_ver != 'None' and (REINSTALL_ALL or not is_installed("xformers")):
         if platform.python_version().startswith("3.10"):
             if torch_platform_ver == 'cu130':
                 verify_installed_version('xformers', xformers_ver, False, use_index = 'https://download.pytorch.org/whl/cu130', package_url = '')

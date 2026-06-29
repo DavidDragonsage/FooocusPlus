@@ -231,8 +231,8 @@
         "39",
         2
       ],
-      "start_color": "orange",
-      "end_color": "black",
+      "start_color": "255,165,0",
+      "end_color": "0,0,0",
       "multiplier": 1
     },
     "class_type": "CreateGradientFromCoords",
@@ -256,8 +256,8 @@
     "inputs": {
       "light_position": "Left Light",
       "multiplier": 1,
-      "start_color": "#FFFFFF",
-      "end_color": "#000000",
+      "start_color": "255,255,255",
+      "end_color": "0,0,0",
       "width": [
         "39",
         1

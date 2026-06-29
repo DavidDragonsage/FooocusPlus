@@ -28,6 +28,7 @@ FooocusPlus gives you access to a diversity of AI image generation base models, 
 - Segmind-Vega
 - Stable Diffusion 1.5 (SD1.5)
 - Stable Diffusion 3.5 (temporarily disabled)
+- Z-Image Turbo DIT
 
 If you’re new to AI art, don’t worry! Our built-in presets will give you one-click access to all of those exciting AI image generation models without any prior knowledge required. Favorite presets are located in a bar at the top of the FooocusPlus main canvas, and the whole preset collection is available from two dropdown menus located under the Settings tab. You'll be able to choose your own favorite model in no time.
 
@@ -51,28 +52,7 @@ Torchruntime is integrated into FooocusPlus. Please check their [compatibility t
 
 For Linux users, please use the [Installation Script for Linux](https://github.com/DavidDragonsage/FooocusPlus/wiki/Installation-Script-for-Linux) in the FooocusPlus Wiki.
 
-For Windows users, this [Installation Procedure](https://github.com/DavidDragonsage/FooocusPlus/wiki/Installation-Procedure-for-Windows) is also available in the Wiki, complete with images.
-
-If you were using a pre-release or Beta version of FooocusPlus, please be sure to delete or at least rename it first, it is not compatible with the release version. Ideally FooocusPlus should be installed in the root of a high speed internal drive such an NVMe solid state drive (SSD). However it will work fine on standard SATA hard drive, just a bit more slowly. First, download the following archives:
-
-- The _latest_ version of [7-Zip](https://7-zip.org/). The installation may fail if the version is not current.
-- The [FooocusPlus](https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/FooocusPlus.7z) program archive. For East Asian users, try the [FooocusPlus mirror](https://hf-mirror.com/DavidDragonsage/FooocusPlus/resolve/main/FooocusPlus.7z).
-- If you are using Windows, the [Python library](https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/python_embedded.7z) files. Or in [East Asia](https://hf-mirror.com/DavidDragonsage/FooocusPlus/resolve/main/python_embedded.7z).
-- The FooocusPlus [Support Pack](https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/SupportPack.7z). Or in [East Asia](https://hf-mirror.com/DavidDragonsage/FooocusPlus/resolve/main/SupportPack.7z). The Support Pack is optional but will save you a lot of time later.
-- The FooocusPlus [Tiny Pack](https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/TinyPack.7z). Or in [East Asia](https://hf-mirror.com/DavidDragonsage/FooocusPlus/resolve/main/TinyPack.7z). The Tiny Pack is designed for those with graphics cards that have less than 6GB of video RAM (VRAM). The Tiny Pack is completely optional. If not installed now, its files will be downloaded later if needed by a preset.
-- The FooocusPlus [Schnell Pack](https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/SchnellPack.7z). Or in [East Asia](https://hf-mirror.com/DavidDragonsage/FooocusPlus/resolve/main/SchnellPack.7z). Another completely optional pack, it contains four basic Flux1 Schnell models. Schnell models provide high speed - 4 sampling steps per image generation - with reasonably good quality.
-<br/><br/>
-1. After your downloads are complete, first install 7-Zip.
-
-2. Next, extract the _program archive_ to create a FooocusPlus folder in the root of the drive, E:\ for example. The FooocusPlus folder will contain the FooocusPlusAI folder, the UserDir folder and two batch files.
-
-3. Next, extract the _python_embedded_ library archive into the FooocusPlus folder.
-
-4. Next, extract the _Support Pack_ to the FooocusPlus folder. These files will be added to the UserDir\models subfolder.
-
-5. If you decided to download the _Tiny Pack_ or _Schnell Pack_, extract them to the FooocusPlus folder. Their contents will be added to the UserDir\models subfolder.
-
-6. Now double-click on the _run_FooocusPlus.bat_ file to load FooocusPlus for the first time. It will download some additional components automatically on the first run.
+And for Windows users, please use this [Installation Procedure](https://github.com/DavidDragonsage/FooocusPlus/wiki/Installation-Procedure-for-Windows), also  available in the Wiki.
 
 ## Language Support
 
@@ -106,7 +86,7 @@ You also agree that you will not use FooocusPlus to:
 
 ## Credits
 
-FooocusPlus is Copyright &copy; 2024-2025 David Sage and contributors.
+FooocusPlus is Copyright &copy; 2024-2026 David Sage and contributors.
 
 This software was made possible by integrating open-source technologies from projects including:
 

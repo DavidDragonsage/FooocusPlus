@@ -78,8 +78,14 @@ try:
         repo.checkout_tree(repo.get(remote_commit.id))
         repo.reset(local_branch.target, pygit2.GIT_RESET_HARD)
         print(f'{branch_name if branch_name!="main" else "FooocusPlus"}: Fast-forward merge, {str(local_commit.id)[:7]} <- {str(remote_commit.id)[:7]}')
-    elif merge_result & pygit2.GIT_MERGE_ANALYSIS_NORMAL:
-        print(f'{branch_name if branch_name!="main" else "FooocusPlus"}: Update failed - Did you modify any files? {str(local_commit.id)[:7]} <- {str(remote_commit.id)[:7]}')
+    elif merge_result & pygit2.GIT_MERGE_ANALYSIS_NORMAL or merge_result & pygit2.GIT_MERGE_ANALYSIS_NONE:
+        # Reconcile diverged or rewritten remote history (force-push protection)
+        print(f'{branch_name if branch_name!="main" else "FooocusPlus"}: Reconciling diverged history, resetting to remote head...')
+        local_branch.set_target(remote_commit.id)
+        repo.head.set_target(remote_commit.id)
+        repo.checkout_tree(repo.get(remote_commit.id), strategy=pygit2.GIT_CHECKOUT_FORCE)
+        repo.reset(local_branch.target, pygit2.GIT_RESET_HARD)
+        print(f'{branch_name if branch_name!="main" else "FooocusPlus"}: Successfully force-updated to {str(remote_commit.id)[:7]}')
 except Exception as e:
     print(f'{branch_name if branch_name!="main" else "FooocusPlus"}: Update failed.')
     print(str(e))

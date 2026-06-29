@@ -1,7 +1,8 @@
-import type {INodeInputSlot} from "typings/litegraph.js";
+import type {INodeInputSlot, LGraphNodeConstructor} from "@comfyorg/frontend";
+import type {ComfyNodeDef} from "typings/comfy.js";
 
+import {app} from "scripts/app.js";
 import {BaseContextNode} from "./context.js";
-import {ComfyNodeConstructor, ComfyObjectInfo} from "typings/comfy.js";
 import {RgthreeBaseServerNode} from "./base_node.js";
 import {moveArrayItem, wait} from "rgthree/common/shared_utils.js";
 import {RgthreeInvisibleWidget} from "./utils_widgets.js";
@@ -10,7 +11,6 @@ import {
   InputMutation,
   InputMutationOperation,
 } from "./services/context_service.js";
-import {app} from "scripts/app.js";
 import {SERVICE as CONTEXT_SERVICE} from "./services/context_service.js";
 
 const OWNED_PREFIX = "+";
@@ -19,10 +19,11 @@ const REGEX_EMPTY_INPUT = /^\+\s*$/;
 
 export type InputLike = {
   name: string;
-  type: string | -1;
+  type: number | string;
   label?: string;
   link: number | null;
   removable?: boolean;
+  boundingRect: any;
 };
 
 /**
@@ -96,7 +97,7 @@ export class DynamicContextNodeBase extends BaseContextNode {
     }
   }
   override clone() {
-    const cloned = super.clone();
+    const cloned = super.clone()! as DynamicContextNodeBase;
     while (cloned.inputs.length > 1) {
       cloned.removeInput(cloned.inputs.length - 1);
     }
@@ -128,7 +129,7 @@ export class DynamicContextNodeBase extends BaseContextNode {
   addContextInput(name: string, type: string, slot = -1) {
     const inputs = this.getContextInputsList();
     if (this.hasShadowInputs) {
-      inputs.push({name, type, link: null});
+      inputs.push({name, type, link: null, boundingRect: null});
     } else {
       this.addInput(name, type);
     }
@@ -221,7 +222,7 @@ export class DynamicContextNodeBase extends BaseContextNode {
     }
   }
 
-  static override setUp(comfyClass: ComfyNodeConstructor, nodeData: ComfyObjectInfo) {
+  static override setUp(comfyClass: typeof LGraphNode, nodeData: ComfyNodeDef) {
     RgthreeBaseServerNode.registerForOverride(comfyClass, nodeData, this);
     // [🤮] ComfyUI only adds "required" inputs to the outputs list when dragging an output to
     // empty space, but since RGTHREE_CONTEXT is optional, it doesn't get added to the menu because
@@ -231,7 +232,10 @@ export class DynamicContextNodeBase extends BaseContextNode {
     wait(500).then(() => {
       LiteGraph.slot_types_default_out["RGTHREE_DYNAMIC_CONTEXT"] =
         LiteGraph.slot_types_default_out["RGTHREE_DYNAMIC_CONTEXT"] || [];
-      LiteGraph.slot_types_default_out["RGTHREE_DYNAMIC_CONTEXT"].push(comfyClass.comfyClass);
+      const comfyClassStr = (comfyClass as LGraphNodeConstructor).comfyClass;
+      if (comfyClassStr) {
+        LiteGraph.slot_types_default_out["RGTHREE_DYNAMIC_CONTEXT"].push(comfyClassStr);
+      }
     });
   }
 }

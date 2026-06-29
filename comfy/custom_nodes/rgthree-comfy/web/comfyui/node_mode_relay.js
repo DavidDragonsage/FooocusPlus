@@ -1,5 +1,5 @@
 import { app } from "../../scripts/app.js";
-import { PassThroughFollowing, addConnectionLayoutSupport, getConnectedInputNodesAndFilterPassThroughs, getConnectedOutputNodesAndFilterPassThroughs, } from "./utils.js";
+import { PassThroughFollowing, addConnectionLayoutSupport, changeModeOfNodes, getConnectedInputNodesAndFilterPassThroughs, getConnectedOutputNodesAndFilterPassThroughs, } from "./utils.js";
 import { wait } from "../../rgthree/common/shared_utils.js";
 import { BaseCollectorNode } from "./base_node_collector.js";
 import { NodeTypesString, stripRgthree } from "./constants.js";
@@ -55,15 +55,8 @@ class NodeModeRelay extends BaseCollectorNode {
         if (this.inputs.length <= 1 && !this.isInputConnected(0) && this.isAnyOutputConnected()) {
             const [n, v] = logger.infoParts(`Mode change without any inputs; relaying our mode.`);
             (_a = console[n]) === null || _a === void 0 ? void 0 : _a.call(console, ...v);
-            this.dispatchModeToRepeater(this.mode);
+            this.dispatchModeToRepeater(to);
         }
-    }
-    configure(info) {
-        var _a;
-        if ((_a = info.outputs) === null || _a === void 0 ? void 0 : _a.length) {
-            info.outputs.length = 1;
-        }
-        super.configure(info);
     }
     onDrawForeground(ctx, canvas) {
         var _a;
@@ -123,7 +116,7 @@ class NodeModeRelay extends BaseCollectorNode {
                 mode = MODE_ALWAYS;
             }
             else {
-                mode = null;
+                mode = undefined;
             }
         }
         this.dispatchModeToRepeater(mode);
@@ -141,7 +134,7 @@ class NodeModeRelay extends BaseCollectorNode {
                 if ((_b = this.outputs) === null || _b === void 0 ? void 0 : _b.length) {
                     const outputNodes = getConnectedOutputNodesAndFilterPassThroughs(this);
                     for (const outputNode of outputNodes) {
-                        outputNode.mode = mode;
+                        changeModeOfNodes(outputNode, mode);
                         wait(16).then(() => {
                             outputNode.setDirtyCanvas(true, true);
                         });

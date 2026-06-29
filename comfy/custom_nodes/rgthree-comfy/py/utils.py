@@ -2,6 +2,8 @@ import json
 import os
 import re
 
+from typing import Union
+
 
 class AnyType(str):
   """A special class that is always equal in not equal comparisons. Credit to pythongosssss"""
@@ -9,28 +11,48 @@ class AnyType(str):
   def __ne__(self, __value: object) -> bool:
     return False
 
+
 class FlexibleOptionalInputType(dict):
   """A special class to make flexible nodes that pass data to our python handlers.
 
   Enables both flexible/dynamic input types (like for Any Switch) or a dynamic number of inputs
   (like for Any Switch, Context Switch, Context Merge, Power Lora Loader, etc).
 
-  Note, for ComfyUI, all that's needed is the `__contains__` override below, which tells ComfyUI
-  that our node will handle the input, regardless of what it is.
+  Initially, ComfyUI only needed to return True for `__contains__` below, which told ComfyUI that
+  our node will handle the input, regardless of what it is.
 
-  However, with https://github.com/comfyanonymous/ComfyUI/pull/2666 a large change would occur
-  requiring more details on the input itself. There, we need to return a list/tuple where the first
-  item is the type. This can be a real type, or use the AnyType for additional flexibility.
-
-  This should be forwards compatible unless more changes occur in the PR.
+  However, after https://github.com/comfyanonymous/ComfyUI/pull/2666 ComdyUI's execution changed
+  also checking the data for the key; specifcially, the type which is the first tuple entry. This
+  type is supplied to our FlexibleOptionalInputType and returned for any non-data key. This can be a
+  real type, or use the AnyType for additional flexibility.
   """
-  def __init__(self, type):
+
+  def __init__(self, type, data: Union[dict, None] = None):
+    """Initializes the FlexibleOptionalInputType.
+
+    Args:
+      type: The flexible type to use when ComfyUI retrieves an unknown key (via `__getitem__`).
+      data: An optional dict to use as the basis. This is stored both in a `data` attribute, so we
+        can look it up without hitting our overrides, as well as iterated over and adding its key
+        and values to our `self` keys. This way, when looked at, we will appear to represent this
+        data. When used in an "optional" INPUT_TYPES, these are the starting optional node types.
+    """
     self.type = type
+    self.data = data
+    if self.data is not None:
+      for k, v in self.data.items():
+        self[k] = v
 
   def __getitem__(self, key):
-    return (self.type, )
+    # If we have this key in the initial data, then return it. Otherwise return the tuple with our
+    # flexible type.
+    if self.data is not None and key in self.data:
+      val = self.data[key]
+      return val
+    return (self.type,)
 
   def __contains__(self, key):
+    """Always contain a key, and we'll always return the tuple above when asked for it."""
     return True
 
 
@@ -38,13 +60,13 @@ any_type = AnyType("*")
 
 
 def is_dict_value_falsy(data: dict, dict_key: str):
-  """ Checks if a dict value is falsy."""
+  """Checks if a dict value is falsy."""
   val = get_dict_value(data, dict_key)
   return not val
 
 
 def get_dict_value(data: dict, dict_key: str, default=None):
-  """ Gets a deeply nested value given a dot-delimited key."""
+  """Gets a deeply nested value given a dot-delimited key."""
   keys = dict_key.split('.')
   key = keys.pop(0) if len(keys) > 0 else None
   found = data[key] if key in data else None
@@ -54,12 +76,12 @@ def get_dict_value(data: dict, dict_key: str, default=None):
 
 
 def set_dict_value(data: dict, dict_key: str, value, create_missing_objects=True):
-  """ Sets a deeply nested value given a dot-delimited key."""
+  """Sets a deeply nested value given a dot-delimited key."""
   keys = dict_key.split('.')
   key = keys.pop(0) if len(keys) > 0 else None
   if key not in data:
-    if create_missing_objects == False:
-      return
+    if create_missing_objects is False:
+      return data
     data[key] = {}
   if len(keys) == 0:
     data[key] = value
@@ -70,7 +92,7 @@ def set_dict_value(data: dict, dict_key: str, value, create_missing_objects=True
 
 
 def dict_has_key(data: dict, dict_key):
-  """ Checks if a dict has a deeply nested dot-delimited key."""
+  """Checks if a dict has a deeply nested dot-delimited key."""
   keys = dict_key.split('.')
   key = keys.pop(0) if len(keys) > 0 else None
   if key is None or key not in data:
@@ -106,12 +128,43 @@ def save_json_file(file_path: str, data: dict):
   with open(file_path, 'w+', encoding='UTF-8') as file:
     json.dump(data, file, sort_keys=False, indent=2, separators=(",", ": "))
 
+
 def path_exists(path):
   """Checks if a path exists, accepting None type."""
   if path is not None:
     return os.path.exists(path)
   return False
 
+
+def file_exists(path):
+  """Checks if a file exists, accepting None type."""
+  if path is not None:
+    return os.path.isfile(path)
+  return False
+
+
+def remove_path(path):
+  """Removes a path, if it exists."""
+  if path_exists(path):
+    os.remove(path)
+    return True
+  return False
+
+def abspath(file_path: str):
+  """Resolves the abspath of a file, resolving symlinks and user dirs."""
+  abs_path = os.path.abspath(file_path) if file_path else file_path
+  if abs_path and not path_exists(abs_path):
+    maybe_path = os.path.abspath(os.path.realpath(os.path.expanduser(file_path)))
+    abs_path = maybe_path if path_exists(maybe_path) else abs_path
+  return abs_path
+
+def sub_abspath(parent_dir: str, rel_path: str):
+  """Resolves the abspath under a parent directory ensuring it exists and is contained within."""
+  rel_path = os.path.join(parent_dir, rel_path)
+  abs_path = abspath(rel_path)
+  if not path_exists(abs_path) or not abs_path.startswith(parent_dir):
+    return None
+  return abs_path
 
 class ByPassTypeTuple(tuple):
   """A special class that will return additional "AnyType" strings beyond defined values.

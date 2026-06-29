@@ -68,6 +68,8 @@ https://huggingface.co/MonsterMMORPG/tools/resolve/main/antelopev2.zip 下载并
 
 模型主页(Canny): https://huggingface.co/Kwai-Kolors/Kolors-ControlNet-Canny
 
+模型主页(Pose): https://huggingface.co/Kwai-Kolors/Kolors-ControlNet-Pose
+
 ### Kolors-Inpainting模型下载地址
 模型主页: https://huggingface.co/Kwai-Kolors/Kolors-Inpainting
 
@@ -134,6 +136,8 @@ Model homepage(Depth): https://huggingface.co/Kwai-Kolors/Kolors-ControlNet-Dept
 
 Model homepage(Canny): https://huggingface.co/Kwai-Kolors/Kolors-ControlNet-Canny
 
+Model homepage(Pose): https://huggingface.co/Kwai-Kolors/Kolors-ControlNet-Pose
+
 ### Kolors-Inpainting model download link
 Model homepage: https://huggingface.co/Kwai-Kolors/Kolors-Inpainting
 
@@ -196,8 +200,6 @@ Error occurred when executing MZ_ChatGLM3Loader: 'ChatGLMModel' object has no at
 ## Stargazers
 [![Stargazers repo roster for @MinusZoneAI/ComfyUI-Kolors-MZ](https://reporoster.com/stars/MinusZoneAI/ComfyUI-Kolors-MZ)](https://github.com/MinusZoneAI/ComfyUI-Kolors-MZ/stargazers)
 
-
-## Sponsorship
-<img src="https://github.com/user-attachments/assets/a7ef9684-4911-45b6-8071-a9b433dca6af"  width="200"/>
+ 
 
 

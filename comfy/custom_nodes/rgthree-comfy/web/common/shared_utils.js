@@ -5,10 +5,10 @@ export function getResolver(timeout = 5000) {
     resolver.resolved = false;
     resolver.rejected = false;
     resolver.promise = new Promise((resolve, reject) => {
-        resolver.reject = () => {
+        resolver.reject = (e) => {
             resolver.completed = true;
             resolver.rejected = true;
-            reject();
+            reject(e);
         };
         resolver.resolve = (data) => {
             resolver.completed = true;
@@ -33,6 +33,12 @@ export function debounce(fn, ms = 64) {
     }
     return DEBOUNCE_FN_TO_PROMISE.get(fn);
 }
+export function check(value, msg = "", ...args) {
+    if (!value) {
+        console.error(msg, ...(args || []));
+        throw new Error(msg || "Error");
+    }
+}
 export function wait(ms = 16) {
     if (ms === 16) {
         return new Promise((resolve) => {
@@ -46,6 +52,16 @@ export function wait(ms = 16) {
             resolve();
         }, ms);
     });
+}
+export function deepFreeze(obj) {
+    const propNames = Reflect.ownKeys(obj);
+    for (const name of propNames) {
+        const value = obj[name];
+        if ((value && typeof value === "object") || typeof value === "function") {
+            deepFreeze(value);
+        }
+    }
+    return Object.freeze(obj);
 }
 function dec2hex(dec) {
     return dec.toString(16).padStart(2, "0");
@@ -112,4 +128,289 @@ export function injectCss(href) {
         link.href = href;
         document.head.appendChild(link);
     });
+}
+export function defineProperty(instance, property, desc) {
+    var _a, _b, _c, _d, _e, _f;
+    const existingDesc = Object.getOwnPropertyDescriptor(instance, property);
+    if ((existingDesc === null || existingDesc === void 0 ? void 0 : existingDesc.configurable) === false) {
+        throw new Error(`Error: rgthree-comfy cannot define un-configurable property "${property}"`);
+    }
+    if ((existingDesc === null || existingDesc === void 0 ? void 0 : existingDesc.get) && desc.get) {
+        const descGet = desc.get;
+        desc.get = () => {
+            existingDesc.get.apply(instance, []);
+            return descGet.apply(instance, []);
+        };
+    }
+    if ((existingDesc === null || existingDesc === void 0 ? void 0 : existingDesc.set) && desc.set) {
+        const descSet = desc.set;
+        desc.set = (v) => {
+            existingDesc.set.apply(instance, [v]);
+            return descSet.apply(instance, [v]);
+        };
+    }
+    desc.enumerable = (_b = (_a = desc.enumerable) !== null && _a !== void 0 ? _a : existingDesc === null || existingDesc === void 0 ? void 0 : existingDesc.enumerable) !== null && _b !== void 0 ? _b : true;
+    desc.configurable = (_d = (_c = desc.configurable) !== null && _c !== void 0 ? _c : existingDesc === null || existingDesc === void 0 ? void 0 : existingDesc.configurable) !== null && _d !== void 0 ? _d : true;
+    if (!desc.get && !desc.set) {
+        desc.writable = (_f = (_e = desc.writable) !== null && _e !== void 0 ? _e : existingDesc === null || existingDesc === void 0 ? void 0 : existingDesc.writable) !== null && _f !== void 0 ? _f : true;
+    }
+    return Object.defineProperty(instance, property, desc);
+}
+export function areDataViewsEqual(a, b) {
+    if (a.byteLength !== b.byteLength) {
+        return false;
+    }
+    for (let i = 0; i < a.byteLength; i++) {
+        if (a.getUint8(i) !== b.getUint8(i)) {
+            return false;
+        }
+    }
+    return true;
+}
+function looksLikeBase64(source) {
+    return source.length > 500 || source.startsWith("data:") || source.includes(";base64,");
+}
+export function areArrayBuffersEqual(a, b) {
+    if (a == b || !a || !b) {
+        return a == b;
+    }
+    return areDataViewsEqual(new DataView(a), new DataView(b));
+}
+export function newCanvas(widthOrPtOrImage, height) {
+    let width;
+    if (typeof widthOrPtOrImage !== "number") {
+        width = widthOrPtOrImage.width;
+        height = widthOrPtOrImage.height;
+    }
+    else {
+        width = widthOrPtOrImage;
+        height = height;
+    }
+    if (height == null) {
+        throw new Error("Invalid height supplied when creating new canvas object.");
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    if (widthOrPtOrImage instanceof HTMLImageElement) {
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(widthOrPtOrImage, 0, 0, width, height);
+    }
+    return canvas;
+}
+export function getCanvasImageData(image) {
+    const canvas = newCanvas(image);
+    const ctx = canvas.getContext("2d");
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    return [canvas, ctx, imageData];
+}
+export async function convertToBase64(source) {
+    if (source instanceof Promise) {
+        source = await source;
+    }
+    if (typeof source === "string" && looksLikeBase64(source)) {
+        return source;
+    }
+    if (typeof source === "string" || source instanceof Blob || source instanceof ArrayBuffer) {
+        return convertToBase64(await loadImage(source));
+    }
+    if (source instanceof HTMLImageElement) {
+        if (looksLikeBase64(source.src)) {
+            return source.src;
+        }
+        const [canvas, ctx, imageData] = getCanvasImageData(source);
+        return convertToBase64(canvas);
+    }
+    if (source instanceof HTMLCanvasElement) {
+        return source.toDataURL("image/png");
+    }
+    throw Error("Unknown source to convert to base64.");
+}
+export async function convertToArrayBuffer(source) {
+    if (source instanceof Promise) {
+        source = await source;
+    }
+    if (source instanceof ArrayBuffer) {
+        return source;
+    }
+    if (typeof source === "string") {
+        if (looksLikeBase64(source)) {
+            var binaryString = atob(source.replace(/^.*?;base64,/, ""));
+            var bytes = new Uint8Array(binaryString.length);
+            for (var i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+        return convertToArrayBuffer(await loadImage(source));
+    }
+    if (source instanceof HTMLImageElement) {
+        const [canvas, ctx, imageData] = getCanvasImageData(source);
+        return convertToArrayBuffer(canvas);
+    }
+    if (source instanceof HTMLCanvasElement) {
+        return convertToArrayBuffer(source.toDataURL());
+    }
+    if (source instanceof Blob) {
+        return source.arrayBuffer();
+    }
+    throw Error("Unknown source to convert to arraybuffer.");
+}
+export async function loadImage(source) {
+    if (source instanceof Promise) {
+        source = await source;
+    }
+    if (source instanceof HTMLImageElement) {
+        return loadImage(source.src);
+    }
+    if (source instanceof Blob) {
+        return loadImage(source.arrayBuffer());
+    }
+    if (source instanceof HTMLCanvasElement) {
+        return loadImage(source.toDataURL());
+    }
+    if (source instanceof ArrayBuffer) {
+        var binary = "";
+        var bytes = new Uint8Array(source);
+        var len = bytes.byteLength;
+        for (var i = 0; i < len; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return loadImage(`data:${getMimeTypeFromArrayBuffer(bytes)};base64,${btoa(binary)}`);
+    }
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.addEventListener("load", () => {
+            resolve(img);
+        });
+        img.addEventListener("error", () => {
+            reject(img);
+        });
+        img.src = source;
+    });
+}
+function getMimeTypeFromArrayBuffer(buffer) {
+    const len = 4;
+    if (buffer.length >= len) {
+        let signatureArr = new Array(len);
+        for (let i = 0; i < len; i++)
+            signatureArr[i] = buffer[i].toString(16);
+        const signature = signatureArr.join("").toUpperCase();
+        switch (signature) {
+            case "89504E47":
+                return "image/png";
+            case "47494638":
+                return "image/gif";
+            case "25504446":
+                return "application/pdf";
+            case "FFD8FFDB":
+            case "FFD8FFE0":
+                return "image/jpeg";
+            case "504B0304":
+                return "application/zip";
+            default:
+                return null;
+        }
+    }
+    return null;
+}
+export class Broadcaster extends EventTarget {
+    constructor(channelName) {
+        super();
+        this.queue = {};
+        this.queue = {};
+        this.channel = new BroadcastChannel(channelName);
+        this.channel.addEventListener("message", (e) => {
+            this.onMessage(e);
+        });
+    }
+    getId() {
+        let id;
+        do {
+            id = generateId(6);
+        } while (this.queue[id]);
+        return id;
+    }
+    async broadcastAndWait(action, payload, options) {
+        const id = this.getId();
+        this.queue[id] = getResolver(options === null || options === void 0 ? void 0 : options.timeout);
+        this.channel.postMessage({
+            id,
+            action,
+            payload,
+        });
+        let response;
+        try {
+            response = await this.queue[id].promise;
+        }
+        catch (e) {
+            console.log("CAUGHT", e);
+            response = [];
+        }
+        return response;
+    }
+    broadcast(action, payload) {
+        this.channel.postMessage({
+            id: this.getId(),
+            action,
+            payload,
+        });
+    }
+    reply(replyId, action, payload) {
+        this.channel.postMessage({
+            id: this.getId(),
+            replyId,
+            action,
+            payload,
+        });
+    }
+    openWindowAndWaitForMessage(rgthreePath, windowName) {
+        const id = this.getId();
+        this.queue[id] = getResolver();
+        const win = window.open(`/rgthree/${rgthreePath}#broadcastLoadMsgId=${id}`, windowName);
+        return { window: win, promise: this.queue[id].promise };
+    }
+    onMessage(e) {
+        var _a, _b;
+        const msgId = ((_a = e.data) === null || _a === void 0 ? void 0 : _a.replyId) || "";
+        const queueItem = this.queue[msgId];
+        if (queueItem) {
+            if (queueItem.completed) {
+                console.error(`${msgId} already completed..`);
+            }
+            queueItem.deferment = queueItem.deferment || { data: [] };
+            queueItem.deferment.data.push(e.data.payload);
+            queueItem.deferment.timeout && clearTimeout(queueItem.deferment.timeout);
+            queueItem.deferment.timeout = setTimeout(() => {
+                queueItem.resolve(queueItem.deferment.data);
+            }, 250);
+        }
+        else {
+            this.dispatchEvent(new CustomEvent("rgthree-broadcast-message", {
+                detail: Object.assign({ replyTo: (_b = e.data) === null || _b === void 0 ? void 0 : _b.id }, e.data),
+            }));
+        }
+    }
+    addMessageListener(callback, options) {
+        return super.addEventListener("rgthree-broadcast-message", callback, options);
+    }
+}
+const broadcastChannelMap = new Map();
+export function broadcastOnChannel(channel, action, payload) {
+    let queue = broadcastChannelMap.get(channel);
+    if (!queue) {
+        broadcastChannelMap.set(channel, {});
+        queue = broadcastChannelMap.get(channel);
+    }
+    let id;
+    do {
+        id = generateId(6);
+    } while (queue[id]);
+    queue[id] = getResolver();
+    channel.postMessage({
+        id,
+        action,
+        payload,
+    });
+    return queue[id].promise;
 }

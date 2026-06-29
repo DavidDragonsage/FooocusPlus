@@ -165,7 +165,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const sysmsgText = document.createElement('pre');
     sysmsgText.id = "sys_msg_text";
     sysmsgText.style.setProperty("margin", "5px 12px 12px 0px");
-    sysmsgText.innerHTML = '<b id="update_f">[Fooocus最新更新]</b>:'+'<b id="update_s">[SimpleSDXL最新更新]</b>';
+    sysmsgText.innerHTML = '<b id="update_f">[Fooocus]</b>:'+'<b id="update_s">[FooocusPlus]</b>';
     sysmsgBox.appendChild(sysmsgText);
 
     const sysmsgClose = document.createElement('div');

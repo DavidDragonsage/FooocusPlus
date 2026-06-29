@@ -1,9 +1,9 @@
+import { app } from "../../scripts/app.js";
 import { BaseContextNode } from "./context.js";
 import { RgthreeBaseServerNode } from "./base_node.js";
 import { moveArrayItem, wait } from "../../rgthree/common/shared_utils.js";
 import { RgthreeInvisibleWidget } from "./utils_widgets.js";
 import { getContextOutputName, InputMutationOperation, } from "./services/context_service.js";
-import { app } from "../../scripts/app.js";
 import { SERVICE as CONTEXT_SERVICE } from "./services/context_service.js";
 const OWNED_PREFIX = "+";
 const REGEX_OWNED_PREFIX = /^\+\s*/;
@@ -88,7 +88,7 @@ export class DynamicContextNodeBase extends BaseContextNode {
     addContextInput(name, type, slot = -1) {
         const inputs = this.getContextInputsList();
         if (this.hasShadowInputs) {
-            inputs.push({ name, type, link: null });
+            inputs.push({ name, type, link: null, boundingRect: null });
         }
         else {
             this.addInput(name, type);
@@ -183,7 +183,10 @@ export class DynamicContextNodeBase extends BaseContextNode {
         wait(500).then(() => {
             LiteGraph.slot_types_default_out["RGTHREE_DYNAMIC_CONTEXT"] =
                 LiteGraph.slot_types_default_out["RGTHREE_DYNAMIC_CONTEXT"] || [];
-            LiteGraph.slot_types_default_out["RGTHREE_DYNAMIC_CONTEXT"].push(comfyClass.comfyClass);
+            const comfyClassStr = comfyClass.comfyClass;
+            if (comfyClassStr) {
+                LiteGraph.slot_types_default_out["RGTHREE_DYNAMIC_CONTEXT"].push(comfyClassStr);
+            }
         });
     }
 }

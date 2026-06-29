@@ -1,4 +1,5 @@
 import { app } from "../../../scripts/app.js";
+import { getGraphDependantNodeKey, getGroupNodes, reduceNodesDepthFirst } from "../utils.js";
 class FastGroupsService {
     constructor() {
         this.msThreshold = 400;
@@ -61,10 +62,18 @@ class FastGroupsService {
     }
     getBoundingsForAllNodes() {
         if (!this.cachedNodeBoundings) {
-            this.cachedNodeBoundings = {};
-            for (const node of app.graph._nodes) {
-                this.cachedNodeBoundings[node.id] = node.getBounding();
-            }
+            this.cachedNodeBoundings = reduceNodesDepthFirst(app.graph._nodes, (node, acc) => {
+                var _a, _b;
+                let bounds = node.getBounding();
+                if (bounds[0] === 0 && bounds[1] === 0 && bounds[2] === 0 && bounds[3] === 0) {
+                    const ctx = (_b = (_a = node.graph) === null || _a === void 0 ? void 0 : _a.primaryCanvas) === null || _b === void 0 ? void 0 : _b.canvas.getContext("2d");
+                    if (ctx) {
+                        node.updateArea(ctx);
+                        bounds = node.getBounding();
+                    }
+                }
+                acc[getGraphDependantNodeKey(node)] = bounds;
+            }, {});
             setTimeout(() => {
                 this.cachedNodeBoundings = null;
             }, 50);
@@ -72,33 +81,50 @@ class FastGroupsService {
         return this.cachedNodeBoundings;
     }
     recomputeInsideNodesForGroup(group) {
+        if (app.canvas.isDragging)
+            return;
         const cachedBoundings = this.getBoundingsForAllNodes();
-        const nodes = group.graph._nodes;
-        group._nodes.length = 0;
+        const nodes = group.graph.nodes;
+        group._children.clear();
+        group.nodes.length = 0;
         for (const node of nodes) {
-            const node_bounding = cachedBoundings[node.id];
-            if (!node_bounding || !LiteGraph.overlapBounding(group._bounding, node_bounding)) {
-                continue;
+            const nodeBounding = cachedBoundings[getGraphDependantNodeKey(node)];
+            const nodeCenter = nodeBounding &&
+                [nodeBounding[0] + nodeBounding[2] * 0.5, nodeBounding[1] + nodeBounding[3] * 0.5];
+            if (nodeCenter) {
+                const grouBounds = group._bounding;
+                if (nodeCenter[0] >= grouBounds[0] &&
+                    nodeCenter[0] < grouBounds[0] + grouBounds[2] &&
+                    nodeCenter[1] >= grouBounds[1] &&
+                    nodeCenter[1] < grouBounds[1] + grouBounds[3]) {
+                    group._children.add(node);
+                    group.nodes.push(node);
+                }
             }
-            group._nodes.push(node);
         }
     }
     getGroupsUnsorted(now) {
+        var _a, _b, _c;
         const canvas = app.canvas;
-        const graph = app.graph;
+        const graph = (_a = canvas.getCurrentGraph()) !== null && _a !== void 0 ? _a : app.graph;
         if (!canvas.selected_group_moving &&
             (!this.groupsUnsorted.length || now - this.msLastUnsorted > this.msThreshold)) {
             this.groupsUnsorted = [...graph._groups];
+            const subgraphs = (_b = graph.subgraphs) === null || _b === void 0 ? void 0 : _b.values();
+            if (subgraphs) {
+                let s;
+                while ((s = subgraphs.next().value))
+                    this.groupsUnsorted.push(...((_c = s.groups) !== null && _c !== void 0 ? _c : []));
+            }
             for (const group of this.groupsUnsorted) {
                 this.recomputeInsideNodesForGroup(group);
-                group._rgthreeHasAnyActiveNode = group._nodes.some((n) => n.mode === LiteGraph.ALWAYS);
+                group.rgthree_hasAnyActiveNode = getGroupNodes(group).some((n) => n.mode === LiteGraph.ALWAYS);
             }
             this.msLastUnsorted = now;
         }
         return this.groupsUnsorted;
     }
     getGroupsAlpha(now) {
-        const graph = app.graph;
         if (!this.groupsSortedAlpha.length || now - this.msLastAlpha > this.msThreshold) {
             this.groupsSortedAlpha = [...this.getGroupsUnsorted(now)].sort((a, b) => {
                 return a.title.localeCompare(b.title);
@@ -108,7 +134,6 @@ class FastGroupsService {
         return this.groupsSortedAlpha;
     }
     getGroupsPosition(now) {
-        const graph = app.graph;
         if (!this.groupsSortedPosition.length || now - this.msLastPosition > this.msThreshold) {
             this.groupsSortedPosition = [...this.getGroupsUnsorted(now)].sort((a, b) => {
                 const aY = Math.floor(a._pos[1] / 30);

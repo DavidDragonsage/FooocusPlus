@@ -8,7 +8,7 @@ from enhanced.translator import interpret
 # Initialize the the current resolution template
 def AR_template_init():
     global AR_template
-    if common.task_method == 'SD_SIMPLE':
+    if common.task_method == 'sd15_TG':
         AR_template = 'SD1.5'
     elif config.enable_shortlist_aspect_ratios:
         AR_template = 'Shortlist'

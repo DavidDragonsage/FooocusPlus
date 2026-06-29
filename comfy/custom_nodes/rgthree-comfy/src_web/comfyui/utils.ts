@@ -1,22 +1,35 @@
-import type { ComfyApp, ComfyNodeConstructor, ComfyObjectInfo } from "typings/comfy.js";
 import type {
   Vector2,
-  LGraphCanvas,
-  ContextMenuItem,
+  LGraphCanvas as TLGraphCanvas,
   LLink,
   LGraph,
   IContextMenuOptions,
   ContextMenu,
-  LGraphNode,
+  LGraphNode as TLGraphNode,
   INodeSlot,
   INodeInputSlot,
   INodeOutputSlot,
-} from "typings/litegraph.js";
-import type { Constructor } from "typings/index.js";
-import { app } from "scripts/app.js";
-import { api } from "scripts/api.js";
-import { Resolver, getResolver, wait } from "rgthree/common/shared_utils.js";
-import { RgthreeHelpDialog } from "rgthree/common/dialog.js";
+  IContextMenuValue,
+  ISerialisedNode,
+  ISlotType,
+  LGraphNodeConstructor,
+  LGraphEventMode,
+  NodeProperty,
+  LinkDirection,
+  Point,
+  ComfyApp,
+  LGraphGroup,
+  NodeId,
+  Subgraph,
+  SubgraphNode,
+} from "@comfyorg/frontend";
+import type {ComfyApiPrompt, ComfyNodeDef} from "typings/comfy";
+import type {Constructor} from "typings/rgthree";
+
+import {app} from "scripts/app.js";
+import {api} from "scripts/api.js";
+import {Resolver, getResolver, wait} from "rgthree/common/shared_utils.js";
+import {RgthreeHelpDialog} from "rgthree/common/dialog.js";
 
 /**
  * Override the api.getNodeDefs call to add a hook for refreshing node defs.
@@ -26,7 +39,7 @@ import { RgthreeHelpDialog } from "rgthree/common/dialog.js";
 const oldApiGetNodeDefs = api.getNodeDefs;
 api.getNodeDefs = async function () {
   const defs = await oldApiGetNodeDefs.call(api);
-  this.dispatchEvent(new CustomEvent("fresh-node-defs", { detail: defs }));
+  this.dispatchEvent(new CustomEvent("fresh-node-defs", {detail: defs}));
   return defs;
 };
 
@@ -42,13 +55,13 @@ type LiteGraphDir =
   | typeof LiteGraph.RIGHT
   | typeof LiteGraph.UP
   | typeof LiteGraph.DOWN;
-export const LAYOUT_LABEL_TO_DATA: { [label: string]: [LiteGraphDir, Vector2, Vector2] } = {
+export const LAYOUT_LABEL_TO_DATA: {[label: string]: [LiteGraphDir, Vector2, Vector2]} = {
   Left: [LiteGraph.LEFT, [0, 0.5], [PADDING, 0]],
   Right: [LiteGraph.RIGHT, [1, 0.5], [-PADDING, 0]],
   Top: [LiteGraph.UP, [0.5, 0], [0, PADDING]],
   Bottom: [LiteGraph.DOWN, [0.5, 1], [0, -PADDING]],
 };
-export const LAYOUT_LABEL_OPPOSITES: { [label: string]: string } = {
+export const LAYOUT_LABEL_OPPOSITES: {[label: string]: string} = {
   Left: "Right",
   Right: "Left",
   Top: "Bottom",
@@ -57,23 +70,23 @@ export const LAYOUT_LABEL_OPPOSITES: { [label: string]: string } = {
 export const LAYOUT_CLOCKWISE = ["Top", "Right", "Bottom", "Left"];
 
 interface MenuConfig {
-  name: string | ((node: LGraphNode) => string);
+  name: string | ((node: TLGraphNode) => string);
   property?: string;
-  prepareValue?: (value: string, node: LGraphNode) => any;
-  callback?: (node: LGraphNode, value?: string) => void;
-  subMenuOptions?: (string | null)[] | ((node: LGraphNode) => (string | null)[]);
+  prepareValue?: (value: NodeProperty | undefined, node: TLGraphNode) => any;
+  callback?: (node: TLGraphNode, value?: string) => void;
+  subMenuOptions?: (string | null)[] | ((node: TLGraphNode) => (string | null)[]);
 }
 
 export function addMenuItem(
-  node: Constructor<LGraphNode>,
+  node: LGraphNodeConstructor,
   _app: ComfyApp,
   config: MenuConfig,
   after = "Shape",
 ) {
   const oldGetExtraMenuOptions = node.prototype.getExtraMenuOptions;
   node.prototype.getExtraMenuOptions = function (
-    canvas: LGraphCanvas,
-    menuOptions: ContextMenuItem[],
+    canvas: TLGraphCanvas,
+    menuOptions: IContextMenuValue[],
   ) {
     oldGetExtraMenuOptions && oldGetExtraMenuOptions.apply(this, [canvas, menuOptions]);
     addMenuItemOnExtraMenuOptions(this, config, menuOptions, after);
@@ -83,10 +96,10 @@ export function addMenuItem(
 /**
  * Waits for the canvas to be available on app using a single promise.
  */
-let canvasResolver: Resolver<LGraphCanvas> | null = null;
+let canvasResolver: Resolver<TLGraphCanvas> | null = null;
 export function waitForCanvas() {
   if (canvasResolver === null) {
-    canvasResolver = getResolver<LGraphCanvas>();
+    canvasResolver = getResolver<TLGraphCanvas>();
     function _waitForCanvas() {
       if (!canvasResolver!.completed) {
         if (app?.canvas) {
@@ -123,9 +136,9 @@ export function waitForGraph() {
 }
 
 export function addMenuItemOnExtraMenuOptions(
-  node: LGraphNode,
+  node: TLGraphNode,
   config: MenuConfig,
-  menuOptions: ContextMenuItem[],
+  menuOptions: (IContextMenuValue | null)[],
   after = "Shape",
 ) {
   let idx = menuOptions
@@ -154,30 +167,30 @@ export function addMenuItemOnExtraMenuOptions(
     has_submenu: !!subMenuOptions?.length,
     isRgthree: true, // Mark it, so we can find it.
     callback: (
-      value: ContextMenuItem,
+      value: IContextMenuValue,
       _options: IContextMenuOptions,
       event: MouseEvent,
       parentMenu: ContextMenu | undefined,
-      _node: LGraphNode,
+      _node: TLGraphNode,
     ) => {
       if (!!subMenuOptions?.length) {
         new LiteGraph.ContextMenu(
-          subMenuOptions.map((option) => (option ? { content: option } : null)),
+          subMenuOptions.map((option) => (option ? {content: option} : null)),
           {
             event,
             parentMenu,
             callback: (
-              subValue: ContextMenuItem,
+              subValue: IContextMenuValue,
               _options: IContextMenuOptions,
               _event: MouseEvent,
               _parentMenu: ContextMenu | undefined,
-              _node: LGraphNode,
+              _node: TLGraphNode,
             ) => {
               if (config.property) {
                 node.properties = node.properties || {};
                 node.properties[config.property] = config.prepareValue
-                  ? config.prepareValue(subValue!.content || '', node)
-                  : subValue!.content || '';
+                  ? config.prepareValue(subValue!.content || "", node)
+                  : subValue!.content || "";
               }
               config.callback && config.callback(node, subValue?.content);
             },
@@ -193,24 +206,24 @@ export function addMenuItemOnExtraMenuOptions(
       }
       config.callback && config.callback(node, value?.content);
     },
-  } as ContextMenuItem);
+  } as IContextMenuValue);
 }
 
 export function addConnectionLayoutSupport(
-  node: Constructor<LGraphNode>,
+  node: LGraphNodeConstructor,
   app: ComfyApp,
   options = [
     ["Left", "Right"],
     ["Right", "Left"],
   ],
-  callback?: (node: LGraphNode) => void,
+  callback?: (node: TLGraphNode) => void,
 ) {
   addMenuItem(node, app, {
     name: "Connections Layout",
     property: "connections_layout",
     subMenuOptions: options.map((option) => option[0] + (option[1] ? " -> " + option[1] : "")),
     prepareValue: (value, node) => {
-      const values = value.split(" -> ");
+      const values = String(value).split(" -> ");
       if (!values[1] && !node.outputs?.length) {
         values[1] = LAYOUT_LABEL_OPPOSITES[values[0]!]!;
       }
@@ -221,19 +234,27 @@ export function addConnectionLayoutSupport(
     },
     callback: (node) => {
       callback && callback(node);
-      app.graph.setDirtyCanvas(true, true);
+      node.graph?.setDirtyCanvas(true, true);
     },
   });
 
-  // const oldGetConnectionPos = node.prototype.getConnectionPos;
+  // [🤮] This is deprecated in a https://github.com/Comfy-Org/litegraph.js/pull/716 @v0.9.9 and
+  // replaced by getInputPos and getOutputPos conveniently added below.
   node.prototype.getConnectionPos = function (isInput: boolean, slotNumber: number, out: Vector2) {
     // Purposefully do not need to call the old one.
-    // oldGetConnectionPos && oldGetConnectionPos.apply(this, [isInput, slotNumber, out]);
     return getConnectionPosForLayout(this, isInput, slotNumber, out);
+  };
+  node.prototype.getInputPos = function (slotNumber: number): Vector2 {
+    // Purposefully do not need to call the existing one because we're overriding.
+    return getConnectionPosForLayout(this, true, slotNumber, [0, 0]);
+  };
+  node.prototype.getOutputPos = function (slotNumber: number): Vector2 {
+    // Purposefully do not need to call the existing one because we're overriding.
+    return getConnectionPosForLayout(this, false, slotNumber, [0, 0]);
   };
 }
 
-export function setConnectionsLayout(node: LGraphNode, newLayout: [string, string]) {
+export function setConnectionsLayout(node: TLGraphNode, newLayout: [string, string]) {
   newLayout = newLayout || (node as any).defaultConnectionsLayout || ["Left", "Right"];
   // If we didn't supply an output layout, and there's no outputs, then just choose the opposite of the
   // input as a safety.
@@ -249,7 +270,7 @@ export function setConnectionsLayout(node: LGraphNode, newLayout: [string, strin
 
 /** Allows collapsing of connections into one. Pretty unusable, unless you're the muter. */
 export function setConnectionsCollapse(
-  node: LGraphNode,
+  node: TLGraphNode,
   collapseConnections: boolean | null = null,
 ) {
   node.properties = node.properties || {};
@@ -259,7 +280,7 @@ export function setConnectionsCollapse(
 }
 
 export function getConnectionPosForLayout(
-  node: LGraphNode,
+  node: TLGraphNode,
   isInput: boolean,
   slotNumber: number,
   out: Vector2,
@@ -268,7 +289,7 @@ export function getConnectionPosForLayout(
   node.properties = node.properties || {};
   const layout = node.properties["connections_layout"] ||
     (node as any).defaultConnectionsLayout || ["Left", "Right"];
-  const collapseConnections = node.properties["collapse_connections"] || false;
+  const collapseConnections = (node.properties["collapse_connections"] as boolean) || false;
   const offset = (node.constructor as any).layout_slot_offset ?? LiteGraph.NODE_SLOT_HEIGHT * 0.5;
   let side = isInput ? layout[0] : layout[1];
   const otherSide = isInput ? layout[1] : layout[0];
@@ -309,8 +330,9 @@ export function getConnectionPosForLayout(
   cxn.dir = data[0];
 
   // If we are only 10px tall or wide, then look at connections_dir for the direction.
-  if ((node.size[0] == 10 || node.size[1] == 10) && node.properties["connections_dir"]) {
-    cxn.dir = node.properties["connections_dir"][isInput ? 0 : 1]!;
+  const connections_dir = node.properties["connections_dir"] as [LinkDirection, LinkDirection];
+  if ((node.size[0] == 10 || node.size[1] == 10) && connections_dir) {
+    cxn.dir = connections_dir[isInput ? 0 : 1]!;
   }
 
   if (side === "Left") {
@@ -389,7 +411,11 @@ function toggleConnectionLabel(cxn: any, hide = true) {
   return cxn;
 }
 
-export function addHelpMenuItem(node: LGraphNode, content: string, menuOptions: ContextMenuItem[]) {
+export function addHelpMenuItem(
+  node: TLGraphNode,
+  content: string,
+  menuOptions: (IContextMenuValue | null)[],
+) {
   addMenuItemOnExtraMenuOptions(
     node,
     {
@@ -418,10 +444,10 @@ export enum PassThroughFollowing {
  * like reroutes, etc.
  */
 export function shouldPassThrough(
-  node?: LGraphNode | null,
+  node?: TLGraphNode | null,
   passThroughFollowing = PassThroughFollowing.ALL,
 ) {
-  const type = (node?.constructor as typeof LGraphNode)?.type;
+  const type = (node?.constructor as typeof TLGraphNode)?.type;
   if (!type || passThroughFollowing === PassThroughFollowing.NONE) {
     return false;
   }
@@ -432,7 +458,6 @@ export function shouldPassThrough(
     type.includes("Reroute") || type.includes("Node Combiner") || type.includes("Node Collector")
   );
 }
-
 
 function filterOutPassthroughNodes(
   infos: ConnectedNodeInfo[],
@@ -446,11 +471,11 @@ function filterOutPassthroughNodes(
  * like reroute, etc. Will also disconnect duplicate nodes from a provided node
  */
 export function getConnectedInputNodes(
-  startNode: LGraphNode,
-  currentNode?: LGraphNode,
+  startNode: TLGraphNode,
+  currentNode?: TLGraphNode,
   slot?: number,
   passThroughFollowing = PassThroughFollowing.ALL,
-): LGraphNode[] {
+): TLGraphNode[] {
   return getConnectedNodesInfo(
     startNode,
     IoDirection.INPUT,
@@ -460,29 +485,36 @@ export function getConnectedInputNodes(
   ).map((n) => n.node);
 }
 export function getConnectedInputInfosAndFilterPassThroughs(
-  startNode: LGraphNode,
-  currentNode?: LGraphNode,
-  slot?: number,
-  passThroughFollowing = PassThroughFollowing.ALL) {
-    return filterOutPassthroughNodes(
-      getConnectedNodesInfo(startNode, IoDirection.INPUT, currentNode, slot, passThroughFollowing),
-      passThroughFollowing);
-}
-export function getConnectedInputNodesAndFilterPassThroughs(
-  startNode: LGraphNode,
-  currentNode?: LGraphNode,
+  startNode: TLGraphNode,
+  currentNode?: TLGraphNode,
   slot?: number,
   passThroughFollowing = PassThroughFollowing.ALL,
-): LGraphNode[] {
-  return getConnectedInputInfosAndFilterPassThroughs(startNode, currentNode, slot, passThroughFollowing).map(n => n.node);
+) {
+  return filterOutPassthroughNodes(
+    getConnectedNodesInfo(startNode, IoDirection.INPUT, currentNode, slot, passThroughFollowing),
+    passThroughFollowing,
+  );
+}
+export function getConnectedInputNodesAndFilterPassThroughs(
+  startNode: TLGraphNode,
+  currentNode?: TLGraphNode,
+  slot?: number,
+  passThroughFollowing = PassThroughFollowing.ALL,
+): TLGraphNode[] {
+  return getConnectedInputInfosAndFilterPassThroughs(
+    startNode,
+    currentNode,
+    slot,
+    passThroughFollowing,
+  ).map((n) => n.node);
 }
 
 export function getConnectedOutputNodes(
-  startNode: LGraphNode,
-  currentNode?: LGraphNode,
+  startNode: TLGraphNode,
+  currentNode?: TLGraphNode,
   slot?: number,
   passThroughFollowing = PassThroughFollowing.ALL,
-): LGraphNode[] {
+): TLGraphNode[] {
   return getConnectedNodesInfo(
     startNode,
     IoDirection.OUTPUT,
@@ -493,28 +525,28 @@ export function getConnectedOutputNodes(
 }
 
 export function getConnectedOutputNodesAndFilterPassThroughs(
-  startNode: LGraphNode,
-  currentNode?: LGraphNode,
+  startNode: TLGraphNode,
+  currentNode?: TLGraphNode,
   slot?: number,
   passThroughFollowing = PassThroughFollowing.ALL,
-): LGraphNode[] {
+): TLGraphNode[] {
   return filterOutPassthroughNodes(
     getConnectedNodesInfo(startNode, IoDirection.OUTPUT, currentNode, slot, passThroughFollowing),
     passThroughFollowing,
-  ).map(n => n.node);
+  ).map((n) => n.node);
 }
 
 export type ConnectedNodeInfo = {
-  node: LGraphNode;
+  node: TLGraphNode;
   travelFromSlot: number;
   travelToSlot: number;
   originTravelFromSlot: number;
 };
 
 export function getConnectedNodesInfo(
-  startNode: LGraphNode,
+  startNode: TLGraphNode,
   dir = IoDirection.INPUT,
-  currentNode?: LGraphNode,
+  currentNode?: TLGraphNode,
   slot?: number,
   passThroughFollowing = PassThroughFollowing.ALL,
   originTravelFromSlot?: number,
@@ -538,11 +570,11 @@ export function getConnectedNodesInfo(
         linkIds = currentNode.inputs?.map((i) => i.link) || [];
       }
     }
-    let graph = app.graph as LGraph;
+    const graph = currentNode.graph ?? app.graph;
     for (const linkId of linkIds) {
       let link: LLink | null = null;
       if (typeof linkId == "number") {
-        link = graph.links[linkId] as LLink;
+        link = graph.links[linkId] ?? null;
       }
       if (!link) {
         continue;
@@ -551,7 +583,7 @@ export function getConnectedNodesInfo(
       const connectedId = dir == IoDirection.OUTPUT ? link.target_id : link.origin_id;
       const travelToSlot = dir == IoDirection.OUTPUT ? link.target_slot : link.origin_slot;
       originTravelFromSlot = originTravelFromSlot != null ? originTravelFromSlot : travelFromSlot;
-      const originNode: LGraphNode = graph.getNodeById(connectedId)!;
+      const originNode: TLGraphNode = graph.getNodeById(connectedId)!;
       if (!link) {
         console.error("No connected node found... weird");
         continue;
@@ -564,7 +596,7 @@ export function getConnectedNodesInfo(
         );
       } else {
         // Add the node and, if it's a pass through, let's collect all its nodes as well.
-        rootNodes.push({ node: originNode, travelFromSlot, travelToSlot, originTravelFromSlot });
+        rootNodes.push({node: originNode, travelFromSlot, travelToSlot, originTravelFromSlot});
         if (shouldPassThrough(originNode, passThroughFollowing)) {
           for (const foundNode of getConnectedNodesInfo(
             startNode,
@@ -597,7 +629,7 @@ export type ConnectionType = {
  * from, but find a type _after_ it (in case it needs to change).
  */
 export function followConnectionUntilType(
-  node: LGraphNode,
+  node: TLGraphNode,
   dir: IoDirection,
   slotNum?: number,
   skipSelf = false,
@@ -631,17 +663,17 @@ function getTypeFromSlot(
   dir: IoDirection,
   skipSelf = false,
 ): ConnectionType | null {
-  let graph = app.graph as LGraph;
+  let graph = app.canvas.getCurrentGraph()!;
   let type = slot?.type;
   if (!skipSelf && type != null && type != "*") {
-    return { type: type as string, label: slot?.label, name: slot?.name };
+    return {type: type as string, label: slot?.label, name: slot?.name};
   }
   const links = getSlotLinks(slot);
   for (const link of links) {
     const connectedId = dir == IoDirection.OUTPUT ? link.link.target_id : link.link.origin_id;
     const connectedSlotNum =
       dir == IoDirection.OUTPUT ? link.link.target_slot : link.link.origin_slot;
-    const connectedNode: LGraphNode = graph.getNodeById(connectedId)!;
+    const connectedNode: TLGraphNode = graph.getNodeById(connectedId)!;
     // Reversed since if we're traveling down the output we want the connected node's input, etc.
     const connectedSlots =
       dir === IoDirection.OUTPUT ? connectedNode.inputs : connectedNode.outputs;
@@ -660,20 +692,20 @@ function getTypeFromSlot(
 }
 
 export async function replaceNode(
-  existingNode: LGraphNode,
-  typeOrNewNode: string | LGraphNode,
+  existingNode: TLGraphNode,
+  typeOrNewNode: string | TLGraphNode,
   inputNameMap?: Map<string, string>,
 ) {
-  const existingCtor = existingNode.constructor as typeof LGraphNode;
+  const existingCtor = existingNode.constructor as typeof TLGraphNode;
 
   const newNode =
-    typeof typeOrNewNode === "string" ? LiteGraph.createNode(typeOrNewNode) : typeOrNewNode;
+    typeof typeOrNewNode === "string" ? LiteGraph.createNode(typeOrNewNode)! : typeOrNewNode;
   // Port title (maybe) the position, size, and properties from the old node.
   if (existingNode.title != existingCtor.title) {
     newNode.title = existingNode.title;
   }
-  newNode.pos = [...existingNode.pos];
-  newNode.properties = { ...existingNode.properties };
+  newNode.pos = [...existingNode.pos] as Point;
+  newNode.properties = {...existingNode.properties};
   const oldComputeSize = [...existingNode.computeSize()];
   // oldSize to use. If we match the smallest size (computeSize) then don't record and we'll use
   // the smalles side after conversion.
@@ -699,24 +731,25 @@ export async function replaceNode(
   // We now collect the links data, inputs and outputs, of the old node since these will be
   // lost when we remove it.
   const links: {
-    node: LGraphNode;
+    node: TLGraphNode;
     slot: number | string;
-    targetNode: LGraphNode;
+    targetNode: TLGraphNode;
     targetSlot: number | string;
   }[] = [];
+  const graph = existingNode.graph || app.graph;
   for (const [index, output] of existingNode.outputs.entries()) {
     for (const linkId of output.links || []) {
-      const link: LLink = (app.graph as LGraph).links[linkId]!;
+      const link: LLink = graph.links[linkId]!;
       if (!link) continue;
-      const targetNode = app.graph.getNodeById(link.target_id)!;
-      links.push({ node: newNode, slot: output.name, targetNode, targetSlot: link.target_slot });
+      const targetNode = graph.getNodeById(link.target_id)!;
+      links.push({node: newNode, slot: output.name, targetNode, targetSlot: link.target_slot});
     }
   }
   for (const [index, input] of existingNode.inputs.entries()) {
     const linkId = input.link;
     if (linkId) {
-      const link: LLink = (app.graph as LGraph).links[linkId]!;
-      const originNode = app.graph.getNodeById(link.origin_id)!;
+      const link: LLink = graph.links[linkId]!;
+      const originNode = graph.getNodeById(link.origin_id)!;
       links.push({
         node: originNode,
         slot: link.origin_slot,
@@ -728,29 +761,126 @@ export async function replaceNode(
     }
   }
   // Add the new node, remove the old node.
-  app.graph.add(newNode);
+  graph.add(newNode);
   await wait();
   // Now go through and connect the other nodes up as they were.
   for (const link of links) {
     link.node.connect(link.slot, link.targetNode, link.targetSlot);
   }
   await wait();
-  app.graph.remove(existingNode);
+  graph.remove(existingNode);
   newNode.size = newNode.computeSize();
   newNode.setDirtyCanvas(true, true);
   return newNode;
 }
 
 export function getOriginNodeByLink(linkId?: number | null) {
-  let node: LGraphNode | null = null;
+  let node: TLGraphNode | null = null;
   if (linkId != null) {
-    const link: LLink = app.graph.links[linkId]!;
-    node = (link != null && app.graph.getNodeById(link.origin_id)) || null;
+    const link = getLinkById(linkId);
+    node = (link != null && getNodeById(link.origin_id)) || null;
   }
   return node;
 }
 
-export function applyMixins(original: Constructor<LGraphNode>, constructors: any[]) {
+/**
+ * Gets a link by id across all graphs and subgraphs.
+ */
+export function getLinkById(linkId?: number | null) {
+  if (linkId == null) return null;
+  let link: LLink | null = app.graph.links[linkId] ?? null;
+  link = link ?? app.canvas.getCurrentGraph()?.links[linkId] ?? null;
+  return link || findSomethingInAllSubgraphs((subgraph) => subgraph?.links[linkId] ?? null);
+}
+
+/**
+ * Gets a node by id across all graphs and subgraphs.
+ */
+export function getNodeById(id: NodeId) {
+  if (id == null) return null;
+  let node = app.graph.getNodeById(id);
+  node = node ?? app.canvas.getCurrentGraph()?.getNodeById(id) ?? null;
+  return node || findSomethingInAllSubgraphs((subgraph) => subgraph?.getNodeById(id) ?? null);
+}
+
+/**
+ * Given a serialized workflow, get the mutable node data.
+ *
+ * Should be kept up to date with `py/utils_graph#get_worflow_node`
+ */
+export function getNodeByIdFromApiPrompt(apiPrompt: ComfyApiPrompt, id: string | number) {
+  const fullId = getFullNodeIdFromApiPrompt(apiPrompt, id);
+  const workflow = apiPrompt.workflow ?? {};
+  const nodeIds = String(fullId).split(":");
+  const workflowNodes = workflow?.["nodes"] ?? [];
+  const workflowSubgraphs = workflow?.["definitions"]?.["subgraphs"] ?? [];
+
+  let nodesList = workflowNodes;
+  let found: ISerialisedNode | null = null;
+
+  for (const nodeId of nodeIds) {
+    found = nodesList.find((n: ISerialisedNode) => String(n.id) === String(nodeId)) || null;
+    if (found?.["type"]) {
+      const subgraph =
+        workflowSubgraphs.find((n: ISerialisedNode) => n.id === found!["type"]) || null;
+      if (subgraph?.["nodes"]) {
+        nodesList = subgraph["nodes"];
+      }
+    }
+  }
+  return found;
+}
+
+/**
+ * Finds the correct "full id" of a node (that is, with subgraph prefixes like "5:12:5"). This is
+ * really only important when attempting to modify the prompt sent to the backend, like the seed
+ * node does to generate a new seed on the client.
+ *
+ * Because the prompt `output` is an object keyed by full id, we can look to see if it has either
+ * the id passed in (either a single id, or an already-full id), or ends with the id passed in.
+ *
+ * NOTE: This does NOT find subgraph nodes since they do not exist in `apiPrompt.output`.
+ * TODO: We could search for subgraph nodes in the `apiPrompt.workflow.definitions.subgraphs`.
+ */
+export function getFullNodeIdFromApiPrompt(apiPrompt: ComfyApiPrompt, id: string | number) {
+  const output = apiPrompt.output ?? {};
+  return output[id] ? id : Object.keys(output).find((i) => i.endsWith(`:${id}`));
+}
+
+/**
+ * [🤮] At some point ComfyUI added a second param for `openSubgraph` which is the node representing
+ * the subgraph in the UI that a user would double click (at least, from what I can tell).
+ * Unfortunately, we sometimes want to open a subgraph without knowing what that node is (like, from
+ * a bookmark).
+ *
+ * While that doesn't break right now, it does throw an error. As a best-attempt to fix their
+ * no longer allowing a subgraph to just open, we can search all nodes for subgraphs for the one
+ * that represents the subgraph itself.
+ */
+export function findFromNodeForSubgraph(subgraphId: string): SubgraphNode | null {
+  const node =
+    findSomethingInAllSubgraphs((subgraph) =>
+      subgraph.nodes
+        .filter((node) => node.isSubgraphNode())
+        .find((node) => node.subgraph.id === subgraphId),
+    ) ?? null;
+  return node;
+}
+
+/**
+ * Finds something across all the graphs and subgraphs.
+ */
+function findSomethingInAllSubgraphs<T>(fn: (subgraph: Subgraph) => T | null): T | null {
+  const rootGraph = app.rootGraph ?? app.graph.rootGraph;
+  const subgraphs = [rootGraph, ...rootGraph.subgraphs?.values()] as Subgraph[];
+  for (const subgraph of subgraphs) {
+    const thing = fn(subgraph);
+    if (thing) return thing;
+  }
+  return null;
+}
+
+export function applyMixins(original: Constructor<TLGraphNode>, constructors: any[]) {
   constructors.forEach((baseCtor) => {
     Object.getOwnPropertyNames(baseCtor.prototype).forEach((name) => {
       Object.defineProperty(
@@ -768,7 +898,7 @@ export function applyMixins(original: Constructor<LGraphNode>, constructors: any
  * Obviously, for an input, this will be a max of one.
  */
 export function getSlotLinks(inputOrOutput?: INodeInputSlot | INodeOutputSlot | null) {
-  const links: { id: number; link: LLink }[] = [];
+  const links: {id: number; link: LLink}[] = [];
   if (!inputOrOutput) {
     return links;
   }
@@ -777,7 +907,7 @@ export function getSlotLinks(inputOrOutput?: INodeInputSlot | INodeOutputSlot | 
     for (const linkId of output.links || []) {
       const link: LLink = (app.graph as LGraph).links[linkId]!;
       if (link) {
-        links.push({ id: linkId, link: link });
+        links.push({id: linkId, link: link});
       }
     }
   }
@@ -785,7 +915,7 @@ export function getSlotLinks(inputOrOutput?: INodeInputSlot | INodeOutputSlot | 
     const input = inputOrOutput as INodeInputSlot;
     const link: LLink = (app.graph as LGraph).links[input.link!]!;
     if (link) {
-      links.push({ id: input.link!, link: link });
+      links.push({id: input.link!, link: link});
     }
   }
   return links;
@@ -796,9 +926,9 @@ export function getSlotLinks(inputOrOutput?: INodeInputSlot | INodeOutputSlot | 
  * slots to match the order.
  */
 export async function matchLocalSlotsToServer(
-  node: LGraphNode,
+  node: TLGraphNode,
   direction: IoDirection,
-  serverNodeData: ComfyObjectInfo,
+  serverNodeData: ComfyNodeDef,
 ) {
   const serverSlotNames =
     direction == IoDirection.INPUT
@@ -814,7 +944,7 @@ export async function matchLocalSlotsToServer(
   let firstIndex = slots.findIndex((o, i) => i !== serverSlotNames.indexOf(o.name));
   if (firstIndex > -1) {
     // Have mismatches. First, let's go through and save all our links by name.
-    const links: { [key: string]: { id: number; link: LLink }[] } = {};
+    const links: {[key: string]: {id: number; link: LLink}[]} = {};
     slots.map((slot) => {
       // There's a chance we have duplicate names on an upgrade, so we'll collect all links to one
       // name so we don't ovewrite our list per name.
@@ -865,10 +995,7 @@ export async function matchLocalSlotsToServer(
             const nextNode = app.graph.getNodeById(linkData.link.target_id);
             // (Check nextNode, as sometimes graphs seem to have very stale data and that node id
             //  doesn't exist).
-            if (
-              nextNode &&
-              (nextNode.constructor as ComfyNodeConstructor)?.type!.includes("Reroute")
-            ) {
+            if (nextNode && (nextNode.constructor as any)?.type!.includes("Reroute")) {
               (nextNode as any).stabilize && (nextNode as any).stabilize();
             }
           }
@@ -908,7 +1035,7 @@ export function isValidConnection(ioA?: INodeSlot | null, ioB?: INodeSlot | null
  * lists (without users needing to go through and re-create all their nodes one by one).
  */
 const oldIsValidConnection = LiteGraph.isValidConnection;
-LiteGraph.isValidConnection = function (typeA: string | string[], typeB: string | string[]) {
+LiteGraph.isValidConnection = function (typeA: ISlotType, typeB: ISlotType): boolean {
   let isValid = oldIsValidConnection.call(LiteGraph, typeA, typeB);
   if (!isValid) {
     typeA = String(typeA);
@@ -925,3 +1052,109 @@ LiteGraph.isValidConnection = function (typeA: string | string[], typeB: string 
   }
   return isValid;
 };
+
+/**
+ * Returns a list of output nodes given a list of nodes.
+ */
+export function getOutputNodes(nodes: TLGraphNode[]) {
+  return (
+    nodes?.filter((n) => {
+      return (
+        n.mode != LiteGraph.NEVER && ((n.constructor as any).nodeData as ComfyNodeDef)?.output_node
+      );
+    }) || []
+  );
+}
+
+/**
+ * Changes the mode of a node. We must go through this to change a node's mode after the
+ * introduction of subgraphs, as ComfyUI doesn't update the mode of a node in a subgraph on its own.
+ */
+export function changeModeOfNodes(nodeOrNodes: TLGraphNode | TLGraphNode[], mode: LGraphEventMode) {
+  reduceNodesDepthFirst(nodeOrNodes, (n) => {
+    n.mode = mode;
+  });
+}
+
+/**
+ * Performs depth-first traversal of nodes and their subgraphs.
+ * Adapted from ComfyUI Frontend's method.
+ */
+export function reduceNodesDepthFirst(
+  nodeOrNodes: TLGraphNode | TLGraphNode[],
+  reduceFn: (node: TLGraphNode) => void,
+): void;
+export function reduceNodesDepthFirst<T>(
+  nodeOrNodes: TLGraphNode | TLGraphNode[],
+  reduceFn: (node: TLGraphNode, reduceTo: T) => T | void,
+  reduceTo: T,
+): T;
+export function reduceNodesDepthFirst<T>(
+  nodeOrNodes: TLGraphNode | TLGraphNode[],
+  reduceFn: (node: TLGraphNode, reduceTo: T) => T | void,
+  reduceTo?: T,
+): T {
+  const nodes = Array.isArray(nodeOrNodes) ? nodeOrNodes : [nodeOrNodes];
+  const stack: Array<{node: TLGraphNode}> = nodes.map((node) => ({node}));
+
+  // Process stack iteratively (DFS)
+  while (stack.length > 0) {
+    const {node} = stack.pop()!;
+    const result = reduceFn(node, reduceTo as T);
+    if (result !== undefined && result !== reduceTo) {
+      reduceTo = result;
+    }
+
+    // If it's a subgraph and we should expand, add children to stack
+    if (node.isSubgraphNode?.() && node.subgraph) {
+      // Process children in reverse order to maintain left-to-right DFS processing
+      // when popping from stack (LIFO). Iterate backwards to avoid array reversal.
+      const children = node.subgraph.nodes;
+      for (let i = children.length - 1; i >= 0; i--) {
+        stack.push({node: children[i]!});
+      }
+    }
+  }
+  return reduceTo as T;
+}
+
+/**
+ * Found an issue where group._nodes had nodes that weren't in the actual group. group._nodes is
+ * marked deprecated, so we'll go ahead and use _children and filter.
+ */
+export function getGroupNodes(group: LGraphGroup): TLGraphNode[] {
+  return Array.from(group._children).filter((c) => c instanceof LGraphNode);
+}
+
+/**
+ * Gets a node identifier alongside the graph identifier.
+ *
+ * Perhaps a bug, but it appears the same node id _could_ be in different subgraphs (or, at least,
+ * was definitively reported to be in the main graph, and a subgraph). So, if we're trying
+ * identifying a node alongside other nodes (like, a cache map), we need to keep the graph id along
+ * side it as well.
+ */
+export function getGraphDependantNodeKey(node: TLGraphNode): string {
+  const graph = node.graph ?? app.graph;
+  return `${graph.id}:${node.id}`;
+}
+
+/**
+ * Gets a full color string, including parsing from the LGraphCanvas data.
+ */
+export function getFullColor(
+  color?: string,
+  liteGraphKey: "groupcolor" | "color" | "bgcolor" = "color",
+) {
+  if (!color) {
+    return "";
+  }
+  if (LGraphCanvas.node_colors[color]) {
+    color = LGraphCanvas.node_colors[color]![liteGraphKey];
+  }
+  color = color.replace("#", "").toLocaleLowerCase();
+  if (color.length === 3) {
+    color = color.replace(/(.)(.)(.)/, "$1$1$2$2$3$3");
+  }
+  return `#${color}`;
+}

@@ -2,7 +2,7 @@
 
 <div align="center">
 <a href="https://space.bilibili.com/1840885116">视频介绍</a> |
-文档 (康明孙) | 
+<a href="https://docs.easyuse.yolain.com">文档</a> | 
 <a href="https://github.com/yolain/ComfyUI-Yolain-Workflows">工作流合集</a> |
 <a href="#%EF%B8%8F-donation">捐助</a> 
 <br><br>
@@ -19,7 +19,7 @@
 - 增加了预采样参数配置的节点，可与采样节点分离，更方便预览。
 - 支持通配符与Lora的提示词节点，如需使用Lora Block Weight用法，需先保证自定义节点包中安装了 [ComfyUI-Inspire-Pack](https://github.com/ltdrdata/ComfyUI-Inspire-Pack)
 - 可多选的风格化提示词选择器，默认是Fooocus的样式json，可自定义json放在styles底下，samples文件夹里可放预览图(名称和name一致,图片文件名如有空格需转为下划线'_')
-- 加载器可开启A1111提示词风格模式，可重现与webui生成近乎相同的图像，需先安装 [ComfyUI_smZNodes](https://github.com/shiimizu/ComfyUI_smZNodes)
+- 加载器可开启A1111提示词风格模式，可重现与webui生成近乎相同的图像
 - 可使用`easy latentNoisy`或`easy preSamplingNoiseIn`节点实现对潜空间的噪声注入
 - 简化 SD1.x、SD2.x、SDXL、SVD、Zero123等流程 
 - 简化 Stable Cascade [示例参考](https://github.com/yolain/ComfyUI-Yolain-Workflows?tab=readme-ov-file#1-13-stable-cascade)
@@ -38,6 +38,7 @@
 - 支持 sd3 模型
 - 支持 kolors 模型
 - 支持 flux 模型
+- 支持 惰性条件判断（ifElse）和 for循环
 
 ## 👨🏻‍🔧 安装
 
@@ -49,22 +50,124 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 双击install.bat安装依赖
 ```
 
-## 👨🏻‍🚀 计划
-
-- [x] 更新便于维护的新前端代码
-  - [x] 使用sass维护css样式
-  - [x] 对原有扩展进行优化
-  - [x] 增加新的组件（如节点时间统计等） 
-- [ ] 在[ComfyUI-Yolain-Workflows](https://github.com/yolain/ComfyUI-Yolain-Workflows)中上传更多的工作流（如kolors,sd3等），并更新english版本的readme  
-- [ ] 更详细功能介绍的 gitbook   
-
 ## 📜 更新日志
+
+**v1.3.6**
+
+- 恢复 `easy showAnything` 对于列表类型的支持（但一些情况下展示庞大数据时仍会导致ComfyUI崩溃） 
+- 修复自定义小部件以支持子图和 Nodes 2.0 #942
+- 添加 `easy multiAngle` 节点
+- 将 `prompt.py` 转换为 V3 Schema
+- 修复 `easy humanSegmentation` 错误
+- 添加 `easy stringJoinLines`、`easy stringToIntList`、`easy simpleMath`
+- 修复 `easy ifElse` 和 `easy anythingIndexSwitch` 在某些环境下失败的问题
+
+**v1.3.5**
+
+- 修复`isNone`
+- 将`preview_rescale`添加到`easy imageChooser`
+- 修复小部件隐藏#910
+- 将 max 参数添加到 `wildcardsPromptMatrix` 偏移量 #909
+- 修复子图节点上的标题框样式
+- 在 `easypromptLine` 上添加 `remove_empty_lines`
+
+**v1.3.4**
+
+- 修复 `easy seedList` 最大值 #879
+- 为xyplot添加controlnet input #877
+- 为 `easy indexAnything` 支持 `反向索引` 
+
+**v1.3.3**
+
+- 删除CSS类名称`gird-cols-1` #859
+- 修复锁定种子在 `easy promptAwait` 中不起作用
+- 重命名节点图
+- 修复`easy ImageChooser`输出错误类型 #845
+
+**v1.3.2**
+
+- 改造 `easy imageChooser` 节点以兼容 frontend>=v1.24.2, 解决方案参考自 [Comfyui_LG_Tools](https://github.com/LAOGOU-666/Comfyui_LG_Tools)
+- 改造 `easy stylesSelector` 节点, 你可在 [other styles files](https://github.com/yolain/EasyUse-Styles-Templates) 下载到 `styles` 文件夹下
+- 改造 `easy humanSegmentation` 节点
+- 修复 `easy makeImageForICLora` 节点.
+- 添加 `easy joycaption3API` 节点
+- 添加 `easy promptAwait` 节点
+
+**v1.3.1**
+
+- 重写 drawNodeWidget 修复组节点预览的问题.
+- 更新了一些 XYPlot 的功能 by [mekinney](https://github.com/mekinney)
+- 添加 `easy seedList` 节点 (它对循环节点有用)
+
+**v1.3.0**
+
+- 将循环节点设置为最大输入和输出数量为20
+- 添加 `uniform width` 方式到 `easy makeImageForICLora`
+- 增加 `wildcardsPromptMatrix` 通配符提示词矩阵，由 [Rosmeowtis](https://github.com/Rosmeowtis) 贡献
+
+**v1.2.9**
+
+- 修复 Imagechooser 会导致工作流处理取消
+- 修复 brushnet tensor(640) 错误
+- 修复v1.6.0前端之后无法隐藏小部件的bug
+- 修复图像选择器无法选择图像
+- 修复ContextMenu Monkey修补以影响自定义脚本（PYSSSS）节点
+
+**v1.2.8**
+
+- 修复了一些BUG (😹)
+- 增加了多语言目录
+
+**v1.2.7**
+
+- 优化管理节点组显示
+- 在 `easy imageRemBg` 上添加 `ben2`
+- 添加 joyCaption2 API版节点（ https://github.com/siliconflow/BizyAir ）
+- 使用一种新的方式在 loader 中显示模型缩略图（支持 diffusion_models、lors、checkpoints）
+
+**v1.2.6**
+
+- 修复了在缺少自定义节点时缺少 “红色框框” 样式的问题。
+- 在一些简单的加载器中，将 `clip_skip` 的默认值从 `-1` 调整为 `-2`。
+- 修复因设置节点中缺少相连接的自定义节点而导致弄乱画布的问题
+- 修复 'easy imageChooser' 不能循环使用的问题。
+
+**v1.2.5**
+
+- 在 `easy preSamplingCustom` 和 `easy preSamplingAdvanced` 上增加 `enable (GPU=A1111)` 噪波生成模式选择项
+- 增加 `easy makeImageForICLora`
+- 在 `easy ipadapterApply` 添加 `REGULAR - FLUX and SD3.5 only (high strength)` 预置项以支持 InstantX Flux ipadapter 
+- 修复brushnet 无法在 `--fast` 模式下使用 
+- 支持briaai RMBG-2.0
+- 支持mochi模型
+- 实现在循环主体中重复使用终端节点输出（例如预览图像和显示任何内容等输出节点...）
+
+**v1.2.4**
+
+- 增加 `easy imageSplitTiles` and `easy imageTilesFromBatch` - 图像分块
+- 支持 `model_override`,`vae_override`,`clip_override` 可以在 `easy fullLoader` 中单独输入
+- 增加 `easy saveImageLazy`
+- 增加 `easy loadImageForLoop`
+- 增加 `easy isFileExist`
+- 增加 `easy saveText`
+
+**v1.2.3**
+
+- `easy showAnything` 和 `easy cleanGPUUsed` 增加输出插槽
+- 添加新的人体分割在 `easy humanSegmentation` 节点上 - 代码从 [ComfyUI_Human_Parts](https://github.com/metal3d/ComfyUI_Human_Parts) 整合
+- 当你在 `easy preSamplingCustom` 节点上选择basicGuider，CFG>0 且当前模型为Flux时，将使用FluxGuidance
+- 增加 `easy loraStackApply` and `easy controlnetStackApply`
 
 **v1.2.2**
 
+- 增加 `easy batchAny`
+- 增加 `easy anythingIndexSwitch`
+- 增加 `easy forLoopStart` 和 `easy forLoopEnd`  
+- 增加 `easy ifElse`
 - 增加 v2 版本新前端代码
 - 增加 `easy fluxLoader`
 - 增加 `controlnetApply` 相关节点对sd3和hunyuanDiT的支持
+- 修复 当使用fooocus inpaint后，再使用Lora模型无法生效的问题
 
 **v1.2.1**
 
@@ -121,7 +224,8 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 - 增加 `easy imageCount` - 图像数量
 - 增加 `easy textSwitch` - 文字切换
 
-**v1.1.5**
+<details>
+<summary><b>v1.1.5</b></summary>
 
 - 重写 `easy cleanGPUUsed` - 可强制清理comfyUI的模型显存占用
 - 增加 `easy humanSegmentation` - 多类分割、人像分割
@@ -130,8 +234,10 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 - 增加 `easy ipadapterApplyFromParams`
 - 增加 `easy imageInterrogator` - 图像反推
 - 增加 `easy stableDiffusion3API` - 简易的Stable Diffusion 3 多账号API节点
+</details>
 
-**v1.1.4**
+<details>
+<summary><b>v1.1.4</b></summary>
 
 - 增加 `easy imageChooser` - 从[cg-image-picker](https://github.com/chrisgoringe/cg-image-picker)简化的图片选择器
 - 增加 `easy preSamplingCustom` - 自定义预采样，可支持cosXL-edit
@@ -139,8 +245,10 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 - 增加 在Loaders上右键菜单可查看 checkpoints、lora 信息
 - 修复 `easy preSamplingNoiseIn`、`easy latentNoisy`、`east Unsampler` 以兼容ComfyUI Revision>=2098 [0542088e] 以上版本
 - 修复 FooocusInpaint修改ModelPatcher计算权重引发的问题，理应在生成model后重置ModelPatcher为默认值
+</details>
 
-**v1.1.3**
+<details>
+<summary><b>v1.1.3</b></summary>
 
 - `easy ipadapterApply` 增加 **COMPOSITION** 预置项
 - 增加 对[ResAdapter](https://huggingface.co/jiaxiangc/res-adapter) lora模型 的加载支持
@@ -149,6 +257,7 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 - 增加 `easy promptConcat`
 - `easy wildcards` 增加 **multiline_mode**属性 
 - 增加 当节点需要下载模型时，若huggingface连接超时，会切换至镜像地址下载模型
+</details>
 
 <details>
 <summary><b>v1.1.2</b></summary>
@@ -169,7 +278,7 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 </details>
 
 <details>
-<summary><b>v1.1.1/b></summary>
+<summary><b>v1.1.1</b></summary>
 
 - 修复首次添加含seed的节点且当前模式为control_before_generate时，seed为0的问题
 - `easy preSamplingAdvanced` 增加 **return_with_leftover_noise**
@@ -442,18 +551,23 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 [ComfyUI_ExtraModels](https://github.com/city96/ComfyUI_ExtraModels) - DiT架构相关节点（Pixart、混元DiT等）
 
-## ☕️ Donation
+## 免责声明
+
+本开源项目及其内容按 “原样 ”提供，不作任何明示或暗示的保证，包括但不限于适销性、特定用途适用性和非侵权保证。在任何情况下，作者或其他版权所有者均不对因本软件或本软件的使用或其他交易而产生、引起或与之相关的任何索赔、损害或其他责任承担责任，无论是合同诉讼、侵权诉讼还是其他诉讼。
+
+用户应自行负责确保在使用本软件或发布由本软件生成的内容时，遵守所在司法管辖区的所有适用法律和法规。作者和版权所有者不对用户在其各自所在地违反法律或法规的行为负责。
+
+## ☕️ 投喂
 
 **Comfyui-Easy-Use** 是一个 GPL 许可的开源项目。为了项目取得更好、可持续的发展，我希望能够获得更多的支持。 如果我的自定义节点为您的一天增添了价值，请考虑喝杯咖啡来进一步补充能量！ 💖感谢您的支持，每一杯咖啡都是我创作的动力！
 
 - [BiliBili充电](https://space.bilibili.com/1840885116)
-- [爱发电](https://afdian.com/a/yolain)
 - [Wechat/Alipay](https://github.com/user-attachments/assets/803469bd-ed6a-4fab-932d-50e5088a2d03)
 
 感谢您的捐助，我将用这些费用来租用 GPU 或购买其他 GPT 服务，以便更好地调试和完善 ComfyUI-Easy-Use 功能
 
-##  🌟Stargazers
+##  🌟大富大贵的人儿
 
-My gratitude extends to the generous souls who bestow a star. Your support is much appreciated!
+我对那些慷慨的赐予一颗星的人表示感谢。非常感谢您的支持！
 
 [![Stargazers repo roster for @yolain/ComfyUI-Easy-Use](https://reporoster.com/stars/yolain/ComfyUI-Easy-Use)](https://github.com/yolain/ComfyUI-Easy-Use/stargazers)

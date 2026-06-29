@@ -1,25 +1,27 @@
-import { app } from "scripts/app.js";
 import type {
   INodeInputSlot,
   INodeOutputSlot,
   LGraphCanvas,
+  LGraphEventMode,
   LGraphNode,
   LLink,
-  SerializedLGraphNode,
   Vector2,
-} from "typings/litegraph.js";
-import type { NodeMode } from "typings/comfy.js";
+  ISerialisedNode,
+} from "@comfyorg/frontend";
+
+import {app} from "scripts/app.js";
 import {
   PassThroughFollowing,
   addConnectionLayoutSupport,
+  changeModeOfNodes,
   getConnectedInputNodesAndFilterPassThroughs,
   getConnectedOutputNodesAndFilterPassThroughs,
 } from "./utils.js";
-import { wait } from "rgthree/common/shared_utils.js";
-import { BaseCollectorNode } from "./base_node_collector.js";
-import { NodeTypesString, stripRgthree } from "./constants.js";
-import { fitString } from "./utils_canvas.js";
-import { rgthree } from "./rgthree.js";
+import {wait} from "rgthree/common/shared_utils.js";
+import {BaseCollectorNode} from "./base_node_collector.js";
+import {NodeTypesString, stripRgthree} from "./constants.js";
+import {fitString} from "./utils_canvas.js";
+import {rgthree} from "./rgthree.js";
 
 const MODE_ALWAYS = 0;
 const MODE_MUTE = 2;
@@ -97,24 +99,15 @@ class NodeModeRelay extends BaseCollectorNode {
     return super.onConstructed();
   }
 
-  override onModeChange(from: NodeMode, to: NodeMode) {
+  override onModeChange(from: LGraphEventMode | undefined, to: LGraphEventMode) {
     super.onModeChange(from, to);
     // If we aren't connected to anything, then we'll use our mode to relay when it changes.
     if (this.inputs.length <= 1 && !this.isInputConnected(0) && this.isAnyOutputConnected()) {
       const [n, v] = logger.infoParts(`Mode change without any inputs; relaying our mode.`);
       console[n]?.(...v);
-      this.dispatchModeToRepeater(this.mode);
+      // Pass "to" since there may be other getters in the way to access this.mode directly.
+      this.dispatchModeToRepeater(to);
     }
-  }
-
-  override configure(info: SerializedLGraphNode<LGraphNode>): void {
-    // Patch a small issue (~14h) where multiple OPT_CONNECTIONS may have been created.
-    // https://github.com/rgthree/rgthree-comfy/issues/206
-    // TODO: This can probably be removed within a few weeks.
-    if (info.outputs?.length) {
-      info.outputs.length = 1;
-    }
-    super.configure(info);
   }
 
   override onDrawForeground(ctx: CanvasRenderingContext2D, canvas: LGraphCanvas): void {
@@ -193,7 +186,7 @@ class NodeModeRelay extends BaseCollectorNode {
       -1,
       this.inputsPassThroughFollowing,
     );
-    let mode: NodeMode | -99 | null = undefined;
+    let mode: LGraphEventMode | -99 | undefined = undefined;
     for (const inputNode of inputNodes) {
       // If we haven't set our mode to be, then let's set it. Otherwise, mode will stick if it
       // remains constant, otherwise, if we hit an ALWAYS, then we'll unmute all repeaters and
@@ -205,7 +198,7 @@ class NodeModeRelay extends BaseCollectorNode {
       } else if (inputNode.mode === MODE_ALWAYS || mode === MODE_ALWAYS) {
         mode = MODE_ALWAYS;
       } else {
-        mode = null;
+        mode = undefined;
       }
     }
 
@@ -218,16 +211,16 @@ class NodeModeRelay extends BaseCollectorNode {
   /**
    * Sends the mode to the repeater, checking to see if we're modifying our mode.
    */
-  private dispatchModeToRepeater(mode?: NodeMode | -99 | null) {
+  private dispatchModeToRepeater(mode?: LGraphEventMode | -99 | null) {
     if (mode != null) {
       const propertyVal = this.properties?.[MODE_TO_PROPERTY.get(mode) || ""];
-      const newMode = OPTION_TO_MODE.get(propertyVal);
-      mode = (newMode !== null ? newMode : mode) as NodeMode | -99;
+      const newMode = OPTION_TO_MODE.get(propertyVal as string);
+      mode = (newMode !== null ? newMode : mode) as LGraphEventMode | -99;
       if (mode !== null && mode !== MODE_NOTHING) {
         if (this.outputs?.length) {
           const outputNodes = getConnectedOutputNodesAndFilterPassThroughs(this);
           for (const outputNode of outputNodes) {
-            outputNode.mode = mode;
+            changeModeOfNodes(outputNode, mode);
             wait(16).then(() => {
               outputNode.setDirtyCanvas(true, true);
             });

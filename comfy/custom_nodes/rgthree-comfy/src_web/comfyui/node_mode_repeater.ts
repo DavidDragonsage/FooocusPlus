@@ -1,22 +1,23 @@
-import { app } from "scripts/app.js";
-import { BaseCollectorNode } from "./base_node_collector.js";
-import { NodeTypesString, stripRgthree } from "./constants.js";
-
 import type {
   INodeInputSlot,
   INodeOutputSlot,
+  LGraphEventMode,
   LGraphGroup,
   LGraphNode,
   LLink,
-  SerializedLGraphNode,
-} from "typings/litegraph.js";
+} from "@comfyorg/frontend";
+
+import {app} from "scripts/app.js";
+import {BaseCollectorNode} from "./base_node_collector.js";
+import {NodeTypesString, stripRgthree} from "./constants.js";
 import {
   PassThroughFollowing,
   addConnectionLayoutSupport,
+  changeModeOfNodes,
   getConnectedInputNodesAndFilterPassThroughs,
   getConnectedOutputNodesAndFilterPassThroughs,
+  getGroupNodes,
 } from "./utils.js";
-import { NodeMode } from "typings/comfy.js";
 
 class NodeModeRepeater extends BaseCollectorNode {
   override readonly inputsPassThroughFollowing: PassThroughFollowing = PassThroughFollowing.ALL;
@@ -40,16 +41,6 @@ class NodeModeRepeater extends BaseCollectorNode {
     });
 
     return super.onConstructed();
-  }
-
-  override configure(info: SerializedLGraphNode<LGraphNode>): void {
-    // Patch a small issue (~14h) where multiple OPT_CONNECTIONS may have been created.
-    // https://github.com/rgthree/rgthree-comfy/issues/206
-    // TODO: This can probably be removed within a few weeks.
-    if (info.outputs?.length) {
-      info.outputs.length = 1;
-    }
-    super.configure(info);
   }
 
   override onConnectOutput(
@@ -137,7 +128,7 @@ class NodeModeRepeater extends BaseCollectorNode {
           }
         }
       } else {
-        inputNode.mode = this.mode;
+        changeModeOfNodes(inputNode, this.mode);
       }
     }
 
@@ -159,7 +150,7 @@ class NodeModeRepeater extends BaseCollectorNode {
   }
 
   /** When a mode change, we want all connected nodes to match except for connected relays. */
-  override onModeChange(from: NodeMode, to: NodeMode) {
+  override onModeChange(from: LGraphEventMode | undefined, to: LGraphEventMode) {
     super.onModeChange(from, to);
     const linkedNodes = getConnectedInputNodesAndFilterPassThroughs(this).filter(
       (node) => node.type !== NodeTypesString.NODE_MODE_RELAY,
@@ -167,16 +158,21 @@ class NodeModeRepeater extends BaseCollectorNode {
     if (linkedNodes.length) {
       for (const node of linkedNodes) {
         if (node.type !== NodeTypesString.NODE_MODE_RELAY) {
-          node.mode = this.mode;
+          // Use "to" as there may be other getters in the way to access this.mode directly.
+          changeModeOfNodes(node, to);
         }
       }
-    } else if (app.graph._groups?.length) {
+    } else if (this.graph?._groups?.length) {
       // No linked nodes.. check if we're in a group.
-      for (const group of app.graph._groups as LGraphGroup[]) {
+      for (const group of this.graph._groups as LGraphGroup[]) {
         group.recomputeInsideNodes();
-        if (group._nodes?.includes(this)) {
-          for (const node of group._nodes) {
-            node.mode = this.mode;
+        const groupNodes = getGroupNodes(group);
+        if (groupNodes?.includes(this)) {
+          for (const node of groupNodes) {
+            if (node !== this) {
+              // Use "to" as there may be other getters in the way to access this.mode directly.
+              changeModeOfNodes(node, to);
+            }
           }
         }
       }

@@ -567,6 +567,7 @@ def save_preset(*args):
         preset["default_overwrite_step"] = overwrite_step
         preset["checkpoint_downloads"] = {}
         preset["embeddings_downloads"] = {}
+        preset["clip_downloads"] = {}
         preset["lora_downloads"] = {}
         preset["vae_downloads"] = {}
         preset["default_vae"] = vae_name

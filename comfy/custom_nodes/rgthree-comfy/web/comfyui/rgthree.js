@@ -1,14 +1,16 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 import { SERVICE as CONFIG_SERVICE } from "./services/config_service.js";
-import { fixBadLinks } from "../../rgthree/common/link_fixer.js";
+import { SERVICE as BOOKMARKS_SERVICE } from "./services/bookmarks_services.js";
+import { SERVICE as KEY_EVENT_SERVICE } from "./services/key_events_services.js";
+import { WorkflowLinkFixer } from "../../rgthree/common/link_fixer.js";
 import { injectCss, wait } from "../../rgthree/common/shared_utils.js";
 import { replaceNode, waitForCanvas, waitForGraph } from "./utils.js";
 import { NodeTypesString, addRgthree, getNodeTypeStrings } from "./constants.js";
 import { RgthreeProgressBar } from "../../rgthree/common/progress_bar.js";
 import { RgthreeConfigDialog } from "./config.js";
 import { iconGear, iconNode, iconReplace, iconStarFilled, logoRgthree, } from "../../rgthree/common/media/svgs.js";
-import { query, queryOne } from "../../rgthree/common/utils_dom.js";
+import { createElement, queryAll, query } from "../../rgthree/common/utils_dom.js";
 export var LogLevel;
 (function (LogLevel) {
     LogLevel[LogLevel["IMPORTANT"] = 1] = "IMPORTANT";
@@ -43,6 +45,13 @@ const LogLevelToCSS = {
     [LogLevel.DEV]: "color: #004b68;",
 };
 let GLOBAL_LOG_LEVEL = LogLevel.ERROR;
+const apiURL = api.apiURL;
+api.apiURL = function (route) {
+    if (route.includes("rgthree/")) {
+        return (this.api_base + "/" + route).replace(/\/\//g, "/");
+    }
+    return apiURL.apply(this, arguments);
+};
 const INVOKE_EXTENSIONS_BLOCKLIST = [
     {
         name: "Comfy.WidgetInputs",
@@ -106,6 +115,9 @@ class LogSession {
     warnParts(message, ...args) {
         return this.logParts(LogLevel.WARN, message, ...args);
     }
+    errorParts(message, ...args) {
+        return this.logParts(LogLevel.ERROR, message, ...args);
+    }
     newSession(name) {
         return new LogSession(`${this.name}${name}`);
     }
@@ -118,20 +130,22 @@ class Rgthree extends EventTarget {
         this.settingsDialog = null;
         this.progressBarEl = null;
         this.queueNodeIds = null;
+        this.version = CONFIG_SERVICE.getConfigValue("version");
         this.logger = new LogSession("[rgthree]");
         this.monitorBadLinksAlerted = false;
         this.monitorLinkTimeout = null;
         this.processingQueue = false;
-        this.loadingApiJson = false;
+        this.loadingApiJson = null;
         this.replacingReroute = null;
         this.processingMouseDown = false;
         this.processingMouseUp = false;
         this.processingMouseMove = false;
-        this.lastAdjustedMouseEvent = null;
+        this.lastCanvasMouseEvent = null;
         this.canvasCurrentlyCopyingToClipboard = false;
         this.canvasCurrentlyCopyingToClipboardWithMultipleNodes = false;
+        this.canvasCurrentlyPastingFromClipboard = false;
+        this.canvasCurrentlyPastingFromClipboardWithMultipleNodes = false;
         this.initialGraphToPromptSerializedWorkflowBecauseComfyUIBrokeStuff = null;
-        this.elDebugKeydowns = null;
         this.isMac = !!(((_a = navigator.platform) === null || _a === void 0 ? void 0 : _a.toLocaleUpperCase().startsWith("MAC")) ||
             ((_c = (_b = navigator.userAgentData) === null || _b === void 0 ? void 0 : _b.platform) === null || _c === void 0 ? void 0 : _c.toLocaleUpperCase().startsWith("MAC")));
         const logLevel = (_d = LogLevelKeyToLogLevel[CONFIG_SERVICE.getConfigValue("log_level")]) !== null && _d !== void 0 ? _d : GLOBAL_LOG_LEVEL;
@@ -147,6 +161,16 @@ class Rgthree extends EventTarget {
                 this.initializeProgressBar();
             }
         }));
+        if (CONFIG_SERVICE.getConfigValue("debug.keys_down.enabled")) {
+            const elDebugKeydowns = createElement("div.rgthree-debug-keydowns", {
+                parent: document.body,
+            });
+            const updateDebugKeyDown = () => {
+                elDebugKeydowns.innerText = Object.keys(KEY_EVENT_SERVICE.downKeys).join(" ");
+            };
+            KEY_EVENT_SERVICE.addEventListener("keydown", updateDebugKeyDown);
+            KEY_EVENT_SERVICE.addEventListener("keyup", updateDebugKeyDown);
+        }
     }
     async initializeProgressBar() {
         var _a;
@@ -164,11 +188,11 @@ class Rgthree extends EventTarget {
                     LiteGraph.closeAllContextMenus();
                     if (e.button == 2) {
                         const canvas = await waitForCanvas();
-                        new LiteGraph.ContextMenu(this.getRgthreeContextMenuItems(), {
+                        new LiteGraph.ContextMenu(this.getRgthreeIContextMenuValues(), {
                             title: `<div class="rgthree-contextmenu-item rgthree-contextmenu-title-rgthree-comfy">${logoRgthree} rgthree-comfy</div>`,
                             left: e.clientX,
                             top: 5,
-                        }, canvas.getCanvasWindow());
+                        });
                         return;
                     }
                     if (e.button == 0) {
@@ -186,15 +210,15 @@ class Rgthree extends EventTarget {
                     }
                 });
             }
-            const isUpdatedComfyBodyClasses = !!queryOne(".comfyui-body-top");
+            const isUpdatedComfyBodyClasses = !!query(".comfyui-body-top");
             const position = CONFIG_SERVICE.getConfigValue("features.progress_bar.position");
             this.progressBarEl.classList.toggle("rgthree-pos-bottom", position === "bottom");
             if (isUpdatedComfyBodyClasses) {
                 if (position === "bottom") {
-                    queryOne(".comfyui-body-bottom").appendChild(this.progressBarEl);
+                    query(".comfyui-body-bottom").appendChild(this.progressBarEl);
                 }
                 else {
-                    queryOne(".comfyui-body-top").appendChild(this.progressBarEl);
+                    query(".comfyui-body-top").appendChild(this.progressBarEl);
                 }
             }
             else {
@@ -229,20 +253,27 @@ class Rgthree extends EventTarget {
         const adjustMouseEvent = LGraphCanvas.prototype.adjustMouseEvent;
         LGraphCanvas.prototype.adjustMouseEvent = function (e) {
             adjustMouseEvent.apply(this, [...arguments]);
-            rgthree.lastAdjustedMouseEvent = e;
+            rgthree.lastCanvasMouseEvent = e;
         };
         const copyToClipboard = LGraphCanvas.prototype.copyToClipboard;
-        LGraphCanvas.prototype.copyToClipboard = function (nodes) {
+        LGraphCanvas.prototype.copyToClipboard = function (items) {
             rgthree.canvasCurrentlyCopyingToClipboard = true;
             rgthree.canvasCurrentlyCopyingToClipboardWithMultipleNodes =
-                Object.values(nodes || this.selected_nodes || []).length > 1;
-            copyToClipboard.apply(this, [...arguments]);
+                Object.values(items || this.selected_nodes || []).length > 1;
+            const value = copyToClipboard.apply(this, [...arguments]);
             rgthree.canvasCurrentlyCopyingToClipboard = false;
             rgthree.canvasCurrentlyCopyingToClipboardWithMultipleNodes = false;
+            return value;
+        };
+        const pasteFromClipboard = LGraphCanvas.prototype.pasteFromClipboard;
+        LGraphCanvas.prototype.pasteFromClipboard = function (...args) {
+            rgthree.canvasCurrentlyPastingFromClipboard = true;
+            pasteFromClipboard.apply(this, [...arguments]);
+            rgthree.canvasCurrentlyPastingFromClipboard = false;
         };
         const onGroupAdd = LGraphCanvas.onGroupAdd;
         LGraphCanvas.onGroupAdd = function (...args) {
-            const graph = app.graph;
+            const graph = app.canvas.getCurrentGraph();
             onGroupAdd.apply(this, [...args]);
             LGraphCanvas.onShowPropertyEditor({}, null, null, null, graph._groups[graph._groups.length - 1]);
         };
@@ -294,7 +325,7 @@ class Rgthree extends EventTarget {
                     content: logoRgthree + `rgthree-comfy`,
                     className: "rgthree-contextmenu-item rgthree-contextmenu-main-item-rgthree-comfy",
                     submenu: {
-                        options: that.getRgthreeContextMenuItems(),
+                        options: that.getRgthreeIContextMenuValues(),
                     },
                 });
                 options.push(null);
@@ -317,8 +348,8 @@ class Rgthree extends EventTarget {
             };
         }, 1016);
     }
-    getRgthreeContextMenuItems() {
-        const [canvas, graph] = [app.canvas, app.graph];
+    getRgthreeIContextMenuValues() {
+        const [canvas, graph] = [app.canvas, app.canvas.getCurrentGraph()];
         const selectedNodes = Object.values(canvas.selected_nodes || {});
         let rerouteNodes = [];
         if (selectedNodes.length) {
@@ -344,13 +375,15 @@ class Rgthree extends EventTarget {
                     options: getNodeTypeStrings(),
                     callback: (value, options, event) => {
                         const node = LiteGraph.createNode(addRgthree(value));
-                        node.pos = [
-                            rgthree.lastAdjustedMouseEvent.canvasX,
-                            rgthree.lastAdjustedMouseEvent.canvasY,
-                        ];
-                        canvas.graph.add(node);
-                        canvas.selectNode(node);
-                        app.graph.setDirtyCanvas(true, true);
+                        if (node) {
+                            node.pos = [
+                                rgthree.lastCanvasMouseEvent.canvasX,
+                                rgthree.lastCanvasMouseEvent.canvasY,
+                            ];
+                            canvas.graph.add(node);
+                            canvas.selectNode(node);
+                            graph.setDirtyCanvas(true, true);
+                        }
                     },
                     extra: { rgthree_doNotNest: true },
                 },
@@ -407,11 +440,12 @@ class Rgthree extends EventTarget {
             },
         ];
     }
-    async queueOutputNodes(nodeIds) {
+    async queueOutputNodes(nodes) {
         var _a;
+        const nodeIds = nodes.map((n) => n.id);
         try {
             this.queueNodeIds = nodeIds;
-            await app.queuePrompt();
+            await app.queuePrompt(0);
         }
         catch (e) {
             const [n, v] = this.logParts(LogLevel.ERROR, `There was an error queuing nodes ${nodeIds}`, e);
@@ -437,11 +471,11 @@ class Rgthree extends EventTarget {
     initializeComfyUIHooks() {
         const rgthree = this;
         const queuePrompt = app.queuePrompt;
-        app.queuePrompt = async function () {
+        app.queuePrompt = async function (number, batchCount) {
             rgthree.processingQueue = true;
             rgthree.dispatchCustomEvent("queue");
             try {
-                await queuePrompt.apply(app, [...arguments]);
+                return await queuePrompt.apply(app, [...arguments]);
             }
             finally {
                 rgthree.processingQueue = false;
@@ -449,13 +483,13 @@ class Rgthree extends EventTarget {
             }
         };
         const loadApiJson = app.loadApiJson;
-        app.loadApiJson = async function () {
-            rgthree.loadingApiJson = true;
+        app.loadApiJson = async function (apiData, fileName) {
+            rgthree.loadingApiJson = apiData;
             try {
                 loadApiJson.apply(app, [...arguments]);
             }
             finally {
-                rgthree.loadingApiJson = false;
+                rgthree.loadingApiJson = null;
             }
         };
         const graphToPrompt = app.graphToPrompt;
@@ -467,7 +501,7 @@ class Rgthree extends EventTarget {
             return promise;
         };
         const apiQueuePrompt = api.queuePrompt;
-        api.queuePrompt = async function (index, prompt) {
+        api.queuePrompt = async function (index, prompt, ...args) {
             var _a;
             if (((_a = rgthree.queueNodeIds) === null || _a === void 0 ? void 0 : _a.length) && prompt.output) {
                 const oldOutput = prompt.output;
@@ -481,7 +515,7 @@ class Rgthree extends EventTarget {
                 workflow: prompt.workflow,
                 output: prompt.output,
             });
-            const response = apiQueuePrompt.apply(app, [index, prompt]);
+            const response = apiQueuePrompt.apply(app, [index, prompt, ...args]);
             rgthree.dispatchCustomEvent("comfy-api-queue-prompt-end");
             return response;
         };
@@ -509,7 +543,8 @@ class Rgthree extends EventTarget {
                 const wasLoadingAborted = (_b = (_a = document
                     .querySelector(".comfy-modal-content")) === null || _a === void 0 ? void 0 : _a.textContent) === null || _b === void 0 ? void 0 : _b.includes("Loading aborted due");
                 const graphToUse = wasLoadingAborted ? graphCopy || graph : app.graph;
-                const fixBadLinksResult = fixBadLinks(graphToUse);
+                const fixer = WorkflowLinkFixer.create(graphToUse);
+                const fixBadLinksResult = fixer.check();
                 if (fixBadLinksResult.hasBadLinks) {
                     const [n, v] = rgthree.logParts(LogLevel.WARN, `The workflow you've loaded has corrupt linking data. Open ${new URL(location.href).origin}/rgthree/link_fixer to try to fix.`);
                     (_c = console[n]) === null || _c === void 0 ? void 0 : _c.call(console, ...v);
@@ -531,7 +566,7 @@ class Rgthree extends EventTarget {
                                         event.preventDefault();
                                         if (confirm("This will attempt to fix in place. Please make sure to have a saved copy of your workflow.")) {
                                             try {
-                                                const fixBadLinksResult = fixBadLinks(graphToUse, true);
+                                                const fixBadLinksResult = fixer.fix();
                                                 if (!fixBadLinksResult.hasBadLinks) {
                                                     rgthree.hideMessage("bad-links");
                                                     alert("Success! It's possible some valid links may have been affected. Please check and verify your workflow.");
@@ -577,7 +612,7 @@ class Rgthree extends EventTarget {
             container.classList.add("rgthree-top-messages-container");
             document.body.appendChild(container);
         }
-        const dialogs = query("dialog[open]");
+        const dialogs = queryAll("dialog[open]");
         if (dialogs.length) {
             let dialog = dialogs[dialogs.length - 1];
             dialog.appendChild(container);
@@ -650,20 +685,20 @@ class Rgthree extends EventTarget {
     newLogSession(name) {
         return this.logger.newSession(name);
     }
+    isDebugMode() {
+        if (window.location.href.includes("rgthree-debug=false")) {
+            return false;
+        }
+        return GLOBAL_LOG_LEVEL >= LogLevel.DEBUG || window.location.href.includes("rgthree-debug");
+    }
     isDevMode() {
         if (window.location.href.includes("rgthree-dev=false")) {
             return false;
         }
-        return GLOBAL_LOG_LEVEL >= LogLevel.DEBUG || window.location.href.includes("rgthree-dev");
-    }
-    isDebugMode() {
-        if (!this.isDevMode() || window.location.href.includes("rgthree-debug=false")) {
-            return false;
-        }
-        return window.location.href.includes("rgthree-debug");
+        return GLOBAL_LOG_LEVEL >= LogLevel.DEV || window.location.href.includes("rgthree-dev");
     }
     monitorBadLinks() {
-        const badLinksFound = fixBadLinks(app.graph);
+        const badLinksFound = WorkflowLinkFixer.create(app.graph).check();
         if (badLinksFound.hasBadLinks && !this.monitorBadLinksAlerted) {
             this.monitorBadLinksAlerted = true;
             alert(`Problematic links just found in live data. Can you save your workflow and file a bug with ` +
@@ -679,18 +714,15 @@ class Rgthree extends EventTarget {
     }
 }
 function getBookmarks() {
-    const graph = app.graph;
-    const bookmarks = graph._nodes
-        .filter((n) => n.type === NodeTypesString.BOOKMARK)
-        .sort((a, b) => a.title.localeCompare(b.title))
-        .map((n) => ({
+    const bookmarks = BOOKMARKS_SERVICE.getCurrentBookmarks();
+    const bookmarkItems = bookmarks.map((n) => ({
         content: `[${n.shortcutKey}] ${n.title}`,
         className: "rgthree-contextmenu-item",
         callback: () => {
             n.canvasToBookmark();
         },
     }));
-    return !bookmarks.length
+    return !bookmarkItems.length
         ? []
         : [
             {
@@ -698,8 +730,18 @@ function getBookmarks() {
                 disabled: true,
                 className: "rgthree-contextmenu-item rgthree-contextmenu-label",
             },
-            ...bookmarks,
+            ...bookmarkItems,
         ];
 }
 export const rgthree = new Rgthree();
 window.rgthree = rgthree;
+app.registerExtension({
+    name: "Comfy.RgthreeComfy",
+    aboutPageBadges: [
+        {
+            label: `rgthree-comfy v${rgthree.version}`,
+            url: "https://github.com/rgthree/rgthree-comfy",
+            icon: "rgthree-comfy-about-badge-logo",
+        },
+    ],
+});

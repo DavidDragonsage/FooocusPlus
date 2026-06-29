@@ -35,9 +35,13 @@ import sys
 import importlib.util
 import importlib.metadata
 import comfy.model_management as mm
+import logging
 import gc
 from packaging import version
 from server import PromptServer
+
+LOG = logging.getLogger(__name__)
+
 def is_package_installed(package):
     try:
         module = importlib.util.find_spec(package)
@@ -82,6 +86,7 @@ def compare_revision(num):
     if not comfy_ui_revision:
         comfy_ui_revision = get_comfyui_revision()
     return True if comfy_ui_revision == 'Unknown' or int(comfy_ui_revision) >= num else False
+
 def find_tags(string: str, sep="/") -> list[str]:
     """
     find tags from string use the sep for split
@@ -121,6 +126,8 @@ def get_sd_version(model):
         return 'hydit'
     elif isinstance(model_config, comfy.supported_models.Flux):
         return 'flux'
+    elif isinstance(model_config, comfy.supported_models.GenmoMochi):
+        return 'mochi'
     else:
         return 'unknown'
 
@@ -182,8 +189,9 @@ def find_wildcards_seed(clip_id, text, prompt):
     else:
         return None
 
-def is_linked_styles_selector(prompt, my_unique_id, prompt_type='positive'):
-    inputs_values = prompt[my_unique_id]['inputs'][prompt_type] if prompt_type in prompt[my_unique_id][
+def is_linked_styles_selector(prompt, unique_id, prompt_type='positive'):
+    unique_id = unique_id.split('.')[len(unique_id.split('.')) - 1] if "." in unique_id else unique_id
+    inputs_values = prompt[unique_id]['inputs'][prompt_type] if prompt_type in prompt[unique_id][
         'inputs'] else None
     if type(inputs_values) == list and inputs_values != 'undefined' and inputs_values[0]:
         return True if prompt[inputs_values[0]] and prompt[inputs_values[0]]['class_type'] == 'easy stylesSelector' else False
@@ -214,14 +222,15 @@ def get_local_filepath(url, dirname, local_file_name=None):
         except Exception as e:
             use_mirror = True
             url = url.replace('huggingface.co', 'hf-mirror.com')
-            print(f'无法从huggingface下载，正在尝试从 {url} 下载...')
-            PromptServer.instance.send_sync("easyuse-toast", {'content': f'无法连接huggingface，正在尝试从 {url} 下载...', 'duration': 10000})
+            print(f'Unable to download from huggingface, trying mirror: {url}')
+            PromptServer.instance.send_sync("easyuse-toast", {'content': f'Unable to connect to huggingface, trying mirror: {url}', 'duration': 10000})
             try:
                 download_url_to_file(url, destination)
             except Exception as err:
+                error_msg = str(err.args[0]) if err.args else str(err)
                 PromptServer.instance.send_sync("easyuse-toast",
-                                                {'content': f'无法从 {url} 下载模型', 'type':'error'})
-                raise Exception(f'无法从 {url} 下载，错误信息：{str(err.args[0])}')
+                                                {'content': f'Unable to download model from {url}', 'type':'error'})
+                raise Exception(f'Download failed. Original URL and mirror both failed.\nError: {error_msg}')
     return destination
 
 def to_lora_patch_dict(state_dict: dict) -> dict:
@@ -246,9 +255,9 @@ def to_lora_patch_dict(state_dict: dict) -> dict:
 def easySave(images, filename_prefix, output_type, prompt=None, extra_pnginfo=None):
     """Save or Preview Image"""
     from nodes import PreviewImage, SaveImage
-    if output_type == "Hide":
+    if output_type in ["Hide", "None"]:
         return list()
-    if output_type in ["Preview", "Preview&Choose"]:
+    elif output_type in ["Preview", "Preview&Choose"]:
         filename_prefix = 'easyPreview'
         results = PreviewImage().save_images(images, filename_prefix, prompt, extra_pnginfo)
         return results['ui']['images']
@@ -272,6 +281,20 @@ def getMetadata(filepath):
         return header
 
 def cleanGPUUsedForce():
+    from .cache import remove_cache
+
+    remove_cache("*")
     gc.collect()
+    try:
+        import torch
+    except (ImportError, OSError, RuntimeError) as exc:
+        LOG.debug("Skipping CUDA synchronize during cleanGPUUsedForce: torch import failed: %s", exc)
+    else:
+        try:
+            if torch.cuda.is_available():
+                torch.cuda.synchronize()
+        except (AttributeError, OSError, RuntimeError) as exc:
+            LOG.debug("Skipping CUDA synchronize during cleanGPUUsedForce: %s", exc)
+
     mm.unload_all_models()
     mm.soft_empty_cache()

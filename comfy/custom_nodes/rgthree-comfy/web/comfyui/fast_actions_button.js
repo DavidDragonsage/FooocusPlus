@@ -1,7 +1,7 @@
 import { app } from "../../scripts/app.js";
 import { BaseAnyInputConnectedNode } from "./base_any_input_connected_node.js";
 import { NodeTypesString } from "./constants.js";
-import { addMenuItem } from "./utils.js";
+import { addMenuItem, changeModeOfNodes } from "./utils.js";
 import { rgthree } from "./rgthree.js";
 const MODE_ALWAYS = 0;
 const MODE_MUTE = 2;
@@ -19,7 +19,7 @@ class FastActionsButton extends BaseAnyInputConnectedNode {
         this.properties["buttonText"] = "🎬 Action!";
         this.properties["shortcutModifier"] = "alt";
         this.properties["shortcutKey"] = "";
-        this.buttonWidget = this.addWidget("button", this.properties["buttonText"], null, () => {
+        this.buttonWidget = this.addWidget("button", this.properties["buttonText"], "", () => {
             this.executeConnectedNodes();
         }, { serialize: false });
         this.keypressBound = this.onKeypress.bind(this);
@@ -32,7 +32,7 @@ class FastActionsButton extends BaseAnyInputConnectedNode {
             if (info.widgets_values) {
                 for (let [index, value] of info.widgets_values.entries()) {
                     if (index > 0) {
-                        if (value.startsWith("comfy_action:")) {
+                        if (typeof value === "string" && value.startsWith("comfy_action:")) {
                             value = value.replace("comfy_action:", "");
                             this.addComfyActionWidget(index, value);
                         }
@@ -92,17 +92,19 @@ class FastActionsButton extends BaseAnyInputConnectedNode {
         }
         this.executingFromShortcut = false;
     }
-    onPropertyChanged(property, value, _prevValue) {
-        if (property == "buttonText") {
+    onPropertyChanged(property, value, prevValue) {
+        var _a, _b;
+        if (property == "buttonText" && typeof value === "string") {
             this.buttonWidget.name = value;
         }
-        if (property == "shortcutKey") {
-            value = value.trim();
-            this.properties["shortcutKey"] = (value && value[0].toLowerCase()) || "";
+        if (property == "shortcutKey" && typeof value === "string") {
+            this.properties["shortcutKey"] = (_b = (_a = value.trim()[0]) === null || _a === void 0 ? void 0 : _a.toLowerCase()) !== null && _b !== void 0 ? _b : "";
         }
+        return true;
     }
     handleLinkedNodesStabilization(linkedNodes) {
         var _a, _b, _c, _d, _e, _f, _g, _h;
+        let changed = false;
         for (const [widget, data] of this.widgetToData.entries()) {
             if (!data.node) {
                 continue;
@@ -112,6 +114,7 @@ class FastActionsButton extends BaseAnyInputConnectedNode {
                 if (index > -1) {
                     this.widgetToData.delete(widget);
                     this.removeWidget(widget);
+                    changed = true;
                 }
                 else {
                     const [m, a] = this.logger.debugParts("Connected widget is not in widgets... weird.");
@@ -139,6 +142,7 @@ class FastActionsButton extends BaseAnyInputConnectedNode {
                     if (((_g = (_f = this.widgetToData.get(this.widgets[i])) === null || _f === void 0 ? void 0 : _f.node) === null || _g === void 0 ? void 0 : _g.id) === node.id) {
                         widget = this.widgets.splice(i, 1)[0];
                         this.widgets.splice(index + indexOffset, 0, widget);
+                        changed = true;
                         break;
                     }
                 }
@@ -151,6 +155,7 @@ class FastActionsButton extends BaseAnyInputConnectedNode {
                         return widget === null || widget === void 0 ? void 0 : widget.value;
                     };
                     this.widgetToData.set(widget, { node });
+                    changed = true;
                 }
             }
         }
@@ -160,17 +165,19 @@ class FastActionsButton extends BaseAnyInputConnectedNode {
                 continue;
             }
             this.removeWidget(widgetAtSlot);
+            changed = true;
         }
+        return changed;
     }
-    removeWidget(widgetOrSlot) {
-        const widget = typeof widgetOrSlot === "number" ? this.widgets[widgetOrSlot] : widgetOrSlot;
+    removeWidget(widget) {
+        widget = typeof widget === "number" ? this.widgets[widget] : widget;
         if (widget && this.widgetToData.has(widget)) {
             this.widgetToData.delete(widget);
         }
-        super.removeWidget(widgetOrSlot);
+        super.removeWidget(widget);
     }
     async executeConnectedNodes() {
-        var _a;
+        var _a, _b;
         for (const widget of this.widgets) {
             if (widget == this.buttonWidget) {
                 continue;
@@ -185,18 +192,21 @@ class FastActionsButton extends BaseAnyInputConnectedNode {
             }
             if (node) {
                 if (action === "Mute") {
-                    node.mode = MODE_MUTE;
+                    changeModeOfNodes(node, MODE_MUTE);
                 }
                 else if (action === "Bypass") {
-                    node.mode = MODE_BYPASS;
+                    changeModeOfNodes(node, MODE_BYPASS);
                 }
                 else if (action === "Enable") {
-                    node.mode = MODE_ALWAYS;
+                    changeModeOfNodes(node, MODE_ALWAYS);
                 }
                 if (node.handleAction) {
+                    if (typeof action !== "string") {
+                        throw new Error("Fast Actions Button action should be a string: " + action);
+                    }
                     await node.handleAction(action);
                 }
-                app.graph.change();
+                (_b = this.graph) === null || _b === void 0 ? void 0 : _b.change();
                 continue;
             }
             console.warn("Fast Actions Button has a widget without correct data.");
@@ -204,18 +214,18 @@ class FastActionsButton extends BaseAnyInputConnectedNode {
     }
     addComfyActionWidget(slot, value) {
         let widget = this.addWidget("combo", "Comfy Action", "None", () => {
-            if (widget.value.startsWith("MOVE ")) {
+            if (String(widget.value).startsWith("MOVE ")) {
                 this.widgets.push(this.widgets.splice(this.widgets.indexOf(widget), 1)[0]);
-                widget.value = widget["lastValue_"];
+                widget.value = String(widget.rgthree_lastValue);
             }
-            else if (widget.value.startsWith("REMOVE ")) {
+            else if (String(widget.value).startsWith("REMOVE ")) {
                 this.removeWidget(widget);
             }
-            widget["lastValue_"] = widget.value;
+            widget.rgthree_lastValue = widget.value;
         }, {
             values: ["None", "Queue Prompt", "REMOVE Comfy Action", "MOVE to end"],
         });
-        widget["lastValue_"] = value;
+        widget.rgthree_lastValue = value;
         widget.serializeValue = async (_node, _index) => {
             return `comfy_app:${widget === null || widget === void 0 ? void 0 : widget.value}`;
         };
@@ -225,12 +235,12 @@ class FastActionsButton extends BaseAnyInputConnectedNode {
         }
         return widget;
     }
-    onSerialize(o) {
-        var _a;
-        super.onSerialize && super.onSerialize(o);
-        for (let [index, value] of (o.widgets_values || []).entries()) {
-            if (((_a = this.widgets[index]) === null || _a === void 0 ? void 0 : _a.name) === "Comfy Action") {
-                o.widgets_values[index] = `comfy_action:${value}`;
+    onSerialize(serialised) {
+        var _a, _b;
+        (_a = super.onSerialize) === null || _a === void 0 ? void 0 : _a.call(this, serialised);
+        for (let [index, value] of (serialised.widgets_values || []).entries()) {
+            if (((_b = this.widgets[index]) === null || _b === void 0 ? void 0 : _b.name) === "Comfy Action") {
+                serialised.widgets_values[index] = `comfy_action:${value}`;
             }
         }
     }

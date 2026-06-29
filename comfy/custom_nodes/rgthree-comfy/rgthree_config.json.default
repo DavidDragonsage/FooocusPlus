@@ -2,7 +2,6 @@
 {
   "log_level": "WARN",
   "features": {
-    "patch_recursive_execution": true,
     "show_alerts_for_corrupt_workflows": false,
     "monitor_for_corrupt_links": false,
     "menu_queue_selected_nodes": true,
@@ -15,7 +14,7 @@
     },
     "group_header_fast_toggle": {
       "enabled": null,
-      "toggles": ["mute", "bypass"],
+      "toggles": ["queue", "bypass", "mute"],
       "show": "hover"
     },
     "progress_bar": {
@@ -56,6 +55,14 @@
         "key_connections_input": "Shift + S",
         "key_connections_output": "Shift + D"
       }
+    },
+    "power_lora_loader": {
+      "show_info_badge": true
+    }
+  },
+  "announcements": {
+    "comfy-nodes-20": {
+      "incompatible": true
     }
   }
 }

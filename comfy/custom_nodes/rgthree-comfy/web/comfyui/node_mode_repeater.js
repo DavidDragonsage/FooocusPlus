@@ -1,7 +1,7 @@
 import { app } from "../../scripts/app.js";
 import { BaseCollectorNode } from "./base_node_collector.js";
 import { NodeTypesString, stripRgthree } from "./constants.js";
-import { PassThroughFollowing, addConnectionLayoutSupport, getConnectedInputNodesAndFilterPassThroughs, getConnectedOutputNodesAndFilterPassThroughs, } from "./utils.js";
+import { PassThroughFollowing, addConnectionLayoutSupport, changeModeOfNodes, getConnectedInputNodesAndFilterPassThroughs, getConnectedOutputNodesAndFilterPassThroughs, getGroupNodes, } from "./utils.js";
 class NodeModeRepeater extends BaseCollectorNode {
     constructor(title) {
         super(title);
@@ -17,13 +17,6 @@ class NodeModeRepeater extends BaseCollectorNode {
             color_off: "#a80",
         });
         return super.onConstructed();
-    }
-    configure(info) {
-        var _a;
-        if ((_a = info.outputs) === null || _a === void 0 ? void 0 : _a.length) {
-            info.outputs.length = 1;
-        }
-        super.configure(info);
     }
     onConnectOutput(outputIndex, inputType, inputSlot, inputNode, inputIndex) {
         let canConnect = !this.hasRelayInput;
@@ -75,7 +68,7 @@ class NodeModeRepeater extends BaseCollectorNode {
                 }
             }
             else {
-                inputNode.mode = this.mode;
+                changeModeOfNodes(inputNode, this.mode);
             }
         }
         this.hasTogglerOutput = hasTogglerOutput;
@@ -100,16 +93,19 @@ class NodeModeRepeater extends BaseCollectorNode {
         if (linkedNodes.length) {
             for (const node of linkedNodes) {
                 if (node.type !== NodeTypesString.NODE_MODE_RELAY) {
-                    node.mode = this.mode;
+                    changeModeOfNodes(node, to);
                 }
             }
         }
-        else if ((_a = app.graph._groups) === null || _a === void 0 ? void 0 : _a.length) {
-            for (const group of app.graph._groups) {
+        else if ((_b = (_a = this.graph) === null || _a === void 0 ? void 0 : _a._groups) === null || _b === void 0 ? void 0 : _b.length) {
+            for (const group of this.graph._groups) {
                 group.recomputeInsideNodes();
-                if ((_b = group._nodes) === null || _b === void 0 ? void 0 : _b.includes(this)) {
-                    for (const node of group._nodes) {
-                        node.mode = this.mode;
+                const groupNodes = getGroupNodes(group);
+                if (groupNodes === null || groupNodes === void 0 ? void 0 : groupNodes.includes(this)) {
+                    for (const node of groupNodes) {
+                        if (node !== this) {
+                            changeModeOfNodes(node, to);
+                        }
                     }
                 }
             }

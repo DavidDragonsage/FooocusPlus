@@ -1,37 +1,29 @@
-import { app } from "scripts/app.js";
-import type { LGraphNode as TLGraphNode } from "typings/litegraph.js";
-import type {
-  ComfyApp,
-  ComfyObjectInfo,
-  ComfyGraphNode,
-  ComfyNodeConstructor,
-} from "typings/comfy.js";
-import { addConnectionLayoutSupport } from "./utils.js";
-import { PowerPrompt } from "./base_power_prompt.js";
-import { NodeTypesString } from "./constants.js";
+import type {LGraphNode, LGraphNodeConstructor} from "@comfyorg/frontend";
+import type {ComfyNodeDef} from "typings/comfy.js";
 
-let nodeData: ComfyObjectInfo | null = null;
+import {app} from "scripts/app.js";
+import {addConnectionLayoutSupport} from "./utils.js";
+import {PowerPrompt} from "./base_power_prompt.js";
+import {NodeTypesString} from "./constants.js";
+
+let nodeData: ComfyNodeDef | null = null;
 app.registerExtension({
   name: "rgthree.PowerPrompt",
-  async beforeRegisterNodeDef(
-    nodeType: ComfyNodeConstructor,
-    passedNodeData: ComfyObjectInfo,
-    _app: ComfyApp,
-  ) {
+  async beforeRegisterNodeDef(nodeType: typeof LGraphNode, passedNodeData: ComfyNodeDef) {
     if (passedNodeData.name.includes("Power Prompt") && passedNodeData.name.includes("rgthree")) {
       nodeData = passedNodeData;
       const onNodeCreated = nodeType.prototype.onNodeCreated;
       nodeType.prototype.onNodeCreated = function () {
         onNodeCreated ? onNodeCreated.apply(this, []) : undefined;
-        (this as any).powerPrompt = new PowerPrompt(this as ComfyGraphNode, passedNodeData);
+        (this as any).powerPrompt = new PowerPrompt(this as LGraphNode, passedNodeData);
       };
-      addConnectionLayoutSupport(nodeType, app, [
+      addConnectionLayoutSupport(nodeType as LGraphNodeConstructor, app, [
         ["Left", "Right"],
         ["Right", "Left"],
       ]);
     }
   },
-  async loadedGraphNode(node: TLGraphNode) {
+  async loadedGraphNode(node: LGraphNode) {
     if (node.type === NodeTypesString.POWER_PROMPT) {
       setTimeout(() => {
         // If the first output is STRING, then it's the text output from the initial launch.
@@ -41,7 +33,7 @@ app.registerExtension({
             node.outputs[3]!.links = node.outputs[3]!.links || [];
             for (const link of node.outputs[0]!.links) {
               node.outputs[3]!.links.push(link);
-              app.graph.links[link]!.origin_slot = 3;
+              (node.graph || app.graph).links[link]!.origin_slot = 3;
             }
             node.outputs[0]!.links = null;
           }

@@ -1,25 +1,27 @@
-import type { ComfyNodeConstructor, ComfyObjectInfo, NodeMode } from "typings/comfy.js";
 import type {
   IWidget,
-  SerializedLGraphNode,
-  LGraphNode as TLGraphNode,
   LGraphCanvas,
-  ContextMenuItem,
-  INodeOutputSlot,
-  INodeInputSlot,
-} from "typings/litegraph.js";
-import type { RgthreeBaseServerNodeConstructor, RgthreeBaseVirtualNodeConstructor } from "typings/rgthree.js";
+  IContextMenuValue,
+  IFoundSlot,
+  LGraphEventMode,
+  LGraphNodeConstructor,
+  ISerialisedNode,
+  IBaseWidget,
+} from "@comfyorg/frontend";
+import type {ComfyNodeDef} from "typings/comfy.js";
+import type {RgthreeBaseServerNodeConstructor} from "typings/rgthree.js";
 
-import { ComfyWidgets } from "scripts/widgets.js";
-import { SERVICE as KEY_EVENT_SERVICE } from "./services/key_events_services.js";
-import { app } from "scripts/app.js";
-import { LogLevel, rgthree } from "./rgthree.js";
-import { addHelpMenuItem } from "./utils.js";
-import { RgthreeHelpDialog } from "rgthree/common/dialog.js";
+import {app} from "scripts/app.js";
+import {ComfyWidgets} from "scripts/widgets.js";
+import {SERVICE as KEY_EVENT_SERVICE} from "./services/key_events_services.js";
+import {LogLevel, rgthree} from "./rgthree.js";
+import {addHelpMenuItem} from "./utils.js";
+import {RgthreeHelpDialog} from "rgthree/common/dialog.js";
 import {
   importIndividualNodesInnerOnDragDrop,
   importIndividualNodesInnerOnDragOver,
 } from "./feature_import_individual_nodes.js";
+import {defineProperty, moveArrayItem} from "rgthree/common/shared_utils.js";
 
 /**
  * A base node with standard methods, directly extending the LGraphNode.
@@ -32,8 +34,12 @@ export abstract class RgthreeBaseNode extends LGraphNode {
   static exposedActions: string[] = [];
 
   static override title: string = "__NEED_CLASS_TITLE__";
-  static category = "rgthree";
+  static override type: string = "__NEED_CLASS_TYPE__";
+  static override category = "rgthree";
   static _category = "rgthree"; // `category` seems to get reset by comfy, so reset to this after.
+
+  /** Our constructor ensures there's a widget array, so we get rid of the nullability. */
+  override widgets!: IWidget[];
 
   /**
    * The comfyClass is property ComfyUI and extensions may care about, even through it is only for
@@ -41,12 +47,12 @@ export abstract class RgthreeBaseNode extends LGraphNode {
    * set it here so extensions that are none the wiser don't break on some unchecked string method
    * call on an undefined calue.
    */
-  comfyClass: string = "__NEED_COMFY_CLASS__";
+  override comfyClass: string = "__NEED_COMFY_CLASS__";
 
   /** Used by the ComfyUI-Manager badge. */
   readonly nickname = "rgthree";
   /** Are we a virtual node? */
-  readonly isVirtualNode: boolean = false;
+  override readonly isVirtualNode: boolean = false;
   /** Are we able to be dropped on (if config is enabled too). */
   isDropEnabled = false;
   /** A state member determining if we're currently removed. */
@@ -57,7 +63,8 @@ export abstract class RgthreeBaseNode extends LGraphNode {
   _tempWidth = 0;
 
   /** Private Mode member so we can override the setter/getter and call an `onModeChange`. */
-  private mode_: NodeMode;
+  private rgthree_mode?: LGraphEventMode;
+
   /** An internal bool set when `onConstructed` is run. */
   private __constructed__ = false;
   /** The help dialog. */
@@ -79,8 +86,24 @@ export abstract class RgthreeBaseNode extends LGraphNode {
       if (this.comfyClass == "__NEED_COMFY_CLASS__") {
         throw new Error("RgthreeBaseNode needs a comfy class override.");
       }
+      if (this.constructor.type == "__NEED_CLASS_TYPE__") {
+        throw new Error("RgthreeBaseNode needs overrides.");
+      }
       // Ensure we've called onConstructed before we got here.
       this.checkAndRunOnConstructed();
+    });
+
+    defineProperty(this, "mode", {
+      get: () => {
+        return this.rgthree_mode;
+      },
+      set: (mode: LGraphEventMode) => {
+        if (this.rgthree_mode != mode) {
+          const oldMode = this.rgthree_mode;
+          this.rgthree_mode = mode;
+          this.onModeChange(oldMode, mode);
+        }
+      },
     });
   }
 
@@ -96,12 +119,12 @@ export abstract class RgthreeBaseNode extends LGraphNode {
     return this.__constructed__;
   }
 
-  onDragOver(e: DragEvent): boolean {
+  override onDragOver(e: DragEvent): boolean {
     if (!this.isDropEnabled) return false;
     return importIndividualNodesInnerOnDragOver(this, e);
   }
 
-  async onDragDrop(e: DragEvent): Promise<boolean> {
+  override async onDragDrop(e: DragEvent): Promise<boolean> {
     if (!this.isDropEnabled) return false;
     return importIndividualNodesInnerOnDragDrop(this, e);
   }
@@ -120,7 +143,7 @@ export abstract class RgthreeBaseNode extends LGraphNode {
     return this.__constructed__;
   }
 
-  override configure(info: SerializedLGraphNode<TLGraphNode>): void {
+  override configure(info: ISerialisedNode): void {
     this.configuring = true;
     super.configure(info);
     // Fix https://github.com/comfyanonymous/ComfyUI/issues/1448 locally.
@@ -135,29 +158,23 @@ export abstract class RgthreeBaseNode extends LGraphNode {
    * Override clone for, at the least, deep-copying properties.
    */
   override clone() {
-    const cloned = super.clone();
-    // This is whild, but LiteGraph clone doesn't deep clone data, so we will. We'll use structured
-    // clone, which most browsers in 2022 support, but but we'll check.
-    if (cloned.properties && !!window.structuredClone) {
+    const cloned = super.clone()!;
+    // This is wild, but LiteGraph doesn't deep clone data, so we will. We'll use structured clone,
+    // which most browsers in 2022 support, but but we'll check.
+    if (cloned?.properties && !!window.structuredClone) {
       cloned.properties = structuredClone(cloned.properties);
     }
+    // [🤮] https://github.com/Comfy-Org/ComfyUI_frontend/issues/5037
+    // ComfyUI started throwing errors when some of our nodes wanted to remove inputs when cloning
+    // (like our dynamic inputs) because the disconnect method that's automatically called assumes
+    // there should be a graph. For now, I _think_ we can simply assign the current graph to avoid
+    // the error, which would then be overwritten when placed...
+    cloned.graph = this.graph;
     return cloned;
   }
 
-  // @ts-ignore - Changing the property to an accessor here seems to work, but ts compiler complains.
-  override set mode(mode: NodeMode) {
-    if (this.mode_ != mode) {
-      const oldMode = this.mode_;
-      this.mode_ = mode;
-      this.onModeChange(oldMode, mode);
-    }
-  }
-  override get mode() {
-    return this.mode_;
-  }
-
   /** When a mode change, we want all connected nodes to match. */
-  onModeChange(from: NodeMode, to: NodeMode) {
+  onModeChange(from: LGraphEventMode | undefined, to: LGraphEventMode) {
     // Override
   }
 
@@ -170,16 +187,44 @@ export abstract class RgthreeBaseNode extends LGraphNode {
   }
 
   /**
-   * Guess this doesn't exist in Litegraph...
+   * This didn't exist in LiteGraph/Comfy, but now it's added. Ours was a bit more flexible, though.
    */
-  removeWidget(widgetOrSlot?: IWidget | number) {
-    if (typeof widgetOrSlot === "number") {
-      this.widgets.splice(widgetOrSlot, 1);
-    } else if (widgetOrSlot) {
-      const index = this.widgets.indexOf(widgetOrSlot);
+  override removeWidget(widget: IBaseWidget | IWidget | number | undefined): void {
+    if (typeof widget === "number") {
+      widget = this.widgets[widget];
+    }
+    if (!widget) return;
+
+    // Comfy added their own removeWidget, but it's not fully rolled out to stable, so keep our
+    // original implementation.
+    // TODO: Actually, scratch that. The ComfyUI impl doesn't call widtget.onRemove?.() and so
+    // we shouldn't switch to it yet. See: https://github.com/Comfy-Org/ComfyUI_frontend/issues/5090
+    const canUseComfyUIRemoveWidget = false;
+    if (canUseComfyUIRemoveWidget && typeof super.removeWidget === 'function') {
+      super.removeWidget(widget as IBaseWidget);
+    } else {
+      const index = this.widgets.indexOf(widget as IWidget);
       if (index > -1) {
         this.widgets.splice(index, 1);
       }
+      widget.onRemove?.();
+    }
+  }
+
+  /**
+   * Replaces an existing widget.
+   */
+  replaceWidget(widgetOrSlot: IWidget | number | undefined, newWidget: IWidget) {
+    let index = null;
+    if (widgetOrSlot) {
+      index = typeof widgetOrSlot === "number" ? widgetOrSlot : this.widgets.indexOf(widgetOrSlot);
+      this.removeWidget(this.widgets[index]!);
+    }
+    index = index != null ? index : this.widgets.length - 1;
+    if (this.widgets.includes(newWidget)) {
+      moveArrayItem(this.widgets, newWidget, index);
+    } else {
+      this.widgets.splice(index, 0, newWidget);
     }
   }
 
@@ -189,23 +234,20 @@ export abstract class RgthreeBaseNode extends LGraphNode {
    * it's default logic. This bakes it so child nodes can call this instead (and this doesn't set
    * getSlotMenuOptions for all child nodes in case it doesn't exist).
    */
-  defaultGetSlotMenuOptions(slot: {
-    input?: INodeInputSlot;
-    output?: INodeOutputSlot;
-  }): ContextMenuItem[] | null {
-    const menu_info: ContextMenuItem[] = [];
+  defaultGetSlotMenuOptions(slot: IFoundSlot): IContextMenuValue[] {
+    const menu_info: IContextMenuValue[] = [];
     if (slot?.output?.links?.length) {
-      menu_info.push({ content: "Disconnect Links", slot: slot });
+      menu_info.push({content: "Disconnect Links", slot});
     }
     let inputOrOutput = slot.input || slot.output;
     if (inputOrOutput) {
       if (inputOrOutput.removable) {
         menu_info.push(
-          inputOrOutput.locked ? { content: "Cannot remove" } : { content: "Remove Slot", slot },
+          inputOrOutput.locked ? {content: "Cannot remove"} : {content: "Remove Slot", slot},
         );
       }
       if (!inputOrOutput.nameLocked) {
-        menu_info.push({ content: "Rename Slot", slot });
+        menu_info.push({content: "Rename Slot", slot});
       }
     }
     return menu_info;
@@ -248,31 +290,29 @@ export abstract class RgthreeBaseNode extends LGraphNode {
     KEY_EVENT_SERVICE.handleKeyDownOrUp(event);
   }
 
-  override getExtraMenuOptions(canvas: LGraphCanvas, options: ContextMenuItem[]): void {
+  override getExtraMenuOptions(
+    canvas: LGraphCanvas,
+    options: (IContextMenuValue<unknown> | null)[],
+  ): (IContextMenuValue<unknown> | null)[] {
     // Some other extensions override getExtraMenuOptions on the nodeType as it comes through from
     // the server, so we can call out to that if we don't have our own.
     if (super.getExtraMenuOptions) {
       super.getExtraMenuOptions?.apply(this, [canvas, options]);
-    } else if ((this.constructor as any).nodeType?.prototype?.getExtraMenuOptions) {
-      (this.constructor as any).nodeType?.prototype?.getExtraMenuOptions?.apply(this, [
-        canvas,
-        options,
-      ]);
+    } else if (this.constructor.nodeType?.prototype?.getExtraMenuOptions) {
+      this.constructor.nodeType?.prototype?.getExtraMenuOptions?.apply(this, [canvas, options]);
     }
     // If we have help content, then add a menu item.
     const help = this.getHelp() || (this.constructor as any).help;
     if (help) {
       addHelpMenuItem(this, help, options);
     }
+    return [];
   }
 }
 
 /**
  * A virtual node. Right now, this is just a wrapper for RgthreeBaseNode (which was the initial
  * base virtual node).
- *
- * TODO: Make RgthreeBaseNode private and move all virtual nodes to this class; cleanup
- * RgthreeBaseNode assumptions that its virtual.
  */
 export class RgthreeBaseVirtualNode extends RgthreeBaseNode {
   override isVirtualNode = true;
@@ -298,8 +338,8 @@ export class RgthreeBaseVirtualNode extends RgthreeBaseNode {
  * seems safer than NOT overriding.
  */
 export class RgthreeBaseServerNode extends RgthreeBaseNode {
-  static nodeData: ComfyObjectInfo | null = null;
-  static nodeType: ComfyNodeConstructor | null = null;
+  static nodeType: LGraphNodeConstructor | null = null;
+  static nodeData: ComfyNodeDef | null = null;
 
   // Drop is enabled by default for server nodes.
   override isDropEnabled = true;
@@ -337,7 +377,7 @@ export class RgthreeBaseServerNode extends RgthreeBaseNode {
 
     const WIDGETS = this.getWidgets();
 
-    const config: { minWidth: number; minHeight: number; widget?: null | { options: any } } = {
+    const config: {minWidth: number; minHeight: number; widget?: null | {options: any}} = {
       minWidth: 1,
       minHeight: 1,
       widget: null,
@@ -390,20 +430,24 @@ export class RgthreeBaseServerNode extends RgthreeBaseNode {
       const outputShape = nodeData["output_is_list"][o]
         ? LiteGraph.GRID_SHAPE
         : LiteGraph.CIRCLE_SHAPE;
-      this.addOutput(outputName, output, { shape: outputShape });
+      this.addOutput(outputName, output, {shape: outputShape});
     }
 
     const s = this.computeSize();
-    s[0] = Math.max(config.minWidth, s[0] * 1.5);
-    s[1] = Math.max(config.minHeight, s[1]);
+    // Sometime around v1.12.6 this broke as `minWidth` and `minHeight` were being explicitly set
+    // to `undefined` in the above Object.assign call (specifically for `WIDGETS[INT]`. We can avoid
+    // that by ensureing we're at a number in that case.
+    // See https://github.com/Comfy-Org/ComfyUI_frontend/issues/3045
+    s[0] = Math.max(config.minWidth ?? 1, s[0] * 1.5);
+    s[1] = Math.max(config.minHeight ?? 1, s[1]);
     this.size = s;
     this.serialize_widgets = true;
   }
 
   static __registeredForOverride__: boolean = false;
   static registerForOverride(
-    comfyClass: ComfyNodeConstructor,
-    nodeData: ComfyObjectInfo,
+    comfyClass: typeof LGraphNode,
+    nodeData: ComfyNodeDef,
     rgthreeClass: RgthreeBaseServerNodeConstructor,
   ) {
     if (OVERRIDDEN_SERVER_NODES.has(comfyClass)) {

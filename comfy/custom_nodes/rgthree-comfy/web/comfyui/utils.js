@@ -102,8 +102,8 @@ export function addMenuItemOnExtraMenuOptions(node, config, menuOptions, after =
                         if (config.property) {
                             node.properties = node.properties || {};
                             node.properties[config.property] = config.prepareValue
-                                ? config.prepareValue(subValue.content || '', node)
-                                : subValue.content || '';
+                                ? config.prepareValue(subValue.content || "", node)
+                                : subValue.content || "";
                         }
                         config.callback && config.callback(node, subValue === null || subValue === void 0 ? void 0 : subValue.content);
                     },
@@ -130,7 +130,7 @@ export function addConnectionLayoutSupport(node, app, options = [
         subMenuOptions: options.map((option) => option[0] + (option[1] ? " -> " + option[1] : "")),
         prepareValue: (value, node) => {
             var _a;
-            const values = value.split(" -> ");
+            const values = String(value).split(" -> ");
             if (!values[1] && !((_a = node.outputs) === null || _a === void 0 ? void 0 : _a.length)) {
                 values[1] = LAYOUT_LABEL_OPPOSITES[values[0]];
             }
@@ -140,12 +140,19 @@ export function addConnectionLayoutSupport(node, app, options = [
             return values;
         },
         callback: (node) => {
+            var _a;
             callback && callback(node);
-            app.graph.setDirtyCanvas(true, true);
+            (_a = node.graph) === null || _a === void 0 ? void 0 : _a.setDirtyCanvas(true, true);
         },
     });
     node.prototype.getConnectionPos = function (isInput, slotNumber, out) {
         return getConnectionPosForLayout(this, isInput, slotNumber, out);
+    };
+    node.prototype.getInputPos = function (slotNumber) {
+        return getConnectionPosForLayout(this, true, slotNumber, [0, 0]);
+    };
+    node.prototype.getOutputPos = function (slotNumber) {
+        return getConnectionPosForLayout(this, false, slotNumber, [0, 0]);
     };
 }
 export function setConnectionsLayout(node, newLayout) {
@@ -203,8 +210,9 @@ export function getConnectionPosForLayout(node, isInput, slotNumber, out) {
                 return count;
             }, 0);
     cxn.dir = data[0];
-    if ((node.size[0] == 10 || node.size[1] == 10) && node.properties["connections_dir"]) {
-        cxn.dir = node.properties["connections_dir"][isInput ? 0 : 1];
+    const connections_dir = node.properties["connections_dir"];
+    if ((node.size[0] == 10 || node.size[1] == 10) && connections_dir) {
+        cxn.dir = connections_dir[isInput ? 0 : 1];
     }
     if (side === "Left") {
         if (node.flags.collapsed) {
@@ -321,16 +329,16 @@ export function getConnectedInputInfosAndFilterPassThroughs(startNode, currentNo
     return filterOutPassthroughNodes(getConnectedNodesInfo(startNode, IoDirection.INPUT, currentNode, slot, passThroughFollowing), passThroughFollowing);
 }
 export function getConnectedInputNodesAndFilterPassThroughs(startNode, currentNode, slot, passThroughFollowing = PassThroughFollowing.ALL) {
-    return getConnectedInputInfosAndFilterPassThroughs(startNode, currentNode, slot, passThroughFollowing).map(n => n.node);
+    return getConnectedInputInfosAndFilterPassThroughs(startNode, currentNode, slot, passThroughFollowing).map((n) => n.node);
 }
 export function getConnectedOutputNodes(startNode, currentNode, slot, passThroughFollowing = PassThroughFollowing.ALL) {
     return getConnectedNodesInfo(startNode, IoDirection.OUTPUT, currentNode, slot, passThroughFollowing).map((n) => n.node);
 }
 export function getConnectedOutputNodesAndFilterPassThroughs(startNode, currentNode, slot, passThroughFollowing = PassThroughFollowing.ALL) {
-    return filterOutPassthroughNodes(getConnectedNodesInfo(startNode, IoDirection.OUTPUT, currentNode, slot, passThroughFollowing), passThroughFollowing).map(n => n.node);
+    return filterOutPassthroughNodes(getConnectedNodesInfo(startNode, IoDirection.OUTPUT, currentNode, slot, passThroughFollowing), passThroughFollowing).map((n) => n.node);
 }
 export function getConnectedNodesInfo(startNode, dir = IoDirection.INPUT, currentNode, slot, passThroughFollowing = PassThroughFollowing.ALL, originTravelFromSlot) {
-    var _a, _b, _c, _d, _e, _f;
+    var _a, _b, _c, _d, _e, _f, _g, _h;
     currentNode = currentNode || startNode;
     let rootNodes = [];
     if (startNode === currentNode || shouldPassThrough(currentNode, passThroughFollowing)) {
@@ -352,11 +360,11 @@ export function getConnectedNodesInfo(startNode, dir = IoDirection.INPUT, curren
                 linkIds = ((_f = currentNode.inputs) === null || _f === void 0 ? void 0 : _f.map((i) => i.link)) || [];
             }
         }
-        let graph = app.graph;
+        const graph = (_g = currentNode.graph) !== null && _g !== void 0 ? _g : app.graph;
         for (const linkId of linkIds) {
             let link = null;
             if (typeof linkId == "number") {
-                link = graph.links[linkId];
+                link = (_h = graph.links[linkId]) !== null && _h !== void 0 ? _h : null;
             }
             if (!link) {
                 continue;
@@ -410,7 +418,7 @@ export function followConnectionUntilType(node, dir, slotNum, skipSelf = false) 
     return type;
 }
 function getTypeFromSlot(slot, dir, skipSelf = false) {
-    let graph = app.graph;
+    let graph = app.canvas.getCurrentGraph();
     let type = slot === null || slot === void 0 ? void 0 : slot.type;
     if (!skipSelf && type != null && type != "*") {
         return { type: type, label: slot === null || slot === void 0 ? void 0 : slot.label, name: slot === null || slot === void 0 ? void 0 : slot.name };
@@ -460,20 +468,21 @@ export async function replaceNode(existingNode, typeOrNewNode, inputNameMap) {
     };
     setSizeFn();
     const links = [];
+    const graph = existingNode.graph || app.graph;
     for (const [index, output] of existingNode.outputs.entries()) {
         for (const linkId of output.links || []) {
-            const link = app.graph.links[linkId];
+            const link = graph.links[linkId];
             if (!link)
                 continue;
-            const targetNode = app.graph.getNodeById(link.target_id);
+            const targetNode = graph.getNodeById(link.target_id);
             links.push({ node: newNode, slot: output.name, targetNode, targetSlot: link.target_slot });
         }
     }
     for (const [index, input] of existingNode.inputs.entries()) {
         const linkId = input.link;
         if (linkId) {
-            const link = app.graph.links[linkId];
-            const originNode = app.graph.getNodeById(link.origin_id);
+            const link = graph.links[linkId];
+            const originNode = graph.getNodeById(link.origin_id);
             links.push({
                 node: originNode,
                 slot: link.origin_slot,
@@ -484,13 +493,13 @@ export async function replaceNode(existingNode, typeOrNewNode, inputNameMap) {
             });
         }
     }
-    app.graph.add(newNode);
+    graph.add(newNode);
     await wait();
     for (const link of links) {
         link.node.connect(link.slot, link.targetNode, link.targetSlot);
     }
     await wait();
-    app.graph.remove(existingNode);
+    graph.remove(existingNode);
     newNode.size = newNode.computeSize();
     newNode.setDirtyCanvas(true, true);
     return newNode;
@@ -498,10 +507,69 @@ export async function replaceNode(existingNode, typeOrNewNode, inputNameMap) {
 export function getOriginNodeByLink(linkId) {
     let node = null;
     if (linkId != null) {
-        const link = app.graph.links[linkId];
-        node = (link != null && app.graph.getNodeById(link.origin_id)) || null;
+        const link = getLinkById(linkId);
+        node = (link != null && getNodeById(link.origin_id)) || null;
     }
     return node;
+}
+export function getLinkById(linkId) {
+    var _a, _b, _c;
+    if (linkId == null)
+        return null;
+    let link = (_a = app.graph.links[linkId]) !== null && _a !== void 0 ? _a : null;
+    link = (_c = link !== null && link !== void 0 ? link : (_b = app.canvas.getCurrentGraph()) === null || _b === void 0 ? void 0 : _b.links[linkId]) !== null && _c !== void 0 ? _c : null;
+    return link || findSomethingInAllSubgraphs((subgraph) => { var _a; return (_a = subgraph === null || subgraph === void 0 ? void 0 : subgraph.links[linkId]) !== null && _a !== void 0 ? _a : null; });
+}
+export function getNodeById(id) {
+    var _a, _b;
+    if (id == null)
+        return null;
+    let node = app.graph.getNodeById(id);
+    node = (_b = node !== null && node !== void 0 ? node : (_a = app.canvas.getCurrentGraph()) === null || _a === void 0 ? void 0 : _a.getNodeById(id)) !== null && _b !== void 0 ? _b : null;
+    return node || findSomethingInAllSubgraphs((subgraph) => { var _a; return (_a = subgraph === null || subgraph === void 0 ? void 0 : subgraph.getNodeById(id)) !== null && _a !== void 0 ? _a : null; });
+}
+export function getNodeByIdFromApiPrompt(apiPrompt, id) {
+    var _a, _b, _c, _d;
+    const fullId = getFullNodeIdFromApiPrompt(apiPrompt, id);
+    const workflow = (_a = apiPrompt.workflow) !== null && _a !== void 0 ? _a : {};
+    const nodeIds = String(fullId).split(":");
+    const workflowNodes = (_b = workflow === null || workflow === void 0 ? void 0 : workflow["nodes"]) !== null && _b !== void 0 ? _b : [];
+    const workflowSubgraphs = (_d = (_c = workflow === null || workflow === void 0 ? void 0 : workflow["definitions"]) === null || _c === void 0 ? void 0 : _c["subgraphs"]) !== null && _d !== void 0 ? _d : [];
+    let nodesList = workflowNodes;
+    let found = null;
+    for (const nodeId of nodeIds) {
+        found = nodesList.find((n) => String(n.id) === String(nodeId)) || null;
+        if (found === null || found === void 0 ? void 0 : found["type"]) {
+            const subgraph = workflowSubgraphs.find((n) => n.id === found["type"]) || null;
+            if (subgraph === null || subgraph === void 0 ? void 0 : subgraph["nodes"]) {
+                nodesList = subgraph["nodes"];
+            }
+        }
+    }
+    return found;
+}
+export function getFullNodeIdFromApiPrompt(apiPrompt, id) {
+    var _a;
+    const output = (_a = apiPrompt.output) !== null && _a !== void 0 ? _a : {};
+    return output[id] ? id : Object.keys(output).find((i) => i.endsWith(`:${id}`));
+}
+export function findFromNodeForSubgraph(subgraphId) {
+    var _a;
+    const node = (_a = findSomethingInAllSubgraphs((subgraph) => subgraph.nodes
+        .filter((node) => node.isSubgraphNode())
+        .find((node) => node.subgraph.id === subgraphId))) !== null && _a !== void 0 ? _a : null;
+    return node;
+}
+function findSomethingInAllSubgraphs(fn) {
+    var _a, _b;
+    const rootGraph = (_a = app.rootGraph) !== null && _a !== void 0 ? _a : app.graph.rootGraph;
+    const subgraphs = [rootGraph, ...(_b = rootGraph.subgraphs) === null || _b === void 0 ? void 0 : _b.values()];
+    for (const subgraph of subgraphs) {
+        const thing = fn(subgraph);
+        if (thing)
+            return thing;
+    }
+    return null;
 }
 export function applyMixins(original, constructors) {
     constructors.forEach((baseCtor) => {
@@ -590,8 +658,7 @@ export async function matchLocalSlotsToServer(node, direction, serverNodeData) {
                     else {
                         linkData.link.origin_slot = currentNodeSlot;
                         const nextNode = app.graph.getNodeById(linkData.link.target_id);
-                        if (nextNode &&
-                            ((_c = nextNode.constructor) === null || _c === void 0 ? void 0 : _c.type.includes("Reroute"))) {
+                        if (nextNode && ((_c = nextNode.constructor) === null || _c === void 0 ? void 0 : _c.type.includes("Reroute"))) {
                             nextNode.stabilize && nextNode.stabilize();
                         }
                     }
@@ -628,3 +695,54 @@ LiteGraph.isValidConnection = function (typeA, typeB) {
     }
     return isValid;
 };
+export function getOutputNodes(nodes) {
+    return ((nodes === null || nodes === void 0 ? void 0 : nodes.filter((n) => {
+        var _a;
+        return (n.mode != LiteGraph.NEVER && ((_a = n.constructor.nodeData) === null || _a === void 0 ? void 0 : _a.output_node));
+    })) || []);
+}
+export function changeModeOfNodes(nodeOrNodes, mode) {
+    reduceNodesDepthFirst(nodeOrNodes, (n) => {
+        n.mode = mode;
+    });
+}
+export function reduceNodesDepthFirst(nodeOrNodes, reduceFn, reduceTo) {
+    var _a;
+    const nodes = Array.isArray(nodeOrNodes) ? nodeOrNodes : [nodeOrNodes];
+    const stack = nodes.map((node) => ({ node }));
+    while (stack.length > 0) {
+        const { node } = stack.pop();
+        const result = reduceFn(node, reduceTo);
+        if (result !== undefined && result !== reduceTo) {
+            reduceTo = result;
+        }
+        if (((_a = node.isSubgraphNode) === null || _a === void 0 ? void 0 : _a.call(node)) && node.subgraph) {
+            const children = node.subgraph.nodes;
+            for (let i = children.length - 1; i >= 0; i--) {
+                stack.push({ node: children[i] });
+            }
+        }
+    }
+    return reduceTo;
+}
+export function getGroupNodes(group) {
+    return Array.from(group._children).filter((c) => c instanceof LGraphNode);
+}
+export function getGraphDependantNodeKey(node) {
+    var _a;
+    const graph = (_a = node.graph) !== null && _a !== void 0 ? _a : app.graph;
+    return `${graph.id}:${node.id}`;
+}
+export function getFullColor(color, liteGraphKey = "color") {
+    if (!color) {
+        return "";
+    }
+    if (LGraphCanvas.node_colors[color]) {
+        color = LGraphCanvas.node_colors[color][liteGraphKey];
+    }
+    color = color.replace("#", "").toLocaleLowerCase();
+    if (color.length === 3) {
+        color = color.replace(/(.)(.)(.)/, "$1$1$2$2$3$3");
+    }
+    return `#${color}`;
+}

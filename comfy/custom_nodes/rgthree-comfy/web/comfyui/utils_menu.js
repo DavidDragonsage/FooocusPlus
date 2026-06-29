@@ -7,11 +7,11 @@ export async function showLoraChooser(event, callback, parentMenu, loras) {
     var _a, _b;
     const canvas = app.canvas;
     if (!loras) {
-        loras = ["None", ...(await rgthreeApi.getLoras())];
+        loras = ["None", ...(await rgthreeApi.getLoras().then((loras) => loras.map((l) => l.file)))];
     }
     new LiteGraph.ContextMenu(loras, {
         event: event,
-        parentMenu,
+        parentMenu: parentMenu != null ? parentMenu : undefined,
         title: "Choose a lora",
         scale: Math.max(1, (_b = (_a = canvas.ds) === null || _a === void 0 ? void 0 : _a.scale) !== null && _b !== void 0 ? _b : 1),
         className: "dark",

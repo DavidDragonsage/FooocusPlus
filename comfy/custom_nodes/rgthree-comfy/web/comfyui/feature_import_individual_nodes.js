@@ -1,6 +1,7 @@
-import { tryToGetWorkflowDataFromEvent } from "../../rgthree/common/utils_workflow.js";
 import { app } from "../../scripts/app.js";
+import { tryToGetWorkflowDataFromEvent } from "../../rgthree/common/utils_workflow.js";
 import { SERVICE as CONFIG_SERVICE } from "./services/config_service.js";
+import { NodeTypesString } from "./constants.js";
 app.registerExtension({
     name: "rgthree.ImportIndividualNodes",
     async beforeRegisterNodeDef(nodeType, nodeData) {
@@ -34,19 +35,32 @@ export async function importIndividualNodesInnerOnDragDrop(node, e) {
     if (!((_a = node.widgets) === null || _a === void 0 ? void 0 : _a.length) || !CONFIG_SERVICE.getFeatureValue("import_individual_nodes.enabled")) {
         return false;
     }
+    const dynamicWidgetLengthNodes = [NodeTypesString.POWER_LORA_LOADER];
     let handled = false;
     const { workflow, prompt } = await tryToGetWorkflowDataFromEvent(e);
-    if (!handled && workflow) {
-        const exact = (workflow.nodes || []).find((n) => n.id === node.id && n.type === node.type);
-        if (exact &&
-            ((_b = exact.widgets_values) === null || _b === void 0 ? void 0 : _b.length) &&
-            confirm("Found a node match from embedded workflow (same id & type) in this workflow. Would you like to set the widget values?")) {
-            node.configure({ widgets_values: [...((exact === null || exact === void 0 ? void 0 : exact.widgets_values) || [])] });
-            handled = true;
-        }
+    const exact = ((workflow === null || workflow === void 0 ? void 0 : workflow.nodes) || []).find((n) => {
+        var _a, _b;
+        return n.id === node.id &&
+            n.type === node.type &&
+            (dynamicWidgetLengthNodes.includes(node.type) ||
+                ((_a = n.widgets_values) === null || _a === void 0 ? void 0 : _a.length) === ((_b = node.widgets_values) === null || _b === void 0 ? void 0 : _b.length));
+    });
+    if (!exact) {
+        handled = !confirm("[rgthree-comfy] Could not find a matching node (same id & type) in the dropped workflow." +
+            " Would you like to continue with the default drop behaviour instead?");
     }
-    if (!handled) {
-        handled = !confirm("No exact match found in workflow. Would you like to replace the whole workflow?");
+    else if (!((_b = exact.widgets_values) === null || _b === void 0 ? void 0 : _b.length)) {
+        handled = !confirm("[rgthree-comfy] Matching node found (same id & type) but there's no widgets to set." +
+            " Would you like to continue with the default drop behaviour instead?");
+    }
+    else if (confirm("[rgthree-comfy] Found a matching node (same id & type) in the dropped workflow." +
+        " Would you like to set the widget values?")) {
+        node.configure({
+            title: node.title,
+            widgets_values: [...((exact === null || exact === void 0 ? void 0 : exact.widgets_values) || [])],
+            mode: exact.mode,
+        });
+        handled = true;
     }
     return handled;
 }

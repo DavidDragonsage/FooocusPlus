@@ -1,23 +1,30 @@
 import type {
   LGraphCanvas as TLGraphCanvas,
   LGraphNode,
-  SerializedLGraphNode,
-  serializedLGraph,
-  ContextMenuItem,
+  IContextMenuValue,
   LGraph as TLGraph,
-  AdjustedMouseEvent,
   IContextMenuOptions,
-} from "typings/litegraph.js";
-import type { ComfyApiFormat, ComfyApiPrompt, ComfyApp } from "typings/comfy.js";
-import { app } from "scripts/app.js";
-import { api } from "scripts/api.js";
-import { SERVICE as CONFIG_SERVICE } from "./services/config_service.js";
-import { fixBadLinks } from "rgthree/common/link_fixer.js";
-import { injectCss, wait } from "rgthree/common/shared_utils.js";
-import { replaceNode, waitForCanvas, waitForGraph } from "./utils.js";
-import { NodeTypesString, addRgthree, getNodeTypeStrings, stripRgthree } from "./constants.js";
-import { RgthreeProgressBar } from "rgthree/common/progress_bar.js";
-import { RgthreeConfigDialog } from "./config.js";
+  ISerialisedGraph,
+  CanvasMouseEvent,
+  CanvasPointerExtensions,
+  NodeId,
+  ISerialisedNode,
+  Positionable,
+  ComfyApp,
+} from "@comfyorg/frontend";
+import type {ComfyApiFormat, ComfyApiPrompt} from "typings/comfy.js";
+
+import {app} from "scripts/app.js";
+import {api} from "scripts/api.js";
+import {SERVICE as CONFIG_SERVICE} from "./services/config_service.js";
+import {SERVICE as BOOKMARKS_SERVICE} from "./services/bookmarks_services.js";
+import {SERVICE as KEY_EVENT_SERVICE} from "./services/key_events_services.js";
+import {WorkflowLinkFixer} from "rgthree/common/link_fixer.js";
+import {injectCss, wait} from "rgthree/common/shared_utils.js";
+import {replaceNode, waitForCanvas, waitForGraph} from "./utils.js";
+import {NodeTypesString, addRgthree, getNodeTypeStrings} from "./constants.js";
+import {RgthreeProgressBar} from "rgthree/common/progress_bar.js";
+import {RgthreeConfigDialog} from "./config.js";
 import {
   iconGear,
   iconNode,
@@ -25,8 +32,7 @@ import {
   iconStarFilled,
   logoRgthree,
 } from "rgthree/common/media/svgs.js";
-import type { Bookmark } from "./bookmark.js";
-import { createElement, query, queryOne } from "rgthree/common/utils_dom.js";
+import {createElement, queryAll, query} from "rgthree/common/utils_dom.js";
 
 export enum LogLevel {
   IMPORTANT = 1,
@@ -37,7 +43,7 @@ export enum LogLevel {
   DEV,
 }
 
-const LogLevelKeyToLogLevel: { [key: string]: LogLevel } = {
+const LogLevelKeyToLogLevel: {[key: string]: LogLevel} = {
   IMPORTANT: LogLevel.IMPORTANT,
   ERROR: LogLevel.ERROR,
   WARN: LogLevel.WARN,
@@ -47,7 +53,7 @@ const LogLevelKeyToLogLevel: { [key: string]: LogLevel } = {
 };
 
 type ConsoleLogFns = "log" | "error" | "warn" | "debug" | "info";
-const LogLevelToMethod: { [key in LogLevel]: ConsoleLogFns } = {
+const LogLevelToMethod: {[key in LogLevel]: ConsoleLogFns} = {
   [LogLevel.IMPORTANT]: "log",
   [LogLevel.ERROR]: "error",
   [LogLevel.WARN]: "warn",
@@ -55,7 +61,7 @@ const LogLevelToMethod: { [key in LogLevel]: ConsoleLogFns } = {
   [LogLevel.DEBUG]: "log",
   [LogLevel.DEV]: "log",
 };
-const LogLevelToCSS: { [key in LogLevel]: string } = {
+const LogLevelToCSS: {[key in LogLevel]: string} = {
   [LogLevel.IMPORTANT]: "font-weight: bold; color: blue;",
   [LogLevel.ERROR]: "",
   [LogLevel.WARN]: "",
@@ -65,6 +71,19 @@ const LogLevelToCSS: { [key in LogLevel]: string } = {
 };
 
 let GLOBAL_LOG_LEVEL = LogLevel.ERROR;
+
+/**
+ * At some point in Summer of 2024 ComfyUI broke third-party api calls by assuming api paths follow
+ * a certain structure. However, rgthree-comfy wants an `/rgthree/` prefix for that same reason, so
+ * we overwrite the apiUrl method to fix.
+ */
+const apiURL = api.apiURL;
+api.apiURL = function (route: string): string {
+  if (route.includes("rgthree/")) {
+    return (this.api_base + "/" + route).replace(/\/\//g, "/");
+  }
+  return apiURL.apply(this, arguments as any);
+};
 
 /**
  * A blocklist of extensions to disallow hooking into rgthree's base classes when calling the
@@ -131,7 +150,7 @@ class Logger {
  */
 class LogSession {
   readonly logger = new Logger();
-  readonly logsCache: { [key: string]: { lastShownTime: number } } = {};
+  readonly logsCache: {[key: string]: {lastShownTime: number}} = {};
 
   constructor(readonly name?: string) {}
 
@@ -162,7 +181,7 @@ class LogSession {
     }
     const parts = this.logger.logParts(level, message, ...args);
     if (console[parts[0]]) {
-      this.logsCache[cacheKey] = this.logsCache[cacheKey] || ({} as { lastShownTime: number });
+      this.logsCache[cacheKey] = this.logsCache[cacheKey] || ({} as {lastShownTime: number});
       this.logsCache[cacheKey]!.lastShownTime = now;
     }
     return parts;
@@ -178,6 +197,10 @@ class LogSession {
 
   warnParts(message?: string, ...args: any[]) {
     return this.logParts(LogLevel.WARN, message, ...args);
+  }
+
+  errorParts(message?: string, ...args: any[]) {
+    return this.logParts(LogLevel.ERROR, message, ...args);
   }
 
   newSession(name?: string) {
@@ -209,7 +232,9 @@ class Rgthree extends EventTarget {
   private rgthreeCssPromise: Promise<void>;
 
   /** Stores a node id that we will use to queu only that output node (with `queueOutputNode`). */
-  private queueNodeIds: number[] | null = null;
+  private queueNodeIds: NodeId[] | null = null;
+
+  readonly version = CONFIG_SERVICE.getConfigValue("version");
 
   logger = new LogSession("[rgthree]");
 
@@ -217,19 +242,23 @@ class Rgthree extends EventTarget {
   monitorLinkTimeout: number | null = null;
 
   processingQueue = false;
-  loadingApiJson = false;
-  replacingReroute: number | null = null;
+  /**
+   * The API Json currently being loaded, or null. Can be used as a falsy boolean to determine if
+   * `app.loadApiJson` is currently executing.
+   */
+  loadingApiJson: ComfyApiFormat | null = null;
+  replacingReroute: NodeId | null = null;
   processingMouseDown = false;
   processingMouseUp = false;
   processingMouseMove = false;
-  lastAdjustedMouseEvent: AdjustedMouseEvent | null = null;
+  lastCanvasMouseEvent: CanvasMouseEvent | null = null;
 
   // Comfy/LiteGraph states so nodes and tell what the hell is going on.
   canvasCurrentlyCopyingToClipboard = false;
   canvasCurrentlyCopyingToClipboardWithMultipleNodes = false;
+  canvasCurrentlyPastingFromClipboard = false;
+  canvasCurrentlyPastingFromClipboardWithMultipleNodes = false;
   initialGraphToPromptSerializedWorkflowBecauseComfyUIBrokeStuff: any = null;
-
-  private elDebugKeydowns: HTMLDivElement | null = null;
 
   private readonly isMac: boolean = !!(
     navigator.platform?.toLocaleUpperCase().startsWith("MAC") ||
@@ -256,6 +285,17 @@ class Rgthree extends EventTarget {
         this.initializeProgressBar();
       }
     }) as EventListener);
+
+    if (CONFIG_SERVICE.getConfigValue("debug.keys_down.enabled")) {
+      const elDebugKeydowns = createElement<HTMLDivElement>("div.rgthree-debug-keydowns", {
+        parent: document.body,
+      });
+      const updateDebugKeyDown = () => {
+        elDebugKeydowns.innerText = Object.keys(KEY_EVENT_SERVICE.downKeys).join(" ");
+      };
+      KEY_EVENT_SERVICE.addEventListener("keydown", updateDebugKeyDown);
+      KEY_EVENT_SERVICE.addEventListener("keyup", updateDebugKeyDown);
+    }
   }
 
   /**
@@ -280,15 +320,11 @@ class Rgthree extends EventTarget {
           LiteGraph.closeAllContextMenus();
           if (e.button == 2) {
             const canvas = await waitForCanvas();
-            new LiteGraph.ContextMenu(
-              this.getRgthreeContextMenuItems(),
-              {
-                title: `<div class="rgthree-contextmenu-item rgthree-contextmenu-title-rgthree-comfy">${logoRgthree} rgthree-comfy</div>`,
-                left: e.clientX,
-                top: 5,
-              },
-              canvas.getCanvasWindow(),
-            );
+            new LiteGraph.ContextMenu(this.getRgthreeIContextMenuValues(), {
+              title: `<div class="rgthree-contextmenu-item rgthree-contextmenu-title-rgthree-comfy">${logoRgthree} rgthree-comfy</div>`,
+              left: e.clientX,
+              top: 5,
+            });
             return;
           }
           if (e.button == 0) {
@@ -308,15 +344,15 @@ class Rgthree extends EventTarget {
       }
       // Handle both cases in case someone hasn't updated. Can probably just assume
       // `isUpdatedComfyBodyClasses` is true in the near future.
-      const isUpdatedComfyBodyClasses = !!queryOne(".comfyui-body-top");
+      const isUpdatedComfyBodyClasses = !!query(".comfyui-body-top");
       const position = CONFIG_SERVICE.getConfigValue("features.progress_bar.position");
       this.progressBarEl.classList.toggle("rgthree-pos-bottom", position === "bottom");
       // If ComfyUI is updated with the body segments, then use that.
       if (isUpdatedComfyBodyClasses) {
         if (position === "bottom") {
-          queryOne(".comfyui-body-bottom")!.appendChild(this.progressBarEl);
+          query(".comfyui-body-bottom")!.appendChild(this.progressBarEl);
         } else {
-          queryOne(".comfyui-body-top")!.appendChild(this.progressBarEl);
+          query(".comfyui-body-top")!.appendChild(this.progressBarEl);
         }
       } else {
         document.body.appendChild(this.progressBarEl);
@@ -353,10 +389,10 @@ class Rgthree extends EventTarget {
 
     // Overrides LiteGraphs' processMouseDown to both keep state as well as dispatch a custom event.
     const processMouseDown = LGraphCanvas.prototype.processMouseDown;
-    LGraphCanvas.prototype.processMouseDown = function (e: AdjustedMouseEvent) {
+    LGraphCanvas.prototype.processMouseDown = function (e: PointerEvent) {
       rgthree.processingMouseDown = true;
       const returnVal = processMouseDown.apply(this, [...arguments] as any);
-      rgthree.dispatchCustomEvent("on-process-mouse-down", { originalEvent: e });
+      rgthree.dispatchCustomEvent("on-process-mouse-down", {originalEvent: e});
       rgthree.processingMouseDown = false;
       return returnVal;
     };
@@ -365,36 +401,49 @@ class Rgthree extends EventTarget {
     // to capture the last `canvasX` and `canvasY` properties, which are not the same as LiteGraph's
     // `canvas.last_mouse_position`, unfortunately.
     const adjustMouseEvent = LGraphCanvas.prototype.adjustMouseEvent;
-    LGraphCanvas.prototype.adjustMouseEvent = function (e: PointerEvent) {
+    LGraphCanvas.prototype.adjustMouseEvent = function <T extends MouseEvent>(
+      e: T & Partial<CanvasPointerExtensions>,
+    ): asserts e is T & CanvasMouseEvent {
       adjustMouseEvent.apply(this, [...arguments] as any);
-      rgthree.lastAdjustedMouseEvent = e as AdjustedMouseEvent;
+      rgthree.lastCanvasMouseEvent = e as CanvasMouseEvent;
     };
 
-    // [🤮] Copying to clipboard clones nodes and then manipulats the linking data manually which
+    // [🤮] Copying to clipboard clones nodes and then manipulates the linking data manually which
     // does not allow a node to handle connections. This harms nodes that manually handle inputs,
     // like our any-input nodes that may start with one input, and manually add new ones when one is
     // attached.
     const copyToClipboard = LGraphCanvas.prototype.copyToClipboard;
-    LGraphCanvas.prototype.copyToClipboard = function (nodes: LGraphNode[]) {
+    LGraphCanvas.prototype.copyToClipboard = function (items?: Iterable<Positionable>) {
       rgthree.canvasCurrentlyCopyingToClipboard = true;
       rgthree.canvasCurrentlyCopyingToClipboardWithMultipleNodes =
-        Object.values(nodes || this.selected_nodes || []).length > 1;
-      copyToClipboard.apply(this, [...arguments] as any);
+        Object.values(items || this.selected_nodes || []).length > 1;
+      const value = copyToClipboard.apply(this, [...arguments] as any);
       rgthree.canvasCurrentlyCopyingToClipboard = false;
       rgthree.canvasCurrentlyCopyingToClipboardWithMultipleNodes = false;
+      return value;
+    };
+
+    // [🤮] Pasting from clipboard.
+    const pasteFromClipboard = LGraphCanvas.prototype.pasteFromClipboard;
+    LGraphCanvas.prototype.pasteFromClipboard = function (...args: any[]) {
+      rgthree.canvasCurrentlyPastingFromClipboard = true;
+      pasteFromClipboard.apply(this, [...arguments] as any);
+      rgthree.canvasCurrentlyPastingFromClipboard = false;
     };
 
     // [⭐] Make it so when we add a group, we get to name it immediately.
     const onGroupAdd = LGraphCanvas.onGroupAdd;
     LGraphCanvas.onGroupAdd = function (...args: any[]) {
-      const graph = app.graph as TLGraph;
+      const graph = app.canvas.getCurrentGraph()!;
       onGroupAdd.apply(this, [...args] as any);
+      // [🤮] Bad typing here.. especially the last arg; it is LGraphNode but can really be anything
+      // with pos or size... pity. See more in our litegraph.d.ts.
       LGraphCanvas.onShowPropertyEditor(
-        {},
-        null,
-        null,
-        null,
-        graph._groups[graph._groups.length - 1],
+        {} as any,
+        null as any,
+        null as any,
+        null as any,
+        graph._groups[graph._groups.length - 1]! as unknown as LGraphNode,
       );
     };
   }
@@ -437,9 +486,9 @@ class Rgthree extends EventTarget {
             const [n, v] = this.logParts(
               LogLevel.ERROR,
               `Error calling extension '${ext.name}' method '${method}' for rgthree-node.`,
-              { error },
-              { extension: ext },
-              { args },
+              {error},
+              {extension: ext},
+              {args},
             );
             console[n]?.(...v);
           }
@@ -453,7 +502,7 @@ class Rgthree extends EventTarget {
    */
   private dispatchCustomEvent(event: string, detail?: any) {
     if (detail != null) {
-      return this.dispatchEvent(new CustomEvent(event, { detail }));
+      return this.dispatchEvent(new CustomEvent(event, {detail}));
     }
     return this.dispatchEvent(new CustomEvent(event));
   }
@@ -468,7 +517,7 @@ class Rgthree extends EventTarget {
       LGraphCanvas.prototype.getCanvasMenuOptions = function (...args: any[]) {
         let existingOptions = getCanvasMenuOptions.apply(this, [...args] as any);
 
-        const options = [];
+        const options: (IContextMenuValue | null)[] = [];
         options.push(null); // Divider
         options.push(null); // Divider
         options.push(null); // Divider
@@ -476,7 +525,7 @@ class Rgthree extends EventTarget {
           content: logoRgthree + `rgthree-comfy`,
           className: "rgthree-contextmenu-item rgthree-contextmenu-main-item-rgthree-comfy",
           submenu: {
-            options: that.getRgthreeContextMenuItems(),
+            options: that.getRgthreeIContextMenuValues(),
           },
         });
         options.push(null); // Divider
@@ -490,7 +539,9 @@ class Rgthree extends EventTarget {
         idx = idx || existingOptions.findIndex((o) => o?.content?.startsWith?.("Arrange ("));
         idx = idx || existingOptions.findIndex((o) => !o) + 1;
         idx = idx || 3;
-        existingOptions.splice(idx, 0, ...options);
+        // [🤮] existingOptions is typed as IContextMenuValue<string> even though it need not be
+        // a string due to the crazy typing from the original litegraph. oh well.
+        (existingOptions as (IContextMenuValue | null)[]).splice(idx, 0, ...options);
         for (let i = existingOptions.length; i > 0; i--) {
           if (existingOptions[i] === null && existingOptions[i + 1] === null) {
             existingOptions.splice(i, 1);
@@ -505,8 +556,8 @@ class Rgthree extends EventTarget {
   /**
    * Returns the standard menu items for an rgthree-comfy context menu.
    */
-  private getRgthreeContextMenuItems(): ContextMenuItem[] {
-    const [canvas, graph] = [app.canvas as TLGraphCanvas, app.graph as TLGraph];
+  private getRgthreeIContextMenuValues(): IContextMenuValue[] {
+    const [canvas, graph] = [app.canvas as TLGraphCanvas, app.canvas.getCurrentGraph()!];
     const selectedNodes = Object.values(canvas.selected_nodes || {});
     let rerouteNodes: LGraphNode[] = [];
     if (selectedNodes.length) {
@@ -530,22 +581,24 @@ class Rgthree extends EventTarget {
         className: "rgthree-contextmenu-item",
         has_submenu: true,
         submenu: {
-          options: getNodeTypeStrings() as unknown as ContextMenuItem[],
+          options: getNodeTypeStrings() as unknown as IContextMenuValue[],
           callback: (
-            value: string | ContextMenuItem,
+            value: string | IContextMenuValue,
             options: IContextMenuOptions,
             event: MouseEvent,
           ) => {
             const node = LiteGraph.createNode(addRgthree(value as string));
-            node.pos = [
-              rgthree.lastAdjustedMouseEvent!.canvasX,
-              rgthree.lastAdjustedMouseEvent!.canvasY,
-            ];
-            canvas.graph.add(node);
-            canvas.selectNode(node);
-            app.graph.setDirtyCanvas(true, true);
+            if (node) {
+              node.pos = [
+                rgthree.lastCanvasMouseEvent!.canvasX,
+                rgthree.lastCanvasMouseEvent!.canvasY,
+              ];
+              canvas.graph!.add(node);
+              canvas.selectNode(node);
+              graph.setDirtyCanvas(true, true);
+            }
           },
-          extra: { rgthree_doNotNest: true },
+          extra: {rgthree_doNotNest: true},
         },
       },
 
@@ -607,10 +660,16 @@ class Rgthree extends EventTarget {
    * Wraps an `app.queuePrompt` call setting a specific node id that we will inspect and change the
    * serialized graph right before being sent (below, in our `api.queuePrompt` override).
    */
-  async queueOutputNodes(nodeIds: number[]) {
+  async queueOutputNodes(nodes: LGraphNode[]) {
+    // We can use just these next two lines when
+    // https://github.com/ltdrdata/ComfyUI-Inspire-Pack/pull/258 is pulled. Until then, we'll keep
+    // our custom logic as ComfyUI-Inspire-Pack would cause it not to work.
+    // app.canvas.selectItems(nodes);
+    // app.extensionManager.command.execute('Comfy.QueueSelectedOutputNodes');
+    const nodeIds = nodes.map((n) => n.id);
     try {
       this.queueNodeIds = nodeIds;
-      await app.queuePrompt();
+      await app.queuePrompt(0);
     } catch (e) {
       const [n, v] = this.logParts(
         LogLevel.ERROR,
@@ -652,11 +711,11 @@ class Rgthree extends EventTarget {
     // understand if we're serializing because we're queueing (and return the random seed to use) or
     // for saving the workflow (and keep -1, etc.).
     const queuePrompt = app.queuePrompt as Function;
-    app.queuePrompt = async function () {
+    app.queuePrompt = async function (number: number, batchCount?: number) {
       rgthree.processingQueue = true;
       rgthree.dispatchCustomEvent("queue");
       try {
-        await queuePrompt.apply(app, [...arguments]);
+        return await queuePrompt.apply(app, [...arguments]);
       } finally {
         rgthree.processingQueue = false;
         rgthree.dispatchCustomEvent("queue-end");
@@ -665,12 +724,12 @@ class Rgthree extends EventTarget {
 
     // Keep state for when the app is in the middle of loading from an api JSON file.
     const loadApiJson = app.loadApiJson;
-    app.loadApiJson = async function () {
-      rgthree.loadingApiJson = true;
+    app.loadApiJson = async function (apiData: any, fileName: string) {
+      rgthree.loadingApiJson = apiData as ComfyApiFormat;
       try {
         loadApiJson.apply(app, [...arguments] as any);
       } finally {
-        rgthree.loadingApiJson = false;
+        rgthree.loadingApiJson = null;
       }
     };
 
@@ -688,7 +747,7 @@ class Rgthree extends EventTarget {
     // then we only want to queue those nodes, by rewriting the api format (prompt 'output' field)
     // so only those are evaluated.
     const apiQueuePrompt = api.queuePrompt as Function;
-    api.queuePrompt = async function (index: number, prompt: ComfyApiPrompt) {
+    api.queuePrompt = async function (index: number, prompt: ComfyApiPrompt, ...args: any[]) {
       if (rgthree.queueNodeIds?.length && prompt.output) {
         const oldOutput = prompt.output;
         let newOutput = {};
@@ -701,7 +760,7 @@ class Rgthree extends EventTarget {
         workflow: prompt.workflow,
         output: prompt.output,
       });
-      const response = apiQueuePrompt.apply(app, [index, prompt]);
+      const response = apiQueuePrompt.apply(app, [index, prompt, ...args]);
       rgthree.dispatchCustomEvent("comfy-api-queue-prompt-end");
       return response;
     };
@@ -716,14 +775,17 @@ class Rgthree extends EventTarget {
     // Hook into a data load, like from an image or JSON drop-in. This is (currently) used to
     // monitor for bad linking data.
     const loadGraphData = app.loadGraphData;
-    app.loadGraphData = function (graph: serializedLGraph) {
+    // NOTE: This was "serializedLGraph" in pre-litegraph types, which maps to `ISerialisedGraph`
+    // now; though, @comfyorg/comfyui-frontend-types have the signature as `ComfyWorkflowJSON` which
+    // is not exported and a zod type. Looks like there's mostly an overlap with ISerialisedGraph.
+    app.loadGraphData = function (graph: ISerialisedGraph) {
       if (rgthree.monitorLinkTimeout) {
         clearTimeout(rgthree.monitorLinkTimeout);
         rgthree.monitorLinkTimeout = null;
       }
       rgthree.clearAllMessages();
       // Try to make a copy to use, because ComfyUI's loadGraphData will modify it.
-      let graphCopy: serializedLGraph | null;
+      let graphCopy: ISerialisedGraph | null;
       try {
         graphCopy = JSON.parse(JSON.stringify(graph));
       } catch (e) {
@@ -734,7 +796,8 @@ class Rgthree extends EventTarget {
           .querySelector(".comfy-modal-content")
           ?.textContent?.includes("Loading aborted due");
         const graphToUse = wasLoadingAborted ? graphCopy || graph : app.graph;
-        const fixBadLinksResult = fixBadLinks(graphToUse as unknown as TLGraph);
+        const fixer = WorkflowLinkFixer.create(graphToUse as unknown as TLGraph);
+        const fixBadLinksResult = fixer.check();
         if (fixBadLinksResult.hasBadLinks) {
           const [n, v] = rgthree.logParts(
             LogLevel.WARN,
@@ -766,10 +829,7 @@ class Rgthree extends EventTarget {
                       )
                     ) {
                       try {
-                        const fixBadLinksResult = fixBadLinks(
-                          graphToUse as unknown as TLGraph,
-                          true,
-                        );
+                        const fixBadLinksResult = fixer.fix();
                         if (!fixBadLinksResult.hasBadLinks) {
                           rgthree.hideMessage("bad-links");
                           alert(
@@ -816,10 +876,10 @@ class Rgthree extends EventTarget {
    */
   getNodeFromInitialGraphToPromptSerializedWorkflowBecauseComfyUIBrokeStuff(
     node: LGraphNode,
-  ): SerializedLGraphNode | null {
+  ): ISerialisedNode | null {
     return (
       this.initialGraphToPromptSerializedWorkflowBecauseComfyUIBrokeStuff?.nodes?.find(
-        (n: SerializedLGraphNode) => n.id === node.id,
+        (n: ISerialisedNode) => n.id === node.id,
       ) ?? null
     );
   }
@@ -836,7 +896,7 @@ class Rgthree extends EventTarget {
     }
     // If we have a dialog open then we want to append the message to the dialog so they show over
     // the modal.
-    const dialogs = query<HTMLDialogElement>("dialog[open]");
+    const dialogs = queryAll<HTMLDialogElement>("dialog[open]");
     if (dialogs.length) {
       let dialog = dialogs[dialogs.length - 1]!;
       dialog.appendChild(container);
@@ -930,22 +990,22 @@ class Rgthree extends EventTarget {
     return this.logger.newSession(name);
   }
 
+  isDebugMode() {
+    if (window.location.href.includes("rgthree-debug=false")) {
+      return false;
+    }
+    return GLOBAL_LOG_LEVEL >= LogLevel.DEBUG || window.location.href.includes("rgthree-debug");
+  }
+
   isDevMode() {
     if (window.location.href.includes("rgthree-dev=false")) {
       return false;
     }
-    return GLOBAL_LOG_LEVEL >= LogLevel.DEBUG || window.location.href.includes("rgthree-dev");
-  }
-
-  isDebugMode() {
-    if (!this.isDevMode() || window.location.href.includes("rgthree-debug=false")) {
-      return false;
-    }
-    return window.location.href.includes("rgthree-debug");
+    return GLOBAL_LOG_LEVEL >= LogLevel.DEV || window.location.href.includes("rgthree-dev");
   }
 
   monitorBadLinks() {
-    const badLinksFound = fixBadLinks(app.graph);
+    const badLinksFound = WorkflowLinkFixer.create(app.graph).check();
     if (badLinksFound.hasBadLinks && !this.monitorBadLinksAlerted) {
       this.monitorBadLinksAlerted = true;
       alert(
@@ -963,23 +1023,17 @@ class Rgthree extends EventTarget {
   }
 }
 
-function getBookmarks(): ContextMenuItem[] {
-  const graph: TLGraph = app.graph;
+function getBookmarks(): IContextMenuValue[] {
+  const bookmarks = BOOKMARKS_SERVICE.getCurrentBookmarks();
+  const bookmarkItems = bookmarks.map((n) => ({
+    content: `[${n.shortcutKey}] ${n.title}`,
+    className: "rgthree-contextmenu-item",
+    callback: () => {
+      n.canvasToBookmark();
+    },
+  }));
 
-  // Sorts by Title.
-  // I could see an option to sort by either Shortcut, Title, or Position.
-  const bookmarks = graph._nodes
-    .filter((n): n is Bookmark => n.type === NodeTypesString.BOOKMARK)
-    .sort((a, b) => a.title.localeCompare(b.title))
-    .map((n) => ({
-      content: `[${n.shortcutKey}] ${n.title}`,
-      className: "rgthree-contextmenu-item",
-      callback: () => {
-        n.canvasToBookmark();
-      },
-    }));
-
-  return !bookmarks.length
+  return !bookmarkItems.length
     ? []
     : [
         {
@@ -987,10 +1041,22 @@ function getBookmarks(): ContextMenuItem[] {
           disabled: true,
           className: "rgthree-contextmenu-item rgthree-contextmenu-label",
         },
-        ...bookmarks,
+        ...bookmarkItems,
       ];
 }
 
 export const rgthree = new Rgthree();
 // Expose it on window because, why not.
 (window as any).rgthree = rgthree;
+
+app.registerExtension({
+  name: "Comfy.RgthreeComfy",
+
+  aboutPageBadges: [
+    {
+      label: `rgthree-comfy v${rgthree.version}`,
+      url: "https://github.com/rgthree/rgthree-comfy",
+      icon: "rgthree-comfy-about-badge-logo",
+    },
+  ],
+});

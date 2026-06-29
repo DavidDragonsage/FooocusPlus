@@ -1,9 +1,13 @@
+import numpy as np
+import torch
+from tqdm.auto import trange
+from typing_extensions import override
+
+import comfy.model_patcher
 import comfy.samplers
 import comfy.utils
-import torch
-import numpy as np
-from tqdm.auto import trange, tqdm
-import math
+from comfy.k_diffusion.sampling import to_d
+from comfy_api.latest import ComfyExtension, io
 
 
 @torch.no_grad()
@@ -34,30 +38,29 @@ def sample_lcm_upscale(model, x, sigmas, extra_args=None, callback=None, disable
     return x
 
 
-class SamplerLCMUpscale:
-    upscale_methods = ["bislerp", "nearest-exact", "bilinear", "area", "bicubic"]
+class SamplerLCMUpscale(io.ComfyNode):
+    UPSCALE_METHODS = ["bislerp", "nearest-exact", "bilinear", "area", "bicubic"]
 
     @classmethod
-    def INPUT_TYPES(s):
-        return {"required":
-                    {"scale_ratio": ("FLOAT", {"default": 1.0, "min": 0.1, "max": 20.0, "step": 0.01}),
-                     "scale_steps": ("INT", {"default": -1, "min": -1, "max": 1000, "step": 1}),
-                     "upscale_method": (s.upscale_methods,),
-                      }
-               }
-    RETURN_TYPES = ("SAMPLER",)
-    CATEGORY = "sampling/custom_sampling/samplers"
+    def define_schema(cls) -> io.Schema:
+        return io.Schema(
+            node_id="SamplerLCMUpscale",
+            category="model/sampling/samplers",
+            inputs=[
+                io.Float.Input("scale_ratio", default=1.0, min=0.1, max=20.0, step=0.01, advanced=True),
+                io.Int.Input("scale_steps", default=-1, min=-1, max=1000, step=1, advanced=True),
+                io.Combo.Input("upscale_method", options=cls.UPSCALE_METHODS),
+            ],
+            outputs=[io.Sampler.Output()],
+        )
 
-    FUNCTION = "get_sampler"
-
-    def get_sampler(self, scale_ratio, scale_steps, upscale_method):
+    @classmethod
+    def execute(cls, scale_ratio, scale_steps, upscale_method) -> io.NodeOutput:
         if scale_steps < 0:
             scale_steps = None
         sampler = comfy.samplers.KSAMPLER(sample_lcm_upscale, extra_options={"total_upscale": scale_ratio, "upscale_steps": scale_steps, "upscale_method": upscale_method})
-        return (sampler, )
+        return io.NodeOutput(sampler)
 
-from comfy.k_diffusion.sampling import to_d
-import comfy.model_patcher
 
 @torch.no_grad()
 def sample_euler_pp(model, x, sigmas, extra_args=None, callback=None, disable=None):
@@ -83,30 +86,68 @@ def sample_euler_pp(model, x, sigmas, extra_args=None, callback=None, disable=No
     return x
 
 
-class SamplerEulerCFGpp:
+class SamplerLCM(io.ComfyNode):
     @classmethod
-    def INPUT_TYPES(s):
-        return {"required":
-                    {"version": (["regular", "alternative"],),}
-               }
-    RETURN_TYPES = ("SAMPLER",)
-    # CATEGORY = "sampling/custom_sampling/samplers"
-    CATEGORY = "_for_testing"
+    def define_schema(cls) -> io.Schema:
+        return io.Schema(
+            node_id="SamplerLCM",
+            category="model/sampling/samplers",
+            description=("LCM sampler with tunable per-step noise. s_noise is a multiplier on the model's training noise scale"),
+            inputs=[
+                io.Float.Input("s_noise", default=1.0, min=0.0, max=64.0, step=0.01,
+                               tooltip="Per-step noise multiplier at the first step (1.0 = match training)."),
+                io.Float.Input("s_noise_end", default=1.0, min=0.0, max=64.0, step=0.01,
+                               tooltip="Per-step noise multiplier at the last step. Set equal to s_noise for a constant schedule."),
+                io.Float.Input("noise_clip_std", default=0.0, min=0.0, max=10.0, step=0.01,
+                               tooltip="Clamp per-step noise to +/- N*std. 0 disables."),
+            ],
+            outputs=[io.Sampler.Output()],
+        )
 
-    FUNCTION = "get_sampler"
+    @classmethod
+    def execute(cls, s_noise, s_noise_end, noise_clip_std) -> io.NodeOutput:
+        sampler = comfy.samplers.ksampler(
+            "lcm",
+            {
+                "s_noise": float(s_noise),
+                "s_noise_end": float(s_noise_end),
+                "noise_clip_std": float(noise_clip_std),
+            },
+        )
+        return io.NodeOutput(sampler)
 
-    def get_sampler(self, version):
+
+class SamplerEulerCFGpp(io.ComfyNode):
+    @classmethod
+    def define_schema(cls) -> io.Schema:
+        return io.Schema(
+            node_id="SamplerEulerCFGpp",
+            display_name="SamplerEulerCFG++",
+            category="experimental",  # "sampling/samplers"
+            inputs=[
+                io.Combo.Input("version", options=["regular", "alternative"], advanced=True),
+            ],
+            outputs=[io.Sampler.Output()],
+            is_experimental=True,
+        )
+
+    @classmethod
+    def execute(cls, version) -> io.NodeOutput:
         if version == "alternative":
             sampler = comfy.samplers.KSAMPLER(sample_euler_pp)
         else:
             sampler = comfy.samplers.ksampler("euler_cfg_pp")
-        return (sampler, )
+        return io.NodeOutput(sampler)
 
-NODE_CLASS_MAPPINGS = {
-    "SamplerLCMUpscale": SamplerLCMUpscale,
-    "SamplerEulerCFGpp": SamplerEulerCFGpp,
-}
 
-NODE_DISPLAY_NAME_MAPPINGS = {
-    "SamplerEulerCFGpp": "SamplerEulerCFG++",
-}
+class AdvancedSamplersExtension(ComfyExtension):
+    @override
+    async def get_node_list(self) -> list[type[io.ComfyNode]]:
+        return [
+            SamplerLCMUpscale,
+            SamplerLCM,
+            SamplerEulerCFGpp,
+        ]
+
+async def comfy_entrypoint() -> AdvancedSamplersExtension:
+    return AdvancedSamplersExtension()
