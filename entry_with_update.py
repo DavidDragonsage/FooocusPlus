@@ -91,32 +91,77 @@ except Exception as e:
     print(str(e))
 
 # ==========================================
-# NEW AUTO-UPDATE LOGIC FOR NESTED CUSTOM NODES
+# NEW AUTO-UPDATE & CLEANUP LOGIC FOR NESTED CUSTOM NODES
 # ==========================================
-print("Checking for nested custom_nodes updates...")
-# Operates from ROOT (FooocusPlus)
-# down to the nested subdirectory
-custom_nodes_path = ROOT.joinpath("FooocusPlusAI", "comfy", "custom_nodes")
+print('Checking and cleaning custom_nodes...')
+custom_nodes_path = ROOT.joinpath('FooocusPlusAI', 'comfy', 'custom_nodes')
 
-if custom_nodes_path.exists() and custom_nodes_path.is_dir():
-    import subprocess
+try:
+    # 1. Open the repository and read the current active index
+    repo = pygit2.Repository(ROOT)
+    index = repo.index
+    index.read()  # Ensure we have the fresh post-checkout index state
 
-    # Traverse subdirectories in custom_nodes
-    for item in custom_nodes_path.iterdir():
-        if item.is_dir() and item.joinpath(".git").exists():
-            node_name = item.name
+    # 2. Identify all custom nodes tracked by the repository at the current HEAD
+    tracked_nodes = set()
+    for entry in index:
+        # entry.path uses forward slashes; Path.parts parses it correctly on all OS
+        parts = Path(entry.path).parts
+        if (len(parts) >= 4 and
+            parts[0] == 'FooocusPlusAI' and
+            parts[1] == 'comfy' and
+            parts[2] == 'custom_nodes'):
+            tracked_nodes.add(parts[3])
+
+    if custom_nodes_path.exists() and custom_nodes_path.is_dir():
+        import shutil
+        import stat
+        import subprocess
+
+        def remove_readonly(func, path, _):
+            """Clear the readonly bit and retry (crucial for Windows/.git folders)"""
             try:
-                # Silently run 'git pull' inside each nested custom node repository
-                print(f"Auto-updating custom node: {node_name}...")
-                subprocess.run(
-                    ["git", "pull"],
-                    cwd=item,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    check=True
-                )
-            except Exception as sub_err:
-                print(f"  -> Could not auto-update {node_name} (skipping).")
+                os.chmod(path, stat.S_IWRITE)
+                func(path)
+            except Exception:
+                pass
+
+        # A. Clean up obsolete custom nodes
+        if len(tracked_nodes) > 0:
+            for item in custom_nodes_path.iterdir():
+                if item.is_dir():
+                    # Preserve special framework directories if any exist
+                    if item.name in ['.git', '__pycache__']:
+                        continue
+
+                    if item.name not in tracked_nodes:
+                        print(f'Removing obsolete custom node folder: {item.name}...')
+                        try:
+                            shutil.rmtree(item, onerror=remove_readonly)
+                        except Exception as rm_err:
+                            print(f'  -> Failed to remove {item.name}: {rm_err}')
+        else:
+            print('Warning: No tracked custom nodes found in repository index. Skipping cleanup.')
+
+        # B. Auto-update active nested custom node repositories
+        for item in custom_nodes_path.iterdir():
+            if item.is_dir() and item.name in tracked_nodes:
+                if item.joinpath('.git').exists():
+                    node_name = item.name
+                    try:
+                        print(f'Auto-updating custom node: {node_name}...')
+                        subprocess.run(
+                            ['git', 'pull'],
+                            cwd=item,
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL,
+                            check=True
+                        )
+                    except Exception as sub_err:
+                        print(f'  -> Could not auto-update {node_name} (skipping).')
+
+except Exception as e:
+    print(f'Error during custom_nodes cleanup/update: {str(e)}')
 
 print()
 # ==========================================
