@@ -39,7 +39,8 @@
 * upgraded IC-Light to the latest version
 * added clip_download support throughout the repo.
 * improved startup logic for newly released versions
-* Hotfix0
+* Hotfix1: improved custom_nodes updating
+  * restored bitsandbytes_default to "0.49.2"
 <br/><br/>
 
 

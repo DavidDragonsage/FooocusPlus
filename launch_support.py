@@ -93,7 +93,7 @@ def dependency_resolver():
         xformers_default = "0.0.31"
     else:
         xformers_default = "0.0.30"
-    bitsandbytes_default = "0.46.0"
+    bitsandbytes_default = "0.49.2"
     torch_platform_default = "cu128"
 
     torch_ver = torch_default # initialize torch to the default

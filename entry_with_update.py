@@ -90,6 +90,37 @@ except Exception as e:
     print(f'{branch_name if branch_name!="main" else "FooocusPlus"}: Update failed.')
     print(str(e))
 
+# ==========================================
+# NEW AUTO-UPDATE LOGIC FOR NESTED CUSTOM NODES
+# ==========================================
+print("Checking for nested custom_nodes updates...")
+# Operates from ROOT (FooocusPlus)
+# down to the nested subdirectory
+custom_nodes_path = ROOT.joinpath("FooocusPlusAI", "comfy", "custom_nodes")
+
+if custom_nodes_path.exists() and custom_nodes_path.is_dir():
+    import subprocess
+
+    # Traverse subdirectories in custom_nodes
+    for item in custom_nodes_path.iterdir():
+        if item.is_dir() and item.joinpath(".git").exists():
+            node_name = item.name
+            try:
+                # Silently run 'git pull' inside each nested custom node repository
+                print(f"Auto-updating custom node: {node_name}...")
+                subprocess.run(
+                    ["git", "pull"],
+                    cwd=item,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=True
+                )
+            except Exception as sub_err:
+                print(f"  -> Could not auto-update {node_name} (skipping).")
+
+print()
+# ==========================================
+
 new_version, new_hotfix, new_hotfix_title = version.get_fooocusplus_ver()
 try:
     if new_version != old_version:
