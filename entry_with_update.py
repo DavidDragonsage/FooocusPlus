@@ -86,19 +86,25 @@ except Exception as e:
 # NEW AUTO-UPDATE & CLEANUP LOGIC FOR NESTED CUSTOM NODES
 # ==========================================
 print('Checking and cleaning custom_nodes...')
-custom_nodes_path = ROOT.joinpath('FooocusPlusAI', 'comfy', 'custom_nodes')
 
 try:
     import subprocess
     import shutil
     import stat
+    import pygit2
 
-    # 1. Update all tracked Git submodules to their pinned working commits
+    # 1. Open repository and dynamically determine the absolute Git root path
+    repo = pygit2.Repository(ROOT)
+    git_root = Path(repo.workdir)
+    # Since the repo is inside FooocusPlusAI, the custom_nodes folder is directly under git_root/comfy/custom_nodes
+    custom_nodes_path = git_root.joinpath('comfy', 'custom_nodes')
+
+    # 2. Update all tracked Git submodules to their pinned working commits
     print('Updating official custom node submodules...')
     try:
         subprocess.run(
             ['git', 'submodule', 'update', '--init', '--recursive'],
-            cwd=ROOT,
+            cwd=git_root,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             check=True
@@ -106,12 +112,11 @@ try:
     except Exception as sub_err:
         print(f'  -> Submodule update failed or skipped: {sub_err}')
 
-    # 2. Open parent repository and read the current index
-    repo = pygit2.Repository(ROOT)
+    # 3. Read the current repository index
     index = repo.index
     index.read()  # Load the latest state from disk
 
-    # 3. Identify all custom nodes tracked by the Git repository at current HEAD
+    # 4. Identify all custom nodes tracked by the Git repository at current HEAD
     tracked_nodes = set()
     for entry in index:
         # Convert path to lowercase and split by forward slash to ensure absolute robust matching
@@ -152,6 +157,8 @@ try:
                             print(f'  -> Failed to remove {item.name}: {rm_err}')
         else:
             print('Warning: No tracked custom nodes found in repository index. Skipping cleanup.')
+    else:
+        print(f'Warning: Target custom_nodes path not found: {custom_nodes_path}')
 
 except Exception as e:
     print(f'Error during custom_nodes cleanup/update: {str(e)}')
