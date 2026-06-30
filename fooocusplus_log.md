@@ -39,6 +39,7 @@
 * upgraded IC-Light to the latest version
 * added clip_download support throughout the repo.
 * improved startup logic for newly released versions
+* Hotfix4: Advanced work on Comfy custom_nodes updating
 * Hotfix3: Further work on Comfy custom_nodes updating
 * Hotfix2: Further improvements to custom_nodes updating
 * Hotfix1: Improved custom_nodes updating

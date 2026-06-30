@@ -7,19 +7,11 @@ sys.path.append(str(ROOT))
 os.chdir(ROOT)
 
 import common
-#try:
+
 import enhanced.version as version
 old_version, old_hotfix, old_hotfix_title = version.get_fooocusplus_ver()
 print(f'Welcome to FooocusPlus {old_version}.{old_hotfix_title}: checking for updates...')
-#except:
-#    print('Please restart FooocusPlus to finish the update')
-#    print()
-#    quit()
 
-# transition between the two possible locations
-# for verify_installed_version
-# modules.launch_util was where it was
-# originally and where it should be now
 try:
     from modules.launch_util import verify_installed_version
 except:
@@ -97,12 +89,29 @@ print('Checking and cleaning custom_nodes...')
 custom_nodes_path = ROOT.joinpath('FooocusPlusAI', 'comfy', 'custom_nodes')
 
 try:
-    # 1. Open repository and read the current index
+    import subprocess
+    import shutil
+    import stat
+
+    # 1. Update all tracked Git submodules to their pinned working commits
+    print('Updating official custom node submodules...')
+    try:
+        subprocess.run(
+            ['git', 'submodule', 'update', '--init', '--recursive'],
+            cwd=ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=True
+        )
+    except Exception as sub_err:
+        print(f'  -> Submodule update failed or skipped: {sub_err}')
+
+    # 2. Open parent repository and read the current index
     repo = pygit2.Repository(ROOT)
     index = repo.index
     index.read()  # Load the latest state from disk
 
-    # 2. Identify all custom nodes tracked by the Git repository at current HEAD
+    # 3. Identify all custom nodes tracked by the Git repository at current HEAD
     tracked_nodes = set()
     for entry in index:
         # Convert path to lowercase and split by forward slash to ensure absolute robust matching
@@ -116,11 +125,9 @@ try:
         except ValueError:
             continue
 
-    if custom_nodes_path.exists() and custom_nodes_path.is_dir():
-        import shutil
-        import stat
-        import subprocess
+    print(f'Tracked custom nodes in repository index: {list(tracked_nodes)}')
 
+    if custom_nodes_path.exists() and custom_nodes_path.is_dir():
         def remove_readonly(func, path, _):
             """Clear the readonly bit and retry (crucial for Windows/.git folders)"""
             try:
@@ -129,7 +136,7 @@ try:
             except Exception:
                 pass
 
-        # A. Clean up obsolete custom nodes
+        # A. Clean up obsolete custom nodes (folders not present in the tracked index)
         if len(tracked_nodes) > 0:
             for item in custom_nodes_path.iterdir():
                 if item.is_dir():
@@ -145,23 +152,6 @@ try:
                             print(f'  -> Failed to remove {item.name}: {rm_err}')
         else:
             print('Warning: No tracked custom nodes found in repository index. Skipping cleanup.')
-
-        # B. Auto-update active nested custom node repositories
-        for item in custom_nodes_path.iterdir():
-            if item.is_dir() and item.name.lower() in tracked_nodes:
-                if item.joinpath('.git').exists():
-                    node_name = item.name
-                    try:
-                        print(f'Auto-updating custom node: {node_name}...')
-                        subprocess.run(
-                            ['git', 'pull'],
-                            cwd=item,
-                            stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL,
-                            check=True
-                        )
-                    except Exception as sub_err:
-                        print(f'  -> Could not auto-update {node_name} (skipping).')
 
 except Exception as e:
     print(f'Error during custom_nodes cleanup/update: {str(e)}')
