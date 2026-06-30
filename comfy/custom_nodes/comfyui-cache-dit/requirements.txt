@@ -1,0 +1,5 @@
+# ComfyUI CacheDit 加速插件依赖
+
+# 核心依赖（通常 ComfyUI 已包含）
+cache_dit
+# 无额外依赖 - 插件设计为与 ComfyUI 完全兼容
