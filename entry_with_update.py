@@ -83,12 +83,11 @@ except Exception as e:
     print(str(e))
 
 # ==========================================
-# NEW AUTO-UPDATE & CLEANUP LOGIC FOR NESTED CUSTOM NODES
+# NEW CLEANUP LOGIC FOR NESTED CUSTOM NODES
 # ==========================================
 print('Checking and cleaning custom_nodes...')
 
 try:
-    import subprocess
     import shutil
     import stat
     import pygit2
@@ -99,24 +98,11 @@ try:
     # Since the repo is inside FooocusPlusAI, the custom_nodes folder is directly under git_root/comfy/custom_nodes
     custom_nodes_path = git_root.joinpath('comfy', 'custom_nodes')
 
-    # 2. Update all tracked Git submodules to their pinned working commits
-    print('Updating official custom node submodules...')
-    try:
-        subprocess.run(
-            ['git', 'submodule', 'update', '--init', '--recursive'],
-            cwd=git_root,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=True
-        )
-    except Exception as sub_err:
-        print(f'  -> Submodule update failed or skipped: {sub_err}')
-
-    # 3. Read the current repository index
+    # 2. Read the current repository index
     index = repo.index
     index.read()  # Load the latest state from disk
 
-    # 4. Identify all custom nodes tracked by the Git repository at current HEAD
+    # 3. Identify all custom nodes tracked by the Git repository at current HEAD
     tracked_nodes = set()
     for entry in index:
         # Convert path to lowercase and split by forward slash to ensure absolute robust matching
@@ -134,7 +120,7 @@ try:
 
     if custom_nodes_path.exists() and custom_nodes_path.is_dir():
         def remove_readonly(func, path, _):
-            """Clear the readonly bit and retry (crucial for Windows/.git folders)"""
+            """Clear the readonly bit and retry (crucial for Windows files)"""
             try:
                 os.chmod(path, stat.S_IWRITE)
                 func(path)
