@@ -97,21 +97,24 @@ print('Checking and cleaning custom_nodes...')
 custom_nodes_path = ROOT.joinpath('FooocusPlusAI', 'comfy', 'custom_nodes')
 
 try:
-    # 1. Open the repository and read the current active index
+    # 1. Open repository and read the current index
     repo = pygit2.Repository(ROOT)
     index = repo.index
-    index.read()  # Ensure we have the fresh post-checkout index state
+    index.read()  # Load the latest state from disk
 
-    # 2. Identify all custom nodes tracked by the repository at the current HEAD
+    # 2. Identify all custom nodes tracked by the Git repository at current HEAD
     tracked_nodes = set()
     for entry in index:
-        # entry.path uses forward slashes; Path.parts parses it correctly on all OS
-        parts = Path(entry.path).parts
-        if (len(parts) >= 4 and
-            parts[0] == 'FooocusPlusAI' and
-            parts[1] == 'comfy' and
-            parts[2] == 'custom_nodes'):
-            tracked_nodes.add(parts[3])
+        # Convert path to lowercase and split by forward slash to ensure absolute robust matching
+        path_str = entry.path.replace('\\', '/').lower()
+        parts = path_str.split('/')
+        try:
+            # Find the 'custom_nodes' segment anywhere in the tracked path
+            idx = parts.index('custom_nodes')
+            if idx > 0 and parts[idx - 1] == 'comfy' and len(parts) > idx + 1:
+                tracked_nodes.add(parts[idx + 1])
+        except ValueError:
+            continue
 
     if custom_nodes_path.exists() and custom_nodes_path.is_dir():
         import shutil
@@ -131,10 +134,10 @@ try:
             for item in custom_nodes_path.iterdir():
                 if item.is_dir():
                     # Preserve special framework directories if any exist
-                    if item.name in ['.git', '__pycache__']:
+                    if item.name.lower() in ['.git', '__pycache__']:
                         continue
 
-                    if item.name not in tracked_nodes:
+                    if item.name.lower() not in tracked_nodes:
                         print(f'Removing obsolete custom node folder: {item.name}...')
                         try:
                             shutil.rmtree(item, onerror=remove_readonly)
@@ -145,7 +148,7 @@ try:
 
         # B. Auto-update active nested custom node repositories
         for item in custom_nodes_path.iterdir():
-            if item.is_dir() and item.name in tracked_nodes:
+            if item.is_dir() and item.name.lower() in tracked_nodes:
                 if item.joinpath('.git').exists():
                     node_name = item.name
                     try:

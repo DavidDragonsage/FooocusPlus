@@ -114,7 +114,7 @@ scipy>=1.14.0
 segment_anything==1.0
 sentencepiece==0.2.0
 setuptools==78.1.0
-simpleeval>=1.0.0
+simpleeval==1.0.7
 soupsieve==2.7
 spandrel==0.4.1
 SQLAlchemy>=2.0.0
