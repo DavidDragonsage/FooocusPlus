@@ -160,15 +160,6 @@
       "title": "prompt"
     }
   },
-  "29": {
-    "inputs": {
-      "ckpt_name": "flux1-schnell-bnb-nf4.safetensors"
-    },
-    "class_type": "CheckpointLoaderNF4",
-    "_meta": {
-      "title": "base_model"
-    }
-  },
   "30": {
     "inputs": {
       "ckpt_name": "flux1-dev-fp8.safetensors"

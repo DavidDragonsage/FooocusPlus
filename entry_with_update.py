@@ -85,7 +85,7 @@ except Exception as e:
 # ==========================================
 # NEW CLEANUP LOGIC FOR NESTED CUSTOM NODES
 # ==========================================
-print('Checking and cleaning custom_nodes...')
+#print('Checking and cleaning custom_nodes...')
 
 try:
     import shutil
@@ -116,7 +116,7 @@ try:
         except ValueError:
             continue
 
-    print(f'Tracked custom nodes in repository index: {list(tracked_nodes)}')
+    # print(f'Tracked custom nodes in repository index: {list(tracked_nodes)}')
 
     if custom_nodes_path.exists() and custom_nodes_path.is_dir():
         def remove_readonly(func, path, _):
@@ -149,7 +149,7 @@ try:
 except Exception as e:
     print(f'Error during custom_nodes cleanup/update: {str(e)}')
 
-print()
+# print()
 # ==========================================
 
 new_version, new_hotfix, new_hotfix_title = version.get_fooocusplus_ver()

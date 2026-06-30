@@ -39,6 +39,7 @@
 * upgraded IC-Light to the latest version
 * added clip_download support throughout the repo.
 * improved startup logic for newly released versions
+* Hotfix7: Fixed Flux workflows: removed NF4 references
 * Hotfix6: Simplified Comfy custom_nodes verification
 * Hotfix5: Fixed path error in custom_nodes updating
 * Hotfix4: Advanced work on Comfy custom_nodes updating
