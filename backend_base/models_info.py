@@ -98,20 +98,10 @@ default_models_info = {
         "hash": "15012c538f503ce2ebfc2c8547b268c75ccdaff7a281db55399940ff1d70e21d",
         "muid": "5da06f78b3c8"
     },
-    "checkpoints/SD3x/sd3_medium_incl_clips.safetensors": {
+    "checkpoints/SD3x/sd3.5_medium_incl_clips_t5xxlfp8scaled.safetensors": {
         "size": 5973224240,
         "hash": "3bb7f21bc5fb450220f4eb78a2f276b15422309d5166a4bdeb8c3b763a3a0581",
         "muid": "bb3cbb3221ef"
-    },
-    "checkpoints/SD3x/sd3_medium_incl_clips_t5xxlfp16.safetensors": {
-        "size": 15761074532,
-        "hash": "69a950c5d143ce782a7423c532c8a12b75da6a37b0e6f26a322acf4e76208912",
-        "muid": "c3a45b17d217"
-    },
-    "checkpoints/SD3x/sd3_medium_incl_clips_t5xxlfp8.safetensors": {
-        "size": 10867168284,
-        "hash": "92db4295e9c9ab8401ef60566d975656a35b0bd0f6d9ce0d083725171f7b3174",
-        "muid": "41d49489bc24"
     },
     "checkpoints/sd_xl_base_1.0_0.9vae.safetensors": {
         "size": 6938078334,

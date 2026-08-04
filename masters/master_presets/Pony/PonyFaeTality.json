@@ -33,6 +33,7 @@
     "default_sample_sharpness": 2.0,
     "default_sampler": "dpmpp_2m_sde_gpu",
     "default_scheduler": "karras",
+    "default_clip_skip": 2,
     "default_performance": "Speed",
     "default_prompt": "",
     "default_prompt_negative": "blurry background, bokeh, __nsfw__",
@@ -42,7 +43,7 @@
     "default_aspect_ratio": "0*0",
     "checkpoint_downloads": {
         "Pony/ponyFaetality_v11.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/ponyFaetality_v11.safetensors"
-    },    
+    },
     "default_overwrite_step": -1,
     "default_inpaint_engine_version": "None",
     "embeddings_downloads": {},

@@ -1,10 +1,12 @@
 {
     "default_engine": {
-        "backend_engine":"Comfy",
-        "disvisible": ["backend_selection", "performance_selection"],
-        "disinteractive": ["input_image_checkbox", "enhance_checkbox", "loras", "refiner_model"],
-        "backend_params": {"task_method": "sd15_TG"}
-              },
+        "backend_engine": "Comfy",
+        "disvisible": ["backend_selection", "performance_selection", "refiner_model", "sharpness"],
+		"disinteractive": ["enhance_checkbox", "input_image_checkbox", "refiner_model"],
+        "backend_params": {
+            "task_method": "sd15_TG"
+        }
+    },
     "default_model": "SD1.5/realisticVisionV60B1_v51VAE.safetensors",
     "default_refiner": "None",
     "default_refiner_switch": 0.6,
@@ -39,6 +41,7 @@
     "default_sample_sharpness": 2.0,
     "default_sampler": "dpmpp_2m_sde_gpu",
     "default_scheduler": "karras",
+    "default_clip_skip": 1,
     "default_performance": "Speed",
     "default_prompt_negative": "",
     "default_styles": [

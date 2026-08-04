@@ -24,7 +24,8 @@ import modules.util as util
 
 from args_manager import args
 from enhanced.backend import comfyd
-from enhanced.translator import interpret
+from enhanced.translator import \
+    interpret, render
 from enhanced.version import announce_version
 from enhanced.welcome import get_welcome_image
 from modules.preset_support import parse_meta_from_preset
@@ -479,7 +480,8 @@ def reset_layout_params(
 
     model_dtype = preset_prepared.get('engine', {}).get('backend_params', {}).get('base_model_dtype', '')
 
-    download_models(default_model, previous_default_models, checkpoint_downloads, embeddings_downloads, lora_downloads, vae_downloads, clip_downloads)
+    # Model downloads moved to async_worker
+    # download_models(default_model, previous_default_models, checkpoint_downloads, embeddings_downloads, lora_downloads, vae_downloads, clip_downloads)
 
     preset_url = preset_prepared.get('reference', get_preset_inc_url(preset))
     state_params.update({"__preset_url":preset_url})
@@ -573,7 +575,7 @@ def prompt_token_prediction(text, style_selections):
     import enhanced.wildcards as wildcards
     from modules.sdxl_styles import apply_style, fooocus_expansion
 
-    prompt = translator.translate(text, True)
+    prompt = render(text, True)
     # save the prompt for preset_resource & meta_parser:
     config.default_prompt = prompt
     return len(tokenizer.tokenize(prompt))

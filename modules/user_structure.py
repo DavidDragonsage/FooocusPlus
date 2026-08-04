@@ -1,6 +1,8 @@
 import json
+import platform
 import random
 import shutil
+import subprocess
 from pathlib import Path
 from enhanced.translator import interpret
 
@@ -382,6 +384,39 @@ def init_batch_structure(user_dir):
     return ref_batch_path
 
 
+def create_directory_link(link_path: Path, target_path: Path) -> None:
+    """
+    Creates a cross-platform directory redirection link.
+    - Windows: Creates a Directory Junction (mklink /J) - no admin required.
+    - Linux/macOS: Creates a standard symbolic link (symlink) - no admin required.
+    """
+    if not link_path.exists():
+        link_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.mkdir(parents=True, exist_ok=True)
+
+        system_os = platform.system()
+        if system_os == 'Windows':
+            # Windows Directory Junction (does not require admin rights)
+            subprocess.run(
+                f'mklink /J "{link_path}" "{target_path}"',
+                shell=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+        elif system_os in ['Linux', 'Darwin']:
+            # Linux/macOS native symlink (does not require admin rights)
+            try:
+                link_path.symlink_to(target_path, target_is_directory=True)
+            except Exception:
+                subprocess.run(
+                    f'ln -s "{target_path}" "{link_path}"',
+                    shell=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
+                )
+    return
+
+
 def cleanup_structure(directml=False, arg_user_dir = '',
     python_embedded_path='', win32_root=''):
     # cleanup an error condition from version 1.0.0
@@ -410,6 +445,45 @@ def cleanup_structure(directml=False, arg_user_dir = '',
     user_dir = Path(arg_user_dir).resolve()
     remove_dirs(Path(user_dir/'translator_packs'))
 
+    # Erase Comfy comfy/models subdirectories,
+    # and establish rembg redirection.
+    repo_root = Path.cwd()
+    comfy_models_dir = repo_root / 'comfy' / 'models'
+
+    # Wipe the entire contents of comfy/models
+    # if it exists on disk, from 1.1.3
+    if comfy_models_dir.exists() and comfy_models_dir.is_dir():
+        for item in comfy_models_dir.iterdir():
+            try:
+                # Windows Safety Gate: Avoid running shutil.rmtree on a directory junction,
+                # as Python will follow the junction and delete your files inside UserDir.
+                if platform.system() == 'Windows':
+                    try:
+                        # .rmdir() on a junction safely unlinks it without touching target files.
+                        # It will fail with OSError if 'item' is a real, non-empty directory.
+                        item.rmdir()
+                        continue
+                    except OSError:
+                        pass
+
+                if item.is_symlink():
+                    item.unlink()
+                elif item.is_dir():
+                    shutil.rmtree(item)
+                else:
+                    item.unlink()
+            except Exception as e:
+                print(f'[Structure] Warning: Failed to remove {item}: {e}')
+
+    # Re-create the comfy/models directory itself
+    # (now completely empty)
+    comfy_models_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create the rembg link
+    user_rembg_target = user_dir / 'models' / 'rembg'
+    comfy_rembg_link = comfy_models_dir / 'rembg'
+    create_directory_link(comfy_rembg_link, user_rembg_target)
+
     # removed obsolete logo & default image from welcome_images, 1.08
     delete_file(Path(user_dir/'welcome_images/FooocusPlusLogo.png'))
 
@@ -433,31 +507,54 @@ def remove_obsolete_flux_folder(arg_parent_str):
 
 
 def create_model_structure(paths_checkpoints, paths_loras):
+    # Define standard subfolder schemas
+    checkpoint_subdirs = [
+        'Alternative',
+        'FluxDev',
+        'FluxKrea',
+        'FluxSchnell',
+        'LowVRAM',
+        'Pony',
+        'SD1.5',
+        'SD3x',
+        'Z-Image'
+    ]
 
-    # remove obsolete Flux folders if empty, effective 1.0.1
-    remove_obsolete_flux_folder(paths_checkpoints[0])
-    if len(paths_checkpoints) > 1:
-        remove_obsolete_flux_folder(paths_checkpoints[1])
+    for path_str in paths_checkpoints[:2]:
+        ckpt_root = Path(path_str)
 
-    # ensure that all the special model directories exist
-    # and this will initialize shared model storage outside of UserDir
-    checkpoint0_path = Path(paths_checkpoints[0])
-    make_dir(checkpoint0_path/'Alternative')
-    make_dir(checkpoint0_path/'FluxDev')
-    make_dir(checkpoint0_path/'FluxKrea')
-    make_dir(checkpoint0_path/'FluxSchnell')
-    make_dir(checkpoint0_path/'LowVRAM')
-    make_dir(checkpoint0_path/'Pony')
-    make_dir(checkpoint0_path/'SD1.5')
-    make_dir(checkpoint0_path/'SD3x')
+        # Remove obsolete Flux folders if empty,
+        # effective 1.0.1
+        remove_obsolete_flux_folder(str(ckpt_root))
 
-    # ensure that the special LoRA directories exist
-    loras0_path = Path(paths_loras[0])
-    make_dir(loras0_path/'Alternative')
-    make_dir(loras0_path/'Flux')
-    make_dir(loras0_path/'Pony')
-    make_dir(loras0_path/'SD1.5')
-    make_dir(loras0_path/'SD3x')
+        # Z-Image Turbo model from 'Alternative'
+        # to 'Z-Image', effective 1.1.3
+        z_image_filename = 'z-image-turbo-fp8-e4m3fn.safetensors'
+        source_file = ckpt_root / 'Alternative' / z_image_filename
+        dest_dir = ckpt_root / 'Z-Image'
+
+        if source_file.exists():
+            interpret(f'[Structure] Moving', f'{z_image_filename} → {dest_dir}')
+            move_file(source_file, dest_dir)
+
+        # Verify standard model directories
+        for subdir in checkpoint_subdirs:
+            make_dir(ckpt_root / subdir)
+
+    lora_subdirs = [
+        'Alternative',
+        'Flux',
+        'Pony',
+        'SD1.5',
+        'SD3x',
+        'Z-Image'
+    ]
+
+    # Verify standard LoRA directories
+    for path in paths_loras[:2]:
+        lora_root = Path(path)
+        for subdir in lora_subdirs:
+            make_dir(lora_root / subdir)
 
     return
 
@@ -535,8 +632,9 @@ def init_preset_structure(init=False, restore_favorites=False,
 def create_user_structure(config_user_dir):
     global masters_dir, user_path
     # initialize the user directory, user_path
+    interpret('[Structure] Verifying the file structure...')
     user_path = Path(config_user_dir).resolve()
-    interpret('[Structure] Initialized the user directory at:', user_path)
+    interpret('Initialized the user directory at:', user_path)
 
     # initialize the user mp3 audio directory
     # which hold notification audio file options

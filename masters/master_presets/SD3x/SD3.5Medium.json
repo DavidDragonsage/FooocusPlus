@@ -1,0 +1,53 @@
+{
+    "default_engine": {
+    	"backend_engine": "SD3x",
+        "disvisible": ["backend_selection", "performance_selection", "refiner_model", "sharpness"],
+		"disinteractive": ["enhance_checkbox", "input_image_checkbox", "refiner_model"],
+        "backend_params": {
+            "task_method": "sd3x_base"
+        }
+    },
+    "default_model": "SD3x/sd3.5_medium_incl_clips_t5xxlfp8scaled.safetensors",
+    "default_refiner": "None",
+    "default_refiner_switch": 0.5,
+    "default_loras": [
+        [
+            "None",
+            1.0
+        ],
+        [
+            "None",
+            1.0
+        ],
+        [
+            "None",
+            1.0
+        ],
+        [
+            "None",
+            1.0
+        ],
+        [
+            "None",
+            1.0
+        ]
+    ],
+    "default_cfg_scale": 4.5,
+    "default_sample_sharpness": 1,
+    "default_sampler": "dpmpp_2m",
+    "default_scheduler": "sgm_uniform",
+    "default_clip_skip": 1,
+    "default_performance": "",
+    "default_styles": [
+        "Fooocus V2",
+        "Fooocus Enhance"
+    ],
+    "v2_substyle": "Unlit",
+    "default_aspect_ratio": "0*0",
+    "default_overwrite_step": 30,
+    "checkpoint_downloads": {
+        "SD3x/sd3.5_medium_incl_clips_t5xxlfp8scaled.safetensors": "https://huggingface.co/Comfy-Org/stable-diffusion-3.5-fp8/resolve/main/sd3.5_medium_incl_clips_t5xxlfp8scaled.safetensors"
+    },
+    "embeddings_downloads": {},
+    "lora_downloads": {}
+}

@@ -1,1 +1,172 @@
-{"3":{"inputs":{"seed":5,"steps":20,"cfg":6,"sampler_name":"euler","scheduler":"karras","denoise":1,"model":["4",0],"positive":["6",0],"negative":["7",0],"latent_image":["5",0]},"class_type":"KSampler","_meta":{"title":"main_sampler"}},"4":{"inputs":{"ckpt_name":""},"class_type":"CheckpointLoaderSimple","_meta":{"title":"base_model"}},"5":{"inputs":{"width":768,"height":768,"batch_size":1},"class_type":"EmptyLatentImage","_meta":{"title":"aspect_ratios_size"}},"6":{"inputs":{"text":"","clip":["4",1]},"class_type":"CLIPTextEncode","_meta":{"title":"prompt"}},"7":{"inputs":{"text":"","clip":["4",1]},"class_type":"CLIPTextEncode","_meta":{"title":"negative_prompt"}},"8":{"inputs":{"samples":["3",0],"vae":["4",2]},"class_type":"VAEDecode","_meta":{"title":"VAE Decode"}},"16":{"inputs":{"images":["8",0]},"class_type":"SaveImageWebsocket","_meta":{"title":"result_image"}}}
+{
+    "3": {
+        "inputs": {
+            "seed": 5,
+            "steps": 20,
+            "cfg": 6,
+            "sampler_name": "euler",
+            "scheduler": "karras",
+            "denoise": 1,
+            "model": [
+                "106",
+                0
+            ],
+            "positive": [
+                "6",
+                0
+            ],
+            "negative": [
+                "7",
+                0
+            ],
+            "latent_image": [
+                "5",
+                0
+            ]
+        },
+        "class_type": "KSampler",
+        "_meta": {
+            "title": "main_sampler"
+        }
+    },
+    "4": {
+        "inputs": {
+            "ckpt_name": ""
+        },
+        "class_type": "CheckpointLoaderSimple",
+        "_meta": {
+            "title": "base_model"
+        }
+    },
+    "5": {
+        "inputs": {
+            "width": 768,
+            "height": 768,
+            "batch_size": 1
+        },
+        "class_type": "EmptyLatentImage",
+        "_meta": {
+            "title": "aspect_ratios_size"
+        }
+    },
+    "6": {
+        "inputs": {
+            "text": "",
+            "clip": [
+                "106",
+                1
+            ]
+        },
+        "class_type": "CLIPTextEncode",
+        "_meta": {
+            "title": "prompt"
+        }
+    },
+    "7": {
+        "inputs": {
+            "text": "",
+            "clip": [
+                "106",
+                1
+            ]
+        },
+        "class_type": "CLIPTextEncode",
+        "_meta": {
+            "title": "negative_prompt"
+        }
+    },
+    "8": {
+        "inputs": {
+            "samples": [
+                "3",
+                0
+            ],
+            "vae": [
+                "4",
+                2
+            ]
+        },
+        "class_type": "VAEDecode",
+        "_meta": {
+            "title": "VAE Decode"
+        }
+    },
+    "16": {
+        "inputs": {
+            "images": [
+                "8",
+                0
+            ]
+        },
+        "class_type": "SaveImageWebsocket",
+        "_meta": {
+            "title": "result_image"
+        }
+    },
+  "101": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [ "4", 0 ],
+      "clip": [ "4", 1 ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "lora_1" }
+  },
+  "102": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [ "101", 0 ],
+      "clip": [ "101", 1 ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "lora_2" }
+  },
+  "103": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [ "102", 0 ],
+      "clip": [ "102", 1 ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "lora_3" }
+  },
+  "104": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [ "103", 0 ],
+      "clip": [ "103", 1 ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "lora_4" }
+  },
+  "105": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [ "104", 0 ],
+      "clip": [ "104", 1 ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "lora_5" }
+  },
+  "106": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [ "105", 0 ],
+      "clip": [ "105", 1 ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "lora_6" }
+  }
+}

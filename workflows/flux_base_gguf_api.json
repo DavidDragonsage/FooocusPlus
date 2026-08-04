@@ -46,16 +46,6 @@
       "title": "clip_model"
     }
   },
-  "12": {
-    "inputs": {
-      "unet_name": "flux1-dev.safetensors",
-      "weight_dtype": "default"
-    },
-    "class_type": "UNETLoader",
-    "_meta": {
-      "title": "base_model"
-    }
-  },
   "13": {
     "inputs": {
       "noise": [
@@ -99,7 +89,7 @@
       "steps": 20,
       "denoise": 1,
       "model": [
-        "36",
+        "106",
         0
       ]
     },
@@ -111,7 +101,7 @@
   "22": {
     "inputs": {
       "model": [
-        "36",
+        "106",
         0
       ],
       "conditioning": [
@@ -150,33 +140,11 @@
       "clip_l": "",
       "t5xxl": "a bottle with a rainbow galaxy inside it on top of a wooden table on a table in the middle of a modern kitchen",
       "guidance": 3.5,
-      "clip": [
-        "11",
-        0
-      ]
+      "clip": ["90", 1]
     },
     "class_type": "CLIPTextEncodeFlux",
     "_meta": {
       "title": "prompt"
-    }
-  },
-  "30": {
-    "inputs": {
-      "ckpt_name": "flux1-dev-fp8.safetensors"
-    },
-    "class_type": "CheckpointLoaderSimple",
-    "_meta": {
-      "title": "base_model"
-    }
-  },
-  "31": {
-    "inputs": {
-      "lora_name": "art_lora.safetensors",
-      "strength_model": 1
-    },
-    "class_type": "LoraLoaderModelOnly",
-    "_meta": {
-      "title": "lora_1"
     }
   },
   "36": {
@@ -187,5 +155,69 @@
     "_meta": {
       "title": "base_model"
     }
+  },
+  "90": {
+    "inputs": {
+      "model": ["36", 0],
+      "clip": ["11", 0]
+    },
+    "class_type": "ModelPristineReset",
+    "_meta": {
+      "title": "Weight Wash"
+    }
+  },
+  "101": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "model": [ "90", 0 ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": { "title": "lora_1" }
+  },
+  "102": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "model": [ "101", 0 ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": { "title": "lora_2" }
+  },
+  "103": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "model": [ "102", 0 ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": { "title": "lora_3" }
+  },
+  "104": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "model": [ "103", 0 ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": { "title": "lora_4" }
+  },
+  "105": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "model": [ "104", 0 ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": { "title": "lora_5" }
+  },
+  "106": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "model": [ "105", 0 ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": { "title": "lora_6" }
   }
 }

@@ -19,9 +19,10 @@ import modules.constants as constants
 import modules.flags as flags
 import modules.gradio_hijack as grh
 import modules.html
-import modules.meta_parser
+import modules.meta_parser as meta_parser
 import modules.preset_resource as PR
 import modules.style_sorter as style_sorter
+import modules.ui_features as UIF
 import modules.ui_support as UIS
 import modules.ui_util as UIU
 import modules.user_structure as US
@@ -34,7 +35,6 @@ from PIL import Image as _Image
 import enhanced.editor as edit
 import enhanced.gallery as gallery_util
 import enhanced.toolbox as toolbox
-import enhanced.translator as translator
 import enhanced.enhanced_parameters as enhanced_parameters
 import enhanced.version as version
 import enhanced.wildcards as wildcards
@@ -42,7 +42,7 @@ import enhanced.comfy_task as comfy_task
 
 from backend_base.__init__ import get_torch_xformers_cuda_version as torch_info
 from enhanced.translator import interpret, \
-    interpret_info, interpret_warn
+    interpret_info, interpret_warn, render
 from enhanced.backend import comfyd
 from enhanced.welcome import get_welcome_image, \
     check_active_logo
@@ -52,7 +52,6 @@ from modules.ar_util import AR_template_init
 from modules.sdxl_styles import legal_style_names, \
     fooocus_expansion
 from modules.private_logger import get_current_html_path
-from modules.ui_features import control_notification
 from modules.ui_gradio_extensions import reload_javascript
 from modules.util import is_json, recover_images
 
@@ -379,6 +378,35 @@ with common.GRADIO_ROOT:
                         value=btn_cancel_value,
                         elem_classes='torch_note_button',
                         visible=False, scale=1)
+
+            # --- ComfyUI Gateway Modal Overlay Box
+            with gr.Group(visible=False,
+                          elem_classes=['remove_torch_box']) as comfy_gateway_modal_box:
+                with gr.Row():
+                    # Dynamic message: Displays either the initial warning or the active status URL
+                    comfy_gateway_modal_msg = gr.Markdown(value='')
+
+                with gr.Row():
+                    # State 1 Buttons: Launch Confirmation Options
+                    btn_confirm = gr.Button(
+                        value='OK',
+                        elem_classes='torch_note_button',
+                        visible=False,
+                        scale=1
+                    )
+                    btn_cancel = gr.Button(
+                        value=btn_cancel_value,
+                        elem_classes='torch_note_button',
+                        visible=False,
+                        scale=1
+                    )
+                    # State 2 Button: Active Gateway Restorer
+                    btn_close_gateway = gr.Button(
+                        value='Close Developer Gateway',
+                        elem_classes='torch_note_button',
+                        visible=False,
+                        scale=1
+                    )
 
             with gr.Row(visible=False) as features_panel:
                 with gr.Tabs():
@@ -1450,6 +1478,11 @@ with common.GRADIO_ROOT:
                             elem_id = 'cat_select',
                             visible=True, interactive=True)
 
+                        # metadata loading trigger
+                        metadata_commence_signal= gr.Textbox(
+                        elem_id= "metadata_commence_signal",
+                        visible=False)
+
                         preset_selection = gr.Dropdown(label='Presets',
                             choices=PR.get_presetnames_in_folder(PR.category_selection),
                             value=args.args.preset if args.args.preset else "initial",
@@ -1476,16 +1509,18 @@ with common.GRADIO_ROOT:
                             info='Quality=60 Steps, Speed=30 Steps, Custom=15 Steps default',
                             elem_classes=['performance_selection'])
 
-                        overwrite_step = gr.Slider(label='Forced Overwrite of Sampling Step',
-                            minimum=-1, maximum=200, step=1,
-                            value=config.default_overwrite_step,
+                        overwrite_step = gr.Slider(
+                            label='Override Sampling Step',
+                            minimum=-1, maximum=200,
+                            step=1,
+                            value= config.default_overwrite_step,
                             info='Set to -1 to disable')
 
                     image_quantity = gr.Slider(
                         label='Image Quantity',
                         minimum=1, step=1,
-                        maximum=config.default_max_image_quantity,
-                        value=config.default_image_quantity)
+                        maximum= config.default_max_image_quantity,
+                        value= config.default_image_quantity)
 
                     with gr.Accordion(label='Batch Control', visible=True,
                     open=False):
@@ -1495,14 +1530,15 @@ with common.GRADIO_ROOT:
 
                             with gr.Row(elem_classes='elem_centre'):
                                 batch_generate_button = gr.Button(value='Batch Generate',
-                                elem_classes='button_classic')
+                                elem_classes= 'button_classic')
 
                                 # hidden button, triggered by Javascript
                                 # script.init_batchCounter()
                                 batch_counter_button = gr.Button(value='Hidden Batch Counter',
                                 elem_id='batch_counter_button', visible=False)
 
-                            batch_count = gr.Slider(label='Batch Count',
+                            batch_count = gr.Slider(
+                                label='Batch Count',
                                 minimum=1, step=1,
                                 value=common.batch_count,
                                 maximum=config.default_max_image_quantity//2,
@@ -1552,11 +1588,11 @@ with common.GRADIO_ROOT:
                             value=config.enable_shortlist_aspect_ratios,
                             visible = (AR.AR_template=="Standard") or (AR.AR_template=="Shortlist"))
 
-                        overwrite_width = gr.Slider(label='Forced Overwrite of Generating Width',
+                        overwrite_width = gr.Slider(label='Override Generating Width',
                             minimum=-1, maximum=2048, step=1, value=-1,
                             info='Set to -1 to disable. '
                             'Results may be worse for non-standard numbers that the model is not trained on.')
-                        overwrite_height = gr.Slider(label='Forced Overwrite of Generating Height',
+                        overwrite_height = gr.Slider(label='Override Generating Height',
                                             minimum=-1, maximum=2048, step=1, value=-1)
 
                     with gr.Accordion(label='Image Seed Control', visible=True, open=False):
@@ -1687,8 +1723,8 @@ with common.GRADIO_ROOT:
                 with gr.Group():
                     base_model = gr.Dropdown(
                         label='Base Model',
-                        choices=config.model_filenames,
-                        value=config.default_base_model_name,
+                        choices = config.model_filenames,
+                        value = config.default_base_model_name,
                         show_label=True,)
 
                     refiner_model = gr.Dropdown(
@@ -1713,6 +1749,11 @@ with common.GRADIO_ROOT:
                     if i < config.default_max_lora_number:
                         config.lora_data[i] = [enabled, filename, weight]
 
+                with gr.Row(
+                    visible=False) as lora_warning:
+                    gr.Markdown(value='#### ⚠️ Out of memory errors or very long generation times may occur when LoRAs are used with FP8 models',
+                    elem_classes='button_info')
+
                 # --- Helper for LoRA Handlers ---
                 def make_lora_handler(index):
                     def handler(en, name, wt):
@@ -1725,19 +1766,16 @@ with common.GRADIO_ROOT:
                         with gr.Row():
                             lora_enabled = gr.Checkbox(label=f'LoRA {i + 1} Enable',
                                 value=enabled,
-                                elem_classes='min_check',
-                                interactive = not common.default_engine or i<2)
+                                elem_classes='min_check')
                         with gr.Row():
                             lora_model = gr.Dropdown(label='',
                                 choices=['None'] + config.lora_filenames,
-                                value=filename,
-                                interactive = not common.default_engine or i<2)
+                                value=filename)
                         with gr.Row():
                             lora_weight = gr.Slider(label='Weight',
                                 minimum=config.default_loras_min_weight,
                                 maximum=config.default_loras_max_weight,
-                                step=0.01, value=weight,
-                                interactive = not common.default_engine or i<2)
+                                step=0.005, value=weight)
 
                         # whenever any component in this row changes,
                         # update config.lora_data[i] using make_lora_handler()
@@ -1761,7 +1799,7 @@ with common.GRADIO_ROOT:
             with gr.Tab(label='Advanced', elem_id="scrollable-box"):
                 guidance_scale = gr.Slider(
                     label='Guidance Scale (CFG)',
-                    minimum=0.1, maximum=30.0, step=0.1,
+                    minimum=1.00, maximum=30.00, step=0.05,
                     value=config.default_cfg_scale,
                     info='Higher values create vivid and glossy images that may follow the prompt more closely')
 
@@ -1898,7 +1936,7 @@ with common.GRADIO_ROOT:
                             maximum=flags.clip_skip_max,
                             step=1,
                             value=config.default_clip_skip,
-                            info='Bypass CLIP layers to avoid overfitting (use 1 to not skip any layers, 2 is recommended).')
+                            info='Bypass CLIP layers to avoid overfitting (use 1 to not skip any layers. 2 is recommended for SDXL models).')
 
                         adaptive_cfg = gr.Slider(
                             label='CFG Mimicking from TSNR',
@@ -1911,7 +1949,7 @@ with common.GRADIO_ROOT:
                             value=flags.refiner_swap_method,
                             choices=['joint', 'separate', 'vae'])
 
-                        overwrite_switch = gr.Slider(label='Forced Overwrite of Refiner Switch Step',
+                        overwrite_switch = gr.Slider(label='Override Refiner Switch Step',
                             minimum=-1, maximum=200, step=1,
                             value=config.default_overwrite_switch,
                             info='Set to -1 to disable')
@@ -1935,6 +1973,24 @@ with common.GRADIO_ROOT:
 
                     with gr.Tab(label='Debugging'):
                         with gr.Group():
+                            with gr.Row():
+                                gateway_info = interpret(
+                                    'Open the Comfy UI in a new tab. To conserve VRAM, FooocusPlus should not be generating images while the gateway is open.',
+                                    '', silent=True)
+                                gr.Markdown(
+                                    value=gateway_info,
+                                    elem_classes='button_info2')
+
+                            with gr.Row(
+                                elem_classes='elem_centre'):
+                                gateway_value = interpret(
+                                    'Open Comfy Gateway',
+                                    '', silent=True)
+                                btn_gateway = gr.Button(
+                                    value=gateway_value,
+                                    elem_classes= 'button_classic'
+                                )
+
                             debugging_cn_preprocessor = gr.Checkbox(
                                 label='Debug ControlNet Preprocessors',
                                 value=False,
@@ -1964,11 +2020,17 @@ with common.GRADIO_ROOT:
                                 value=False,
                                 info='Check for inactive words')
 
+                            revert_fooocus_checkbox = gr.Checkbox(
+                                label='Revert CFG & Step to Fooocus Standards',
+                                value=False,
+                                info='Disable adaptive Guidance Scale & Override Sampling Step slider control when changing presets')
+
                             with gr.Row():
                                 remove_info = interpret(
                                     'Remove dynamic PyTorch components and configs',
                                     '', silent=True)
-                                gr.Markdown(value=remove_info,
+                                gr.Markdown(
+                                    value=remove_info,
                                     elem_classes='button_info2')
                             with gr.Row(
                                 elem_classes='elem_centre'):
@@ -1977,7 +2039,8 @@ with common.GRADIO_ROOT:
                                     '', silent=True)
                                 remove_torch_btn = gr.Button(
                                     value=remove_value,
-                                    elem_classes= 'button_classic')
+                                    elem_classes= 'button_classic'
+                                )
 
                         common.GRADIO_ROOT.load(
                             UIU.inpaint_mode_change,
@@ -2001,21 +2064,6 @@ with common.GRADIO_ROOT:
                                 show_progress=False, queue=False)
 
             with gr.Tab(label='Extras', elem_id="scrollable-box"):
-                with gr.Group():
-                    with gr.Row():
-                        gr.Markdown(value='All current parameters will be saved. Clear the positive and negative prompts unless you want them to be part of the preset.',
-                            elem_classes='button_info2')
-                    with gr.Row(elem_classes='elem_centre'):
-                        preset_save_button = gr.Button(value='Make New Preset',
-                            elem_classes='button_classic')
-                    with gr.Row():
-                        save_res_checkbox = gr.Checkbox(label='Save the Current Resolution',
-                            value = common.save_resolution,
-                            info='Do not save the resolution and aspect ratio unless you want it to change when switching presets')
-                    with gr.Row():
-                        overwrite_prompts_checkbox = gr.Checkbox(label='Overwrite the Current Prompts',
-                            value = common.overwrite_prompts,
-                            info='Do now use this option unless you want the new preset to specify the positive and negative prompts')
 
                 if not args.args.disable_preset_selection and PR.get_preset_list():
                     with gr.Accordion(label='Favorite Preset Control', visible=True, open=False):
@@ -2027,7 +2075,7 @@ with common.GRADIO_ROOT:
                             elem_classes='button_classic2',
                             interactive = PR.current_preset != 'Default')
                         with gr.Row():
-                            gr.Markdown(value='Add the default Favorites. This may override preset modifications.',
+                            gr.Markdown(value='Reinstate the default Favorites. This may override preset modifications.',
                                 elem_classes='button_info2')
                         with gr.Row(elem_classes='elem_centre'):
                             restore_favorites_button = gr.Button(value='Restore Favorites',
@@ -2044,6 +2092,22 @@ with common.GRADIO_ROOT:
                             value='Clear Favorites',
                             interactive=init_interactive,
                             elem_classes='button_classic2')
+
+                with gr.Accordion(label='Create New Preset', visible=True, open=False):
+                    with gr.Row():
+                        gr.Markdown(value='All current parameters will be saved. Clear the positive and negative prompts unless you want them to be part of the preset.',
+                            elem_classes='button_info2')
+                    with gr.Row(elem_classes='elem_centre'):
+                        preset_save_button = gr.Button(value='Make New Preset',
+                            elem_classes='button_classic')
+                    with gr.Row():
+                        save_res_checkbox = gr.Checkbox(label='Save the Current Resolution',
+                            value = common.save_resolution,
+                            info='Do not save the resolution and aspect ratio unless you want it to change when switching presets')
+                    with gr.Row():
+                        overwrite_prompts_checkbox = gr.Checkbox(label='Overwrite the Current Prompts',
+                            value = common.overwrite_prompts,
+                            info='Do now use this option unless you want the new preset to specify the positive and negative prompts')
 
                 with gr.Group():
                     with gr.Row():
@@ -2124,7 +2188,8 @@ with common.GRADIO_ROOT:
                         perform_value = interpret(
                             'Check Performance',
                             '', silent=True)
-                        perform_btn = gr.Button(value=perform_value,
+                        perform_btn = gr.Button(
+                            value=perform_value,
                             elem_classes='button_classic')
 
                 with gr.Row(elem_classes='elem_up'):
@@ -2136,8 +2201,9 @@ with common.GRADIO_ROOT:
                         smart_memory = interpret(
                             'Enabled (VRAM unloaded only when necessary',
                             '', silent=True)
-                    video_system = model_management.get_torch_device_name\
-                        (model_management.get_torch_device())
+                    video_system = model_management.get_torch_device_name(
+                    model_management.get_torch_device())
+
                     torch_ver, xformers_ver, cuda_ver = torch_info()
                     if xformers_ver == '':
                         xformers_ver = "not installed"
@@ -2255,7 +2321,7 @@ with common.GRADIO_ROOT:
 
     super_prompter.click(
         lambda x, y, z: enhanced.superprompter.answer(
-            input_text=translator.translate(f'{y}{x}', True),
+            input_text=render(f'{y}{x}', True),
         seed=image_seed),
         inputs=[prompt, super_prompter_prompt, translation_methods],
         outputs=prompt,
@@ -2263,7 +2329,7 @@ with common.GRADIO_ROOT:
         show_progress=True)
 
     translator_button.click(
-        enhanced.translator.translate,
+        render,
         inputs=prompt,
         outputs=prompt,
         queue=False,
@@ -2272,7 +2338,9 @@ with common.GRADIO_ROOT:
 
     # substituted prompt_panel_checkbox for advanced_checkbox
     # to avoid toggling Advanced tab visibility
-    load_data_outputs = [prompt_panel_checkbox, image_quantity,
+    load_data_outputs = [
+        prompt_panel_checkbox,
+        image_quantity,
         prompt, negative_prompt,
         style_selections, v2_substyle,
         performance_selection,
@@ -2280,7 +2348,8 @@ with common.GRADIO_ROOT:
         aspect_ratios_selection,
         overwrite_width, overwrite_height,
         guidance_scale, sharpness,
-        adm_scaler_positive, adm_scaler_negative,
+        adm_scaler_positive,
+        adm_scaler_negative,
         adm_scaler_end,
         refiner_swap_method,
         adaptive_cfg, clip_skip,
@@ -2435,7 +2504,7 @@ with common.GRADIO_ROOT:
         sampler_selector, scheduler_selector,
         input_image_checkbox, enhance_checkbox,
         base_model, refiner_model, overwrite_step,
-        guidance_scale, negative_prompt,
+        guidance_scale, sharpness, negative_prompt,
         preset_instruction] + lora_ctrls
     common.len_preset_layout = len(reset_preset_layout)
 
@@ -2447,20 +2516,10 @@ with common.GRADIO_ROOT:
         input_image_checkbox, state_topbar]
     common.len_preset_func = len(reset_preset_func)
 
-    def update_preset_info():
-        common.metadata_loading = True
-        return PR.current_preset
 
-    def normalize_preset_loading():
-        time.sleep(2)
-        common.metadata_loading = False
-        if common.log_metadata:
-            interpret('Finished loading metadata')
-            print()
-        common.log_metadata = ''
-        return
-
-    def prepare_UI_for_metadata():
+    def prepare_UI_for_log_metadata():
+        print()
+        interpret_info('Loading log metadata...')
         return (gr.update(visible=False),
                 gr.update(visible=False),
                 gr.update(value=False))
@@ -2471,152 +2530,82 @@ with common.GRADIO_ROOT:
         return(
             trigger_event
     ).then(
-        fn=lambda: interpret_info('Loading log metadata...'),
-        outputs=None,
+        fn=prepare_UI_for_log_metadata,
+        inputs = None,
+        outputs= [toolbox_note_load_button,
+                  toolbox_note_box,
+                  input_image_checkbox],
     ).then(
         lambda: None,
-        inputs=None,
+        inputs= None,
         outputs=None,
         queue=False, show_progress=False,
         _js='()=>{window.close_finished_images_catalog();}'
     ).then(
-        fn=prepare_UI_for_metadata,
-        inputs=None,
-        outputs= [toolbox_note_load_button,
-                  toolbox_note_box,
-                  input_image_checkbox],
-        queue=False, show_progress=False
+        # Update the UI preset section instantly
+        fn=meta_parser.extract_preset_name_from_log,
+        inputs = [prompt],
+        outputs= [category_selection,
+                  preset_selection,
+                  preset_info]
     ).then(
-        fn=modules.meta_parser.read_meta_from_log,
-        inputs=[prompt, state_is_generating, inpaint_mode],
-        outputs=load_data_outputs,
-        queue=False, show_progress=False
-    ).then(
-        style_sorter.sort_styles,
-        inputs=style_selections,
-        outputs=style_selections,
-        queue=False, show_progress=False
-    ).then(
-        fn=update_preset_info,
-        inputs=None,
-        outputs=preset_selection,
-        queue=False, show_progress=False
-    ).then(
-        fn=modules.meta_parser.read_meta_from_log,
-        inputs=[prompt, state_is_generating, inpaint_mode],
-        outputs=load_data_outputs,
-        queue=False, show_progress=False
-    ).then(
-        fn=lambda: time.sleep(6),
-        outputs=None
-    ).then(
-        fn=modules.meta_parser.read_meta_from_log,
-        inputs=[prompt, state_is_generating, inpaint_mode],
-        outputs=load_data_outputs,
-        queue=False, show_progress=False
-    ).then(
-        fn=lambda: time.sleep(6),
-        outputs=None
-    ).then(
-        fn=modules.meta_parser.read_meta_from_log,
-        inputs=[prompt, state_is_generating, inpaint_mode],
-        outputs=load_data_outputs,
-        queue=False, show_progress=False
-    ).then(
-        fn=normalize_preset_loading,
-        inputs=None, outputs=None,
-        queue=False, show_progress=False)
+       # metadata loading is delayed by several seconds
+        fn=None,
+        queue=False, show_progress=False,
+        _js='()=>{start_metadata_alarm();}'
+    )
 
-    # Load Parameters from log via clipboard
-    main_load_event = load_parameter_button.click(
-        fn=lambda: None)
+    # ROUTE 1: Main Load Button
+    main_load_event = load_parameter_button.click(fn=lambda: None)
     attach_load_log_pipeline(main_load_event)
 
-    # Load Parameters directly from the log
+    # ROUTE 2: Toolbox Load Button
     toolbox_load_event = toolbox_note_load_button.click(
-        fn=toolbox.load_log_info_into_prompt,
+        fn=meta_parser.load_log_info_into_prompt,
         inputs=state_topbar,
-        outputs=prompt # the Virtual paste
+        outputs=prompt
     )
     attach_load_log_pipeline(toolbox_load_event)
 
 
-    def image_metadata_import(file, state_is_generating, state_params):
-        parameters, metadata_scheme = modules.meta_parser.read_meta_from_image(file)
-        if parameters is None:
-            interpret_warn('Could not find valid metadata in the image!')
-        return toolbox.reset_params_by_meta(parameters,
-            state_params, state_is_generating, inpaint_mode)
-
+    def prepare_UI_for_image_metadata():
+        print()
+        interpret_info('Loading image metadata...')
+        return (gr.update(visible=False),
+                gr.update(visible=False),
+                gr.update(value=False))
 
     # Apply Metadata after image load
     metadata_import_button.click(
-        fn=lambda: interpret_info('Loading image metadata...'),
-        outputs=None
+        fn=prepare_UI_for_image_metadata,
+        inputs = None,
+        outputs= [toolbox_note_load_button,
+                  toolbox_note_box,
+                  input_image_checkbox],
     ).then(
         lambda: None,
-        inputs=None,
+        inputs= None,
         outputs=None,
         queue=False, show_progress=False,
         _js='()=>{window.close_finished_images_catalog();}'
     ).then(
-        fn=prepare_UI_for_metadata,
-        inputs=None,
-        outputs= [toolbox_note_load_button,
-                  toolbox_note_box,
-                  input_image_checkbox],
+        # Update the UI preset section instantly
+        fn=meta_parser.extract_preset_name_from_image,
+        inputs = [metadata_input_image],
+        outputs= [category_selection,
+                  preset_selection,
+                  preset_info],
         queue=False, show_progress=False
     ).then(
-        fn=image_metadata_import,
-        inputs=[metadata_input_image,
-        state_is_generating, state_topbar],
-        outputs=reset_preset_layout +
-            reset_preset_func + load_data_outputs,
-        queue=False, show_progress=False
-    ).then(
-        style_sorter.sort_styles,
-        inputs=style_selections,
-        outputs=style_selections,
-        queue=False, show_progress=False
-    ).then(
-        fn=update_preset_info,
-        inputs=None, outputs=preset_selection,
-        queue=False, show_progress=False
-    ).then(
-        fn=image_metadata_import,
-        inputs=[metadata_input_image,
-        state_is_generating, state_topbar],
-        outputs=reset_preset_layout +
-          reset_preset_func + load_data_outputs,
-        queue=False, show_progress=False
-    ).then(
-        fn=lambda: time.sleep(6),
-        outputs=None
-    ).then(
-        fn=image_metadata_import,
-        inputs=[metadata_input_image,
-        state_is_generating, state_topbar],
-        outputs=reset_preset_layout +
-          reset_preset_func + load_data_outputs,
-        queue=False, show_progress=False
-    ).then(
-        fn=lambda: time.sleep(6),
-        outputs=None
-    ).then(
-        fn=image_metadata_import,
-        inputs=[metadata_input_image,
-        state_is_generating, state_topbar],
-        outputs=reset_preset_layout +
-          reset_preset_func + load_data_outputs,
-        queue=False, show_progress=False
-    ).then(
-        fn=normalize_preset_loading,
-        inputs=None, outputs=None,
-        queue=False, show_progress=False)
+       # metadata loading is delayed by several seconds
+        fn=None,
+        queue=False, show_progress=False,
+        _js='()=>{start_metadata_alarm();}'
+    )
 
 
     def trigger_metadata_preview(file):
-        parameters, metadata_scheme = modules.meta_parser.read_meta_from_image(file)
+        parameters, metadata_scheme = meta_parser.read_meta_from_image(file)
         results = {}
         if parameters is not None:
             results['parameters'] = parameters
@@ -4776,7 +4765,7 @@ with common.GRADIO_ROOT:
 
     def set_refiner_model(arg_refiner_model):
         config.default_refiner=arg_refiner_model
-        if config.default_refiner == 'None':
+        if config.default_refiner == 'None' or arg_refiner_model == '':
             is_visible = False
         else:
             is_visible = True
@@ -4823,7 +4812,8 @@ with common.GRADIO_ROOT:
             results += [gr.update(interactive=True),
                         gr.update(choices=['None'] + lora_filenames), gr.update()]
         if config.audio_notification:
-            control_notification(config.audio_notification)
+            UIF.control_notification(
+                config.audio_notification)
         interpret_info('Refresh complete!')
         print()
         return results
@@ -5189,6 +5179,71 @@ with common.GRADIO_ROOT:
         show_progress=False, queue=False)
 
 
+    # Comfy UI Gateway Handlers & Helpers
+
+    def show_launch_confirmation():
+        """Toggles the modal to state 1:
+        Displays warning and confirmation controls."""
+        warning_msg = interpret(
+            '### Please Do Not Generate Images While the Gateway is Open\n\n'
+            'Opening the Developer Gateway will **shut down internal Comfy functions** '
+            'to conserve GPU VRAM. Any active Comfy generation will be stopped.\n\n'
+            'Do you want to proceed and launch the standalone ComfyUI workspace?',
+            silent=True
+        )
+        return (
+            gr.update(visible=True),   # comfy_gateway_modal_box
+            gr.update(value=warning_msg), # comfy_gateway_modal_msg
+            gr.update(visible=True),      # btn_confirm
+            gr.update(visible=True),      # btn_cancel
+            gr.update(visible=False)      # btn_close_gateway
+        )
+
+    def transition_to_active_gateway():
+        """Toggles the modal to state 2:
+        Hides confirm controls and shows
+        the close control."""
+        return (
+            gr.update(visible=False),  # btn_confirm
+            gr.update(visible=False),  # btn_cancel
+            gr.update(visible=True)    # btn_close_gateway
+        )
+
+    def hide_modal_overlay():
+        """Hides the entire modal box."""
+        return gr.update(visible=False)
+
+    btn_gateway.click(
+        fn=show_launch_confirmation,
+        outputs=[comfy_gateway_modal_box, comfy_gateway_modal_msg, btn_confirm, btn_cancel, btn_close_gateway]
+    )
+
+    btn_cancel.click(
+        fn=hide_modal_overlay,
+        outputs=comfy_gateway_modal_box
+    )
+
+    # Clicking Confirm launches the workspace,
+    # updates the message, and displays the close control
+    btn_confirm.click(
+        fn=UIF.launch_standalone_comfy,
+        outputs=comfy_gateway_modal_msg
+    ).then(
+        fn=transition_to_active_gateway,
+        outputs=[btn_confirm, btn_cancel, btn_close_gateway]
+    )
+
+    # Clicking the Close Gateway button terminates
+    # the server and hides the overlay completely
+    btn_close_gateway.click(
+        fn=UIF.stop_standalone_comfy,
+        outputs=comfy_gateway_modal_msg
+    ).then(
+        fn=hide_modal_overlay,
+        outputs=comfy_gateway_modal_box
+    )
+
+
     # Debugging Tools Handlers & Helpers
 
     def debugging_cn_preprocessor_change(arg_debugging_cn):
@@ -5258,6 +5313,18 @@ with common.GRADIO_ROOT:
         fn=debug_substyles_checkbox_change,
         inputs=debug_substyles_checkbox,
         outputs=debug_substyles_checkbox,
+        show_progress=False, queue=False)
+
+    def revert_fooocus_checkbox_change(
+        arg_revert_fooocus):
+        PR.revert_fooocus = arg_revert_fooocus
+        return gr.update(
+            value=PR.revert_fooocus)
+
+    revert_fooocus_checkbox.change(
+        fn=revert_fooocus_checkbox_change,
+        inputs=revert_fooocus_checkbox,
+        outputs=revert_fooocus_checkbox,
         show_progress=False, queue=False)
 
 
@@ -5382,7 +5449,7 @@ with common.GRADIO_ROOT:
 
     def notification_control(enable_notification):
         config.audio_notification = enable_notification
-        control_notification(enable_notification)
+        UIF.control_notification(enable_notification)
         if enable_notification:
             audio_mp3 = 'notification.mp3'
         else:
@@ -5455,39 +5522,114 @@ with common.GRADIO_ROOT:
         return result
 
 
+    # Register click handlers for each preset bar button
     for i in range(config.preset_bar_length):
-        bar_buttons[i].click(PR.bar_button_change, inputs=[bar_buttons[i],\
-            state_topbar], outputs=[state_topbar, category_selection, preset_selection]) \
-           .then(UIS.reset_layout_params, inputs=reset_preset_inputs, outputs=reset_layout_params, show_progress=False) \
-           .then(fn=lambda x: x, inputs=state_topbar, outputs=system_params, show_progress=False) \
-           .then(fn=lambda x: {}, inputs=system_params, outputs=system_params, _js=UIS.refresh_topbar_status_js) \
-           .then(lambda: None, _js='()=>{refresh_style_localization();}') \
-           .then(inpaint_engine_state_change, inputs=[inpaint_engine_state] + enhance_inpaint_mode_ctrls,\
-               outputs=enhance_inpaint_engine_ctrls, queue=False, show_progress=False)
+        bar_buttons[i].click(
+            PR.bar_button_change,
+            inputs=[bar_buttons[i], state_topbar],
+            outputs=[state_topbar, category_selection, preset_selection]
+        ).then(
+            UIS.reset_layout_params, inputs=reset_preset_inputs, outputs=reset_layout_params, show_progress=False
+        ).then(
+            fn=lambda x: x,
+            inputs=state_topbar,
+            outputs=system_params,
+            show_progress=False
+        ).then(
+            fn=lambda x: {},
+            inputs=system_params,
+            outputs=system_params,
+            _js=UIS.refresh_topbar_status_js
+        ).then(
+            lambda: None, _js='()=>{refresh_style_localization();}'
+        ).then(
+            inpaint_engine_state_change,
+            inputs=[inpaint_engine_state] + enhance_inpaint_mode_ctrls,
+            outputs=enhance_inpaint_engine_ctrls,
+            queue=False, show_progress=False
+        )
 
-        category_selection.change(PR.set_category_selection, inputs=category_selection,\
-            outputs=[category_selection, preset_selection, preset_info],
-            show_progress=False, queue=False)
+    # Register the global dropdown handlers
+    category_selection.change(
+        PR.set_category_selection,
+        inputs=category_selection,
+        outputs=[category_selection,
+            preset_selection, preset_info],
+        show_progress=False, queue=False
+    )
 
-        preset_selection.change(PR.set_preset_selection,
-            inputs=[preset_selection, state_topbar],
-            outputs=[preset_selection,
-                state_topbar, preset_info,
-                aspect_ratios_selection,
-                category_selection,
-                prompt, negative_prompt,
-                v2_substyle, image_quantity,
-                sampler_selector, scheduler_selector,
-                preset_favorite_button,
-                preset_favorite_button],
-            show_progress=False, queue=False) \
-            .then(UIS.reset_layout_params, inputs=reset_preset_inputs,
-                outputs=reset_layout_params, show_progress=False) \
-            .then(fn=lambda x: x, inputs=state_topbar, outputs=system_params, show_progress=False) \
-            .then(fn=lambda x: {}, inputs=system_params, outputs=system_params, _js=UIS.refresh_topbar_status_js) \
-            .then(lambda: None, _js='()=>{refresh_style_localization();}') \
-            .then(inpaint_engine_state_change, inputs=[inpaint_engine_state] + enhance_inpaint_mode_ctrls,
-            outputs=enhance_inpaint_engine_ctrls, queue=False, show_progress=False)
+
+    def auto_finalize_metadata_load(state_is_generating, state_params, inpaint_mode):
+        # Only act if we are in a metadata load sequence
+        if not common.metadata_loading or not common.log_metadata:
+             return [gr.update()] * (len(reset_preset_layout) + len(reset_preset_func) + len(load_data_outputs))
+
+        interpret('[UI] Finalizing metadata loading...')
+
+        metadata_dict = common.log_metadata
+        results = meta_parser.reset_params_by_meta(metadata_dict,
+            state_params, state_is_generating, inpaint_mode)
+
+        # Reset flags
+        common.metadata_loading = False
+        common.log_metadata = {}
+
+        interpret('Finished loading metadata')
+        return results
+
+
+    # Triggered several seconds after the alarm
+    # was set in attach_load_log_pipeline()
+    metadata_commence_signal.change(
+        fn=auto_finalize_metadata_load,
+        inputs=[state_is_generating, state_topbar, inpaint_mode],
+        outputs=reset_preset_layout + reset_preset_func + load_data_outputs,
+        queue=False, show_progress=False
+    ).then(
+        fn=style_sorter.sort_styles,
+        inputs=style_selections, outputs=style_selections,
+        queue=False, show_progress=False
+    ).then(
+        fn=PR.normalize_preset_loading,
+        inputs=None, outputs=None,
+        queue=False, show_progress=False
+    )
+
+    preset_selection.change(
+        fn=PR.set_preset_selection,
+        inputs=[preset_selection, state_topbar],
+        outputs=[preset_selection,
+            state_topbar, preset_info,
+            aspect_ratios_selection,
+            category_selection,
+            prompt, negative_prompt,
+            v2_substyle, image_quantity,
+            sampler_selector, scheduler_selector,
+            preset_favorite_button,
+            preset_favorite_button,
+            overwrite_step,
+            lora_warning,
+            guidance_scale],
+        show_progress=False, queue=False
+    ).then(
+        UIS.reset_layout_params, inputs=reset_preset_inputs,
+            outputs=reset_layout_params, show_progress=False
+    ).then(
+        fn=lambda x: x,
+        inputs=state_topbar,
+        outputs=system_params,
+        show_progress=False
+    ).then(
+        fn=lambda x: {},
+        inputs=system_params,
+        outputs=system_params, _js=UIS.refresh_topbar_status_js
+    ).then(
+        lambda: None,
+        _js='()=>{refresh_style_localization();}'
+    ).then(
+        inpaint_engine_state_change, inputs=[inpaint_engine_state] + enhance_inpaint_mode_ctrls,
+        outputs=enhance_inpaint_engine_ctrls, queue=False, show_progress=False
+    )
 
 
     # stop ".then chain" early

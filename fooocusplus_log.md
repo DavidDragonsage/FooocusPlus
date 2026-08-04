@@ -1,3 +1,89 @@
+# 1.1.3 Full Comfy LoRA Support & Base Model Restoration
+
+* users no longer have to download unused models
+  * downloading does not occur during preset selection
+  * models only auto-downloaded if used for Generation
+* added support for up to 6 LoRAs for all Comfy models
+  * To improve LoRA support in the DiT workflows:
+  - deleted the "CacheDitConfig" node to reduce noise
+  - added the "ModelPristineReset" node to clean VRAM
+  - this node makes images reproducible & noise-free
+* metadata loading is now faster & more reliable
+  * the process takes 4 seconds instead of 12
+  * added Clip Skip & Workflow fields to the metadata
+* improved the HTML log sorting to be more logical
+  * fields that are not applicable are filtered out
+* restored support for Kwai Kolors & KolorsFast
+  * these presets are in the new KwaiKolors category
+  * Kolors does not exist as a base model file
+  * it is assembled from 7 shards at runtime
+* restored SD3 support with SD3.5Medium & SD3.5Large
+  * these presets are in the new SD3x category
+  * also added SD3.5LgTurbo5 and SD3.5LgTurbo8
+* introduced Z-Image Base support
+* added Z-Image GGUF support for Base & Turbo
+  * added Z-Image Base presets for Q8 and Q5
+  * added an 8 step Z-Image BaseFast preset (Q8)
+  * added Z-Image Turbo presets for Q8, Q5 and Q4
+  * "X" presets use "ModelSamplingAuraFlow" shift 6
+  * this variant increases detail on non-square images
+* added LoRA 8 step accelerated Flux presets:
+  * Flux1DFast, Flux1KreaFast and HyperFluxFast
+* debugged & sorted Sampler and Scheduler selectors
+  * all Samplers from Comfy 0.27.0 are now available
+* IC-Light now uses the UserDir/models/rembg path
+* preset selection defaults to first in the category
+  * unless config.enable_random_preset_in_category True
+* added a Gateway to open the Comfy UI from FooocusPlus
+  * this eases Comfy related FooocusPlus development
+  * accessed from Advanced/Expert Tools/Debugging
+* improved Base Model dropdown filename filtering
+* also improved LoRA filename filtering
+* changed "Forced Overwrite of" to simply "Override"
+* reconfigured the Override Sampling Step control
+  * reduced the maximum value from 200 to 100
+  * for Comfy presets, slider parameters are customized
+* also customized Guidance Control for Comfy presets
+* override with "Revert CFG & Step to Fooocus Standards"
+  * under the Debugging tab, it disables customization
+* upgraded Comfy from 0.26.0 to 0.27.0
+* Comfy Node Maintenance Report:
+  * Removed comfyui-cache-dit
+  * Patched ComfyUI-Kolors-MZ
+  * Patched ComfyUI-KwaiKolorsWrapper
+  * Added & edited ComfyUI-QwenImageWanBridge
+    (removed all nodes except z_image_encoder group)
+  * Created the "ModelPristineReset" micro-node
+* Comfy Workflow Maintenance Report:
+  * All workflows now include a 6 LoRA chain
+  * All DiT workflows include "ModelPristineReset"
+  * Deleted "CacheDitConfig" from all workflows
+  * Removed kolors_text2image1
+  * Removed kolors_text2image3
+  * Removed layerdiffuse_cond_api
+  * Removed layerdiffuse_fg
+  * Removed sd3_base
+  * Removed seamlesstiled_kolors
+  * Renamed kolors_text2image1 to kolors_text2image
+  * Renamed flux_base2_gguf to flux_base_gguf
+  * Upgraded sd3x_base for SD3.5 Large & Medium
+  * Added sd3x_base_gguf for SD3.5 Turbo support
+  * Added ZIB_gguf for Z-Image Base support
+  * Added ZIB_fast_gguf for 8 step Base generation
+  * Added ZIB_shift6_gguf for Base "X" variant
+  * Renamed ZIT_DIT_TG to ZIT
+  * Added ZIT_shift6 for Turbo "X" variant
+  * Added ZIT_gguf to support Turbo GGUF models
+  * Added ZIT_shift6_gguf for Turbo "X" variant
+* Chinese-to-English prompt translation is not
+  applied to the HyDit, Kolors and Z-Image models
+* placed Create New Preset functions in an accordion
+  * located in Extras under Favorite Preset Control
+* Release Date: August 4th, 2026<br/>
+* Hotfix0:
+<br/><br/>
+
+
 # 1.1.2 Comfy Upgrade & Z-Image Turbo Support
 
 * upgraded Comfy from 1dba801 to 0.26.0
@@ -39,6 +125,7 @@
 * upgraded IC-Light to the latest version
 * added clip_download support throughout the repo.
 * improved startup logic for newly released versions
+* Release Date: June 29th, 2026<br/>
 * Hotfix7: Fixed Flux workflows: removed NF4 references
 * Hotfix6: Simplified Comfy custom_nodes verification
 * Hotfix5: Fixed path error in custom_nodes updating
@@ -154,6 +241,7 @@
   * the user config.txt setting may need to be adjusted
 * image buffers are no longer auto-cleared
   * this prevents "dead" images in Input Image modes
+* Release Date: June 19th, 2026<br/>
 * Hotfix4: Eliminated a possible security issue with HyDiT
   * rewrote the HunyuanDiT hydit_task.py module
   * for Linux, set all requirements to specific versions

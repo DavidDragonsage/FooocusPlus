@@ -21,48 +21,7 @@ enhancement_uov_prompt_type_original = 'Original Prompts'
 enhancement_uov_prompt_type_last_filled = 'Last Filled Enhancement Prompts'
 enhancement_uov_prompt_types = [enhancement_uov_prompt_type_original, enhancement_uov_prompt_type_last_filled]
 
-CIVITAI_NO_KARRAS = ["euler", "euler_ancestral", "heun", "dpm_fast", "dpm_adaptive", "ddim", "uni_pc"]
-
-# fooocus: a1111 (Civitai)
-KSAMPLER = {
-    "euler": "Euler",
-    "euler_ancestral": "Euler a",
-    "heun": "Heun",
-    "heunpp2": "",
-    "dpm_2": "DPM2",
-    "dpm_2_ancestral": "DPM2 a",
-    "lms": "LMS",
-    "dpm_fast": "DPM fast",
-    "dpm_adaptive": "DPM adaptive",
-    "dpmpp_2s_ancestral": "DPM++ 2S a",
-    "dpmpp_sde": "DPM++ SDE",
-    "dpmpp_sde_gpu": "DPM++ SDE",
-    "dpmpp_2m": "DPM++ 2M",
-    "dpmpp_2m_sde": "DPM++ 2M SDE",
-    "dpmpp_2m_sde_gpu": "DPM++ 2M SDE",
-    "dpmpp_3m_sde": "",
-    "dpmpp_3m_sde_gpu": "",
-    "ddpm": "",
-    "lcm": "LCM",
-    "tcd": "TCD",
-    "restart": "Restart"
-}
-
-SAMPLER_EXTRA = {
-    "ddim": "DDIM",
-    "uni_pc": "UniPC",
-    "uni_pc_bh2": ""
-}
-
-SAMPLERS = KSAMPLER | SAMPLER_EXTRA
-KSAMPLER_NAMES = list(KSAMPLER.keys())
-SAMPLER_NAMES = KSAMPLER_NAMES + list(SAMPLER_EXTRA.keys())
-sampler_list = SAMPLER_NAMES
-
-SCHEDULER_NAMES = ["normal", "karras", "exponential", "sgm_uniform", "simple", "ddim_uniform", "lcm", "turbo", "align_your_steps", "tcd", "edm_playground_v2.5"]
-scheduler_list = SCHEDULER_NAMES
-
-clip_skip_max = 12
+clip_skip_max = 6
 
 default_vae = 'Default (model)'
 
@@ -128,18 +87,118 @@ describe_type_anime = 'Art/Anime'
 describe_types = [describe_type_photo, describe_type_anime]
 
 
-COMFY_KSAMPLER_NAMES = ["euler", "euler_cfg_pp", "euler_ancestral", "euler_ancestral_cfg_pp", "heun", "heunpp2","dpm_2", "dpm_2_ancestral",
-                  "lms", "dpm_fast", "dpm_adaptive", "dpmpp_2s_ancestral", "dpmpp_sde", "dpmpp_sde_gpu",
-                  "dpmpp_2m", "dpmpp_2m_sde", "dpmpp_2m_sde_gpu", "dpmpp_3m_sde", "dpmpp_3m_sde_gpu", "ddpm", "lcm",
-                  "ipndm", "ipndm_v", "deis"]
-comfy_scheduler_list = COMFY_SCHEDULER_NAMES = ["normal", "karras", "exponential", "sgm_uniform", "simple", "ddim_uniform", "beta"]
-comfy_sampler_list = COMFY_SAMPLER_NAMES = COMFY_KSAMPLER_NAMES + ["ddim", "uni_pc", "uni_pc_bh2"]
+CIVITAI_NO_KARRAS = ["euler", "euler_ancestral", "heun", "dpm_fast", "dpm_adaptive", "ddim", "uni_pc"]
 
-backend_engines = ['Fooocus', 'Comfy', 'Kolors', 'Kolors+', 'SD3x', 'HyDiT', 'HyDiT+', 'Flux']
+# fooocus: a1111 (Civitai)
+KSAMPLER = {
+    "euler": "Euler",
+    "euler_ancestral": "Euler a",
+    "heun": "Heun",
+    "heunpp2": "",
+    "dpm_2": "DPM2",
+    "dpm_2_ancestral": "DPM2 a",
+    "lms": "LMS",
+    "dpm_fast": "DPM fast",
+    "dpm_adaptive": "DPM adaptive",
+    "dpmpp_2s_ancestral": "DPM++ 2S a",
+    "dpmpp_sde": "DPM++ SDE",
+    "dpmpp_sde_gpu": "DPM++ SDE",
+    "dpmpp_2m": "DPM++ 2M",
+    "dpmpp_2m_sde": "DPM++ 2M SDE",
+    "dpmpp_2m_sde_gpu": "DPM++ 2M SDE",
+    "dpmpp_3m_sde": "",
+    "dpmpp_3m_sde_gpu": "",
+    "ddpm": "",
+    "lcm": "LCM",
+    "tcd": "TCD",
+    "restart": "Restart"
+}
+
+SAMPLER_EXTRA = {
+    "ddim": "DDIM",
+    "uni_pc": "UniPC",
+    "uni_pc_bh2": ""
+}
+
+SAMPLERS = KSAMPLER | SAMPLER_EXTRA
+KSAMPLER_NAMES = list(KSAMPLER.keys())
+SAMPLER_NAMES = KSAMPLER_NAMES + list(SAMPLER_EXTRA.keys())
+sampler_list = sorted(SAMPLER_NAMES)
+
+SCHEDULER_NAMES = [
+    "align_your_steps",
+    "ddim_uniform",
+    "edm_playground_v2.5",
+    "exponential",
+    "lcm",
+    "karras",
+    "normal",
+    "simple",
+    "sgm_uniform",
+    "tcd",
+    "turbo"
+]
+scheduler_list = SCHEDULER_NAMES
+
+
+COMFY_KSAMPLER_NAMES = [
+    'ddpm',
+    'deis',
+    'dpm_2',
+    'dpm_2_ancestral',
+    'dpm_adaptive',
+    'dpm_fast',
+    'dpmpp_2m',
+    'dpmpp_2m_sde',
+    'dpmpp_2m_sde_gpu',
+    'dpmpp_2s_ancestral',
+    'dpmpp_3m_sde',
+    'dpmpp_3m_sde_gpu',
+    'dpmpp_sde',
+    'dpmpp_sde_gpu',
+    'edm_playground_v2.5',
+    'euler',
+    'euler_ancestral',
+    'euler_ancestral_cfg_pp',
+    'euler_cfg_pp',
+    'heun',
+    'heunpp2',
+    'ipndm',
+    'ipndm_v',
+    'lcm',
+    'lms',
+    'restart',
+    'tcd'
+]
+
+COMFY_SAMPLER_NAMES = COMFY_KSAMPLER_NAMES + [
+    "ddim",
+    "uni_pc",
+    "uni_pc_bh2"
+]
+comfy_sampler_list = sorted(COMFY_SAMPLER_NAMES)
+
+COMFY_SCHEDULER_NAMES = [
+    'align_your_steps',
+    'beta',
+    'ddim_uniform',
+    'exponential',
+    'karras',
+    'lcm',
+    'normal',
+    'sgm_uniform',
+    'simple',
+    'tcd',
+    'turbo'
+]
+comfy_scheduler_list = COMFY_SCHEDULER_NAMES
+
+
+backend_engines = ['Fooocus', 'Comfy', 'Kolors+', 'SD3x', 'HyDiT+', 'Flux']
 
 model_file_filter = {
         'SD3x'   : ['sd3'],
-        'Flux'   : ['flux'],
+        'Flux'   : ['flux', 'z-image', 'z_image'],
         'HyDiT'  : ['hunyuan'],
         }
 model_file_filter['Fooocus'] = model_file_filter['SD3x'] + model_file_filter['Flux'] + model_file_filter['HyDiT']
@@ -148,9 +207,7 @@ model_file_filter['Fooocus'] = model_file_filter['SD3x'] + model_file_filter['Fl
 task_class_mapping = {
             'Fooocus': 'SDXL-Fooocus',
             'Comfy'  : 'SDXL-Comfy',
-            'Kolors' : 'Kwai-Kolors',
             'Kolors+': 'Kwai-Kolors+',
-            'SD3m'   : 'SD3m',
             'SD3x'   : 'SD3.5x',
             'HyDiT'  : 'Hunyuan-DiT',
             'HyDiT+' : 'Hunyuan-DiT+',
@@ -158,12 +215,18 @@ task_class_mapping = {
             'SD1'    : 'SD1',
             }
 def get_taskclass_by_fullname(fullname):
+    # if the key is already valid, return it:
+    if fullname in task_class_mapping:
+        return fullname
+
+    # Otherwise, look for the full
+    # display name in the list:
     for taskclass, fname in task_class_mapping.items():
         if fname == fullname:
             return taskclass
     return None
 
-comfy_classes = ['Comfy', 'Kolors', 'Kolors+', 'SD3x', 'HyDiT+', 'Flux', 'SD1']
+comfy_classes = ['Comfy', 'Kolors+', 'SD3x', 'HyDiT+', 'Flux', 'SD1']
 
 default_class_params = {
     'Fooocus': {
@@ -175,57 +238,37 @@ default_class_params = {
         'backend_params': {},
         },
     'Comfy': {
-        'disvisible': [],
+        'disvisible': ["sharpness"],
         'disinteractive': [],
         'available_aspect_ratios_selection': 'Standard',
         'available_sampler_name': comfy_sampler_list,
         'available_scheduler_name': comfy_scheduler_list,
         'backend_params': {},
         },
-    'Kolors': {
-        'disvisible': ["backend_selection", "performance_selection", "refiner_model"],
-        'disinteractive': ["input_image_checkbox", "enhance_checkbox", "performance_selection", "base_model", "overwrite_step", "refiner_model"],
-        'available_aspect_ratios_selection': 'Standard',
-        'available_sampler_name': comfy_sampler_list,
-        'available_scheduler_name': comfy_scheduler_list,
-        'backend_params': {
-            "task_method": "kolors_text2image1",
-            "llms_model": "quant8",
-            },
-        },
     'Kolors+': {
-        'disvisible': ["backend_selection", "performance_selection", "refiner_model"],
-        'disinteractive': ["input_image_checkbox", "enhance_checkbox", "performance_selection", "base_model", "overwrite_step", "refiner_model"],
+        'disvisible': ["backend_selection", "performance_selection", "refiner_model", "sharpness"],
+        'disinteractive': ["input_image_checkbox", "enhance_checkbox", "base_model", "refiner_model"],
         'available_aspect_ratios_selection': 'Standard',
         'available_sampler_name': comfy_sampler_list,
         'available_scheduler_name': comfy_scheduler_list,
         'backend_params': {
-            "task_method": "kolors_text2image2",
+            "task_method": "kolors_text2image",
             "llms_model": "quant8",
             },
         },
     'SD3x': {
-        'disvisible': ["backend_selection", "performance_selection", "refiner_model"],
-        'disinteractive': ["input_image_checkbox", "enhance_checkbox", "performance_selection", "loras", "refiner_model"],
+        'disvisible': ["backend_selection", "performance_selection", "refiner_model", "sharpness"],
+        'disinteractive': ["input_image_checkbox", "enhance_checkbox", "refiner_model"],
         'available_aspect_ratios_selection': 'Standard',
         'available_sampler_name': comfy_sampler_list,
         'available_scheduler_name': comfy_scheduler_list,
         'backend_params': {
-            "task_method": "sd3_base",
-            },
-        },
-    'HyDiT': {
-        'disvisible': ["backend_selection", "performance_selection", "refiner_model"],
-        'disinteractive': ["input_image_checkbox", "enhance_checkbox", "performance_selection", "base_model", "loras", "refiner_model", "scheduler_name"],
-        'available_aspect_ratios_selection': 'Standard',
-        'available_sampler_name': ["ddpm", "ddim", "dpmms"],
-        'backend_params': {
-            "task_method": "hydit_base",
+            "task_method": "sd3x_base",
             },
         },
     'HyDiT+': {
-        'disvisible': ["backend_selection", "performance_selection", "refiner_model"],
-        'disinteractive': ["input_image_checkbox", "enhance_checkbox", "performance_selection", "base_model", "loras" "scheduler_name"],
+        'disvisible': ["backend_selection", "performance_selection", "refiner_model", "sharpness"],
+        'disinteractive': ["input_image_checkbox", "enhance_checkbox", "base_model", "scheduler_name"],
         'available_aspect_ratios_selection': 'Standard',
         'available_sampler_name': comfy_sampler_list,
         'available_scheduler_name': comfy_scheduler_list,
@@ -234,8 +277,8 @@ default_class_params = {
             },
         },
     'Flux': {
-        'disvisible': ["backend_selection", "performance_selection", "refiner_model"],
-        'disinteractive': ["input_image_checkbox", "enhance_checkbox", "performance_selection", "loras-4", "refiner_model"],
+        'disvisible': ["backend_selection", "performance_selection", "refiner_model", "sharpness"],
+        'disinteractive': ["input_image_checkbox", "enhance_checkbox", "refiner_model"],
         'available_aspect_ratios_selection': 'Standard',
         'available_sampler_name': comfy_sampler_list,
         'available_scheduler_name': comfy_scheduler_list,
@@ -246,8 +289,8 @@ default_class_params = {
             },
         },
     'SD1': {
-        'disvisible': ["backend_selection", "performance_selection"],
-        'disinteractive': ["input_image_checkbox", "enhance_checkbox", "performance_selection", "loras", "refiner_model"],
+        'disvisible': ["backend_selection", "performance_selection", "sharpness"],
+        'disinteractive': ["input_image_checkbox", "enhance_checkbox", "refiner_model"],
         'available_aspect_ratios_selection': 'SD1.5',
         'available_sampler_name': sampler_list,
         'available_scheduler_name': scheduler_list,

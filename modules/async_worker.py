@@ -7,7 +7,7 @@ import modules.config as config
 import modules.flags as flags
 import modules.util as util
 from enhanced.translator import interpret, \
-    interpret_warn, translate
+    interpret_warn, render
 from extras.inpaint_mask import generate_mask_from_image, SAMOptions
 from modules.patch import PatchSettings, patch_settings, patch_all
 from pathlib import Path
@@ -147,7 +147,11 @@ class AsyncTask:
         self.v2_substyle = getattr(
             config, 'v2_substyle', 'Default')
 
-        self.performance_selection = Performance(common.performance_selection)
+        try:
+            self.performance_selection = Performance(common.performance_selection)
+        except:
+            self.performance_selection = Performance.Speed
+
         self.steps = self.performance_selection.steps()
         self.original_steps = self.steps
 
@@ -378,19 +382,17 @@ class AsyncTask:
             self.task_method = self.layer_method
         self.task_class_full = task_class_mapping[self.task_class]
 
-        if self.task_class in ['Kolors+', 'Kolors', 'Flux', 'HyDiT+', 'SD3x'] and self.task_name not in ['Kolors+', 'Flux', 'HyDiT+', 'SD3x']:
+        if self.task_class in ['Kolors+', 'Flux', 'HyDiT+', 'SD3x'] and self.task_name not in ['Kolors+', 'Flux', 'HyDiT+', 'SD3x']:
             self.task_name = self.task_class
-        if len(self.loras) > 0:
-            if self.task_name in ['Kolors+', 'Flux']:
+        # Map up to 6 active user LoRAs
+        # sequentially for all Comfy-class backends
+        if self.task_class in flags.comfy_classes:
+            for i in range(min(len(self.loras), 6)):
+                slot_num = i + 1
                 self.params_backend.update({
-                    "lora_1": self.loras[0][0],
-                    "lora_1_strength": self.loras[0][1],
-                    })
-            if len(self.loras) > 1 and (self.task_name in ['Kolors+'] or 'base2_gguf' in self.task_method):
-                self.params_backend.update({
-                    "lora_2": self.loras[1][0],
-                    "lora_2_strength": self.loras[1][1],
-                    })
+                    f"lora_{slot_num}": self.loras[i][0],
+                    f"lora_{slot_num}_strength": self.loras[i][1]
+                })
         ui_options = {
             'iclight_enable': self.iclight_enable,
             'iclight_source_radio': self.iclight_source_radio,
@@ -444,7 +446,7 @@ def worker():
     import modules.default_pipeline as pipeline
     import modules.core as core
     import modules.patch
-    import ldm_patched.modules.model_management
+    import ldm_patched.modules.model_management as model_management
     import extras.preprocessors as preprocessors
     import modules.inpaint_worker as inpaint_worker
     import modules.constants as constants
@@ -476,7 +478,7 @@ def worker():
         async_gradio_app = common.GRADIO_ROOT
     except Exception as e:
         print(e)
-    ldm_patched.modules.model_management.print_memory_info()
+    model_management.print_memory_info()
 
 
     def progressbar(async_task, number, arg_text):
@@ -515,7 +517,7 @@ def worker():
         combined_negative = ", ".join([x for x in task["negative"] if isinstance(x, str) and x.strip()])
 
         if async_task.last_stop is not False:
-            ldm_patched.modules.model_management.interrupt_current_processing()
+            model_management.interrupt_current_processing()
 
         if async_task.task_class in flags.comfy_classes:
             default_params = dict(
@@ -747,42 +749,42 @@ def worker():
 
             # Extend with the rest of standard parameters
             d.extend([
-                 ('Performance', 'performance', async_task.performance_selection.value),
-                 ('Steps', 'steps', async_task.steps),
-                 ('Resolution', 'resolution', str((width, height))),
-                 ('Guidance Scale', 'guidance_scale', async_task.cfg_scale),
-                 ('Sharpness', 'sharpness', async_task.sharpness),
-                 ('ADM Guidance', 'adm_guidance', str((
-                     modules.patch.patch_settings[pid].positive_adm_scale,
-                     modules.patch.patch_settings[pid].negative_adm_scale,
-                     modules.patch.patch_settings[pid].adm_scaler_end))),
-                 ('Base Model', 'base_model', async_task.base_model_name),
-                 ('Refiner Model', 'refiner_model', async_task.refiner_model_name),
-                 ('Refiner Switch', 'refiner_switch', async_task.refiner_switch)])
+                ('Performance', 'performance', async_task.performance_selection.value),
+                ('Steps', 'steps', async_task.steps),
+                ('Resolution', 'resolution', str((width, height))),
+                ('Seed', 'seed', str(task['task_seed'])),
+                ('Base Model', 'base_model', async_task.base_model_name)])
 
-            if async_task.refiner_model_name != 'None':
+            if async_task.task_class == 'Fooocus':
+                d.append(('Refiner Model', 'refiner_model', async_task.refiner_model_name))
+                d.append(('Refiner Switch', 'refiner_switch', async_task.refiner_switch))
+
+            if async_task.refiner_model_name != 'None' and async_task.task_class != 'Fooocus':
                 if async_task.overwrite_switch > 0:
                     d.append(('Overwrite Switch', 'overwrite_switch', async_task.overwrite_switch))
                 if async_task.refiner_swap_method != flags.refiner_swap_method:
                     d.append(('Refiner Swap Method', 'refiner_swap_method', async_task.refiner_swap_method))
-            if modules.patch.patch_settings[pid].adaptive_cfg != config.default_cfg_tsnr:
-                d.append(
-                    ('CFG Mimicking from TSNR', 'adaptive_cfg', modules.patch.patch_settings[pid].adaptive_cfg))
 
-            if async_task.clip_skip > 1 and async_task.task_class == 'Fooocus':
-                d.append(('CLIP Skip', 'clip_skip', async_task.clip_skip))
-            d.append(('Sampler', 'sampler', async_task.sampler_name))
-            d.append(('Scheduler', 'scheduler', async_task.scheduler_name))
-            d.append(('VAE', 'vae', async_task.vae_name))
-            d.append(('Seed', 'seed', str(task['task_seed'])))
+            for li, (n, w) in enumerate(loras):
+                if n != 'None' and async_task.task_class in ['Fooocus', 'HyDit+', 'Kolors+', 'Flux']:
+                    d.append((f'LoRA {li + 1}', f'lora_combined_{li + 1}', f'{n} : {w}'))
 
             if async_task.freeu_enabled:
                 d.append(('FreeU', 'freeu',
-                          str((async_task.freeu_b1, async_task.freeu_b2, async_task.freeu_s1, async_task.freeu_s2))))
+                        str((async_task.freeu_b1, async_task.freeu_b2, async_task.freeu_s1, async_task.freeu_s2))))
 
-            for li, (n, w) in enumerate(loras):
-                if n != 'None' and async_task.task_class in ['Fooocus', 'Kolors', 'Kolors+', 'Flux']:
-                    d.append((f'LoRA {li + 1}', f'lora_combined_{li + 1}', f'{n} : {w}'))
+            d.append(('Guidance Scale', 'guidance_scale', async_task.cfg_scale))
+            if async_task.task_class == 'Fooocus':
+                d.append(('Sharpness', 'sharpness', async_task.sharpness))
+
+            d.append(('Sampler', 'sampler', async_task.sampler_name))
+            d.append(('Scheduler', 'scheduler', async_task.scheduler_name))
+            d.append(('VAE', 'vae', async_task.vae_name))
+            d.append(('CLIP Skip', 'clip_skip', async_task.clip_skip))
+
+            if modules.patch.patch_settings[pid].adaptive_cfg != config.default_cfg_tsnr:
+                d.append(
+                    ('CFG Mimicking from TSNR', 'adaptive_cfg', modules.patch.patch_settings[pid].adaptive_cfg))
 
             metadata_parser = None
             if async_task.save_metadata_to_images:
@@ -795,6 +797,12 @@ def worker():
                     async_task.steps, async_task.base_model_name, async_task.refiner_model_name,
                     loras, async_task.vae_name, '')
 
+            d.append(('ADM Guidance', 'adm_guidance', str((
+                modules.patch.patch_settings[pid].positive_adm_scale,
+                modules.patch.patch_settings[pid].negative_adm_scale,
+                modules.patch.patch_settings[pid].adm_scaler_end
+            ))))
+
             d.append(('Backend Engine', 'backend_engine', async_task.task_class_full))
             if async_task.metadata_scheme.value.lower() == 'a1111':
                 metadata_temp = 'A1111'
@@ -803,12 +811,15 @@ def worker():
             d.append(('Metadata Scheme', 'metadata_scheme',
                       metadata_temp if async_task.save_metadata_to_images else async_task.save_metadata_to_images))
             d.append(('Preset', 'current_preset', args_manager.args.preset))
-            fooocusplus_ver, hotfix, hotfix_title = version.get_fooocusplus_ver()
-            d.append(('Version', 'version', f'{fooocusplus_ver}.{hotfix_title}'))
+            d.append(('Workflow', 'task_method', async_task.task_method))
 
             # Inject the built Image Type directly
             # into this individual image's metadata list (d)
             d.append(('Image Type', 'image_type', individual_image_type))
+
+            fooocusplus_ver, hotfix, hotfix_title = version.get_fooocusplus_ver()
+            d.append(('Version', 'version', f'{fooocusplus_ver}.{hotfix_title}'))
+
 
             # Save the first image metadata in the
             # batch for image grid.
@@ -1581,7 +1592,7 @@ def worker():
                     goals_enhance, height, img, None, preparation_steps, steps, switch, tiled, total_count,
                     use_expansion, use_style, use_synthetic_refiner, width, persist_image=persist_image)
 
-            except ldm_patched.modules.model_management.InterruptProcessingException:
+            except model_management.InterruptProcessingException:
                 if async_task.last_stop == 'skip':
                     interpret('User skipped')
                     async_task.last_stop = False
@@ -1601,8 +1612,55 @@ def worker():
     def handler(async_task: AsyncTask):
         preparation_start_time = time.perf_counter()
         async_task.processing = True
-        ldm_patched.modules.model_management.print_memory_info()
-        interpret(f'[Worker] Task Class: {async_task.task_class}, Task Name: {async_task.task_name}, Task Method: {async_task.task_method}')
+
+        # For ZI-BaseFast, we force the backend to 'Free All' just like
+        # a manual preset swap would. This clears the stained session cache.
+        if "ZIB_fast" in str(async_task.task_method):
+            try:
+                # This triggers comfyd.free(all=True), clearing the model/GGUF cache
+                comfyd.stop()
+                interpret('[Worker] Reset session for the workflow:', async_task.task_method)
+            except Exception as e:
+                interpret('[Worker] Reset session failed:', e)
+
+        # --- LAZY PRESET DOWNLOADER ---
+        # Automatically downloads missing preset assets
+        # (checkpoints, vaes, clips, loras)
+        # when the user clicks Generate
+        if common.preset_content:
+            try:
+                from modules.ui_support import download_models
+                from modules.preset_support import parse_meta_from_preset
+
+                preset_prepared = parse_meta_from_preset(common.preset_content)
+                default_model = preset_prepared.get('base_model')
+                previous_default_models = preset_prepared.get('previous_default_models', [])
+                checkpoint_downloads = preset_prepared.get('checkpoint_downloads', {})
+                embeddings_downloads = preset_prepared.get('embeddings_downloads', {})
+                lora_downloads = preset_prepared.get('lora_downloads', {})
+                vae_downloads = preset_prepared.get('vae_downloads', {})
+                clip_downloads = preset_prepared.get('clip_downloads', {})
+
+                # Update the Gradio progress bar
+                down_msg = interpret('Checking & downloading models...', silent=True)
+                # 'preview' = intermediate result
+                # '1' starts the progress bar at 1
+                # 'None' = do not display a new image
+                async_task.yields.append(['preview', (1, down_msg, None)])
+
+                # Execute the secure, automated download
+                download_models(
+                    default_model, previous_default_models,
+                    checkpoint_downloads, embeddings_downloads,
+                    lora_downloads, vae_downloads, clip_downloads
+                )
+            except Exception as e:
+                interpret(f'[Worker] Warning: Preset lazy downloader failed: {e}')
+        # -----------------------------------
+
+
+        model_management.print_memory_info()
+        interpret(f'[Worker] Task Class: {async_task.task_class}, Task Name: {async_task.task_name}, Workflow: {async_task.task_method}')
 
         if async_task.task_class in flags.comfy_classes:
             interpret('[Worker] Enabled Comfyd Backend')
@@ -1611,9 +1669,39 @@ def worker():
             interpret('[Worker] Enabled Fooocus Backend')
             comfyd.stop()
 
-        if async_task.task_class not in ['Kolors', 'Kolors+', 'HyDiT', 'HyDiT+'] and 'kolors' not in async_task.task_name.lower():
-            async_task.prompt = translate(async_task.prompt, True)
-            async_task.negative_prompt = translate(async_task.negative_prompt, True)
+        # Define supported language groupings
+        # matching your active UI language codes
+        english_langs = ['en', 'en_uk']
+        # 'zt' is the traditional
+        # Chinese code used by Argos
+        chinese_langs = ['zh', 'zt']
+        exempt_langs = english_langs + chinese_langs
+
+        # Determine if prompt translation is
+        # required based on text encoder capabilities
+        should_translate = False
+
+        if args_manager.args.language not in exempt_langs:
+            # All other foreign languages (e.g.
+            # Spanish) must be translated to English
+            should_translate = True
+        elif args_manager.args.language in chinese_langs:
+            # Chinese (simplified 'zh' or traditional
+            # 'zt') must be translated to English for
+            # standard models, but must remain
+            # untranslated for bilingual/Chinese
+            # models (Kolors+, HyDiT+ or Z-Image)
+            # First detect if the active generation is
+            # running a Z-Image workflow (ZIB_ or ZIT_)
+            is_z_image = False
+            if isinstance(async_task.task_method, str):
+                is_z_image = any(prefix in async_task.task_method for prefix in ['ZIB_', 'ZIT_'])
+            if async_task.task_class not in ['HyDiT+', 'Kolors+'] and not is_z_image:
+                should_translate = True
+
+        if should_translate:
+            async_task.prompt = render(async_task.prompt, True)
+            async_task.negative_prompt = render(async_task.negative_prompt, True)
 
         async_task.outpaint_selections = [o.lower() for o in async_task.outpaint_selections]
         base_model_additional_loras = []
@@ -1629,7 +1717,10 @@ def worker():
         use_style = len(async_task.style_selections) > 0
 
         if async_task.base_model_name == async_task.refiner_model_name:
-            interpret('The Refiner is disabled because the base model and the refiner are same')
+            # do not complain about Kolors,
+            # it does not have a base model file:
+            if async_task.base_model_name != '':
+                interpret('The Refiner is disabled because the base model and the refiner are same')
             async_task.refiner_model_name = 'None'
 
         current_progress = 0
@@ -1834,7 +1925,7 @@ def worker():
             from enhanced.latent_preview import get_previewer
             from ldm_patched.modules.latent_formats import SDXL as SDXL_format
 
-            ldm_patched.modules.model_management.throw_exception_if_processing_interrupted()
+            model_management.throw_exception_if_processing_interrupted()
             latents = callback_kwargs["latents"]
             preview_format = "JPEG"
             latent_format = SDXL_format()
@@ -1851,17 +1942,16 @@ def worker():
         callback_function = callback
         if async_task.task_class != 'Fooocus':
             pipeline.free_everything()
-            #ldm_patched.modules.model_management.unload_and_free_everything()
+            #model_management.unload_and_free_everything()
             async_task.refiner_model_name = ''
             async_task.refiner_switch = 1.0
             callback_function = callback_comfytask
-            if async_task.task_class == 'HyDiT':
-                async_task.base_model_name = 'hydit_v1.1_fp16.safetensors'
-                callback_function = callback_hydittask
-            elif async_task.task_class == 'Kolors':
+            if async_task.task_class == 'HyDiT+':
+                async_task.base_model_name = 'Alternative/hunyuan_dit_1.2.safetensors'
+            elif async_task.task_class == 'Kolors+':
                 async_task.base_model_name = default_kolors_base_model_name
 
-        ldm_patched.modules.model_management.print_memory_info()
+        model_management.print_memory_info()
 
         show_intermediate_results = len(tasks) > 1 or async_task.should_enhance
         persist_image = not async_task.should_enhance or not async_task.save_final_enhanced_image_only
@@ -1886,7 +1976,7 @@ def worker():
                 current_progress = int(preparation_steps + (100 - preparation_steps) / float(all_steps) * async_task.steps * (current_task_id + 1))
                 images_to_enhance += imgs
 
-            except ldm_patched.modules.model_management.InterruptProcessingException:
+            except model_management.InterruptProcessingException:
                 if async_task.last_stop == 'skip':
                     if async_task.task_class == 'Fooocus':
                         del task['c'], task['uc']  # Save memory
@@ -1901,7 +1991,7 @@ def worker():
                 del task['c'], task['uc']  # Save memory
             execution_time = time.perf_counter() - execution_start_time
             interpret('Generating and saving time in seconds:', f'{execution_time:.2f}')
-            ldm_patched.modules.model_management.print_memory_info()
+            model_management.print_memory_info()
 
 
         if not async_task.should_enhance:
@@ -1960,9 +2050,9 @@ def worker():
                 is_last_enhance_for_image = (current_task_id + 1) % active_enhance_tabs == 0 and not enhance_uov_after
                 persist_image = not async_task.save_final_enhanced_image_only or is_last_enhance_for_image
 
-                enhance_mask_dino_prompt_text = translate(enhance_mask_dino_prompt_text, True)
-                enhance_prompt = translate(enhance_prompt, True)
-                enhance_negative_prompt = translate(enhance_negative_prompt, True)
+                enhance_mask_dino_prompt_text = render(enhance_mask_dino_prompt_text, True)
+                enhance_prompt = render(enhance_prompt, True)
+                enhance_negative_prompt = render(enhance_negative_prompt, True)
 
                 extras = {}
                 if enhance_mask_model == 'sam':
@@ -2021,7 +2111,7 @@ def worker():
                         if enhance_negative_prompt_processed != '':
                             last_enhance_negative_prompt = enhance_negative_prompt_processed
 
-                except ldm_patched.modules.model_management.InterruptProcessingException:
+                except model_management.InterruptProcessingException:
                     if async_task.last_stop == 'skip':
                         interpret('User skipped')
                         async_task.last_stop = False
@@ -2075,7 +2165,8 @@ def worker():
                 if task.task_class not in flags.comfy_classes:
                     pipeline.prepare_text_encoder(async_call=True)
             except:
-#                traceback.print_exc()
+                # MAY NEED TO COMMENT OUT:
+                traceback.print_exc()
                 task.yields.append(['finish', task.results])
             finally:
                 if pid in modules.patch.patch_settings:

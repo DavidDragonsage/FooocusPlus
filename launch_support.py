@@ -270,6 +270,9 @@ def dependency_resolver():
             torch_platform_ver = torch_platform_default
         )
 
+    # Disable Comfy if torch_ver <= 2.4
+    # if torch_ver == "2.4.1" or torch_ver == "2.3.1" or torch_ver == "2.2.2" or torch_ver == "1.13.1":
+    #    args.disable_comfyd = True
     # return the result
     return dependencies
 

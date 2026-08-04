@@ -190,6 +190,20 @@ function playNotification()
     return;
 }
 
+
+function start_metadata_alarm() {
+    // Independent browser-side timer (4 seconds)
+    setTimeout(() => {
+        const el = document.querySelector('#metadata_commence_signal textarea');
+        if (el) {
+            // Unique value forces the .change() event every time
+            el.value = "COMMENCE_" + Date.now();
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    }, 4000);
+}
+
+
 // create a delay,
 // typically to wait for the UI and the generative process
 function delay(ms)

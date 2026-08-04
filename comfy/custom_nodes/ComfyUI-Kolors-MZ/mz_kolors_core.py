@@ -1,5 +1,3 @@
-
-
 import gc
 import json
 import os
@@ -7,11 +5,61 @@ import random
 import re
 import subprocess
 import sys
+import types # added for Transformers patch
 from types import MethodType
 
 import torch
 import folder_paths
 import comfy.model_management as mm
+
+
+import logging
+import warnings
+
+# 1. Mute standard Python UserWarnings and
+# FutureWarnings (e.g. upscaling.py and autocast)
+warnings.filterwarnings('ignore', category=UserWarning)
+warnings.filterwarnings('ignore', category=FutureWarning)
+
+# 2. Intercept and silence the legacy UNet
+# key mapping outputs globally in ComfyUI,
+# with recursion guard
+if not getattr(logging.Logger,
+    '__fooocus_logger_patched__', False):
+    logging.Logger.__fooocus_logger_patched__ = True
+
+    _orig_logger_warning = logging.Logger.warning
+    def _safe_logger_warning(self, msg, *args, **kwargs):
+        msg_str = str(msg)
+        noise_keywords = [
+            'load_unet_state_dict', 'skip_connection', 'resnets', 'conv_shortcut',
+            'down_blocks', 'up_blocks', 'label_emb', 'class_embedding', 'cudaLaunchKernel'
+        ]
+        if any(kw in msg_str for kw in noise_keywords):
+            return
+        _orig_logger_warning(self, msg, *args, **kwargs)
+
+    logging.Logger.warning = _safe_logger_warning
+
+
+def patch_kolors_tokenizer(tokenizer):
+    """
+    Runtime hotfix for ChatGLM3 tokenizer to prevent
+    'padding_side' TypeError under newer versions
+    of the Hugging Face transformers library.
+    """
+    if hasattr(tokenizer, '_pad'):
+        class_name = type(tokenizer).__name__
+        if 'ChatGLM' in class_name:
+            original_pad = tokenizer._pad
+            # Prevent infinite recursion if already patched
+            if not getattr(original_pad, '__wrapped_for_padding_side__', False):
+                import types
+                def wrapped_pad(self, *args, padding_side=None, **kwargs):
+                    return original_pad(*args, **kwargs)
+                wrapped_pad.__wrapped_for_padding_side__ = True
+                tokenizer._pad = types.MethodType(wrapped_pad, tokenizer)
+    return tokenizer
 
 
 def chatglm3_text_encode(chatglm3_model, prompt):
@@ -29,6 +77,10 @@ def chatglm3_text_encode(chatglm3_model, prompt):
 
     # Define tokenizers and text encoders
     tokenizer = chatglm3_model['tokenizer']
+
+    # ---> THE TRANSFORMERS PATCH LINE <---
+    tokenizer = patch_kolors_tokenizer(tokenizer)
+
     text_encoder = chatglm3_model['text_encoder']
     text_encoder.to(device)
     text_inputs = tokenizer(

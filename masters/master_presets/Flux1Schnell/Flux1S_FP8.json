@@ -1,15 +1,15 @@
 {
     "default_engine": {
-	"backend_engine": "Flux",
-	"task_method": "flux_base",
-	"disvisible": ["backend_selection", "performance_selection", "negative_prompt",  "refiner_model"],
-	"disinteractive": ["input_image_checkbox", "enhance_checkbox", "loras-4"],
-	"backend_params": {
-                "task_method": "flux_base",
-                "clip_model": "t5xxl_fp8_e4m3fn.safetensors",
-                "base_model_dtype": "auto"
+        "backend_engine": "Flux",
+        "task_method": "flux_base",
+		"disvisible": ["backend_selection", "negative_prompt", "performance_selection", "refiner_model", "sharpness"],
+		"disinteractive": ["enhance_checkbox", "input_image_checkbox", "refiner_model"],
+        "backend_params": {
+            "task_method": "flux_base",
+            "clip_model": "t5xxl_fp8_e4m3fn.safetensors",
+            "base_model_dtype": "auto"
 	    }
-    	},
+    },
     "default_model": "FluxSchnell/flux1-schnell-fp8.safetensors",
     "default_refiner": "None",
     "default_refiner_switch": 0.5,
@@ -44,7 +44,8 @@
     "default_sample_sharpness": 2,
     "default_sampler": "euler",
     "default_scheduler": "simple",
-    "default_performance": "Speed",
+    "default_clip_skip": 1,
+    "default_performance": "",
     "default_styles": [
         "Fooocus V2"
     ],

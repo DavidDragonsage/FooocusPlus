@@ -9,9 +9,15 @@ MODELS_INFO = None
 # is referenced by several modules
 ROOT = str(Path.cwd())
 
+# use for Comfy port tracking
+# now that it is dynamic
+comfy_port = 8187
+# Common support for Comfy Kolors node
+path_diffusers = ''
+
 # Version control for major updates
 # read by launch.py
-REQUIRED_VERSION = '1.1.2'
+REQUIRED_VERSION = '1.1.3'
 
 # tracks update events
 # set by entry_with_update, checked by webui
@@ -135,7 +141,8 @@ task_method = ''
 # indicates metadata loading is in progress
 # this prevents PR.set_preset_selection from
 # overwriting key metadata values
-# set by webui.update_preset_info()
+# set by meta_parser.extract_preset_name_from_image()
+# and meta_parser.extract_preset_name_from_log()
 # cleared by webui.normalize_preset_loading()
 metadata_loading = False
 log_metadata = []

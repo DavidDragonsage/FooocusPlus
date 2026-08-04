@@ -12,7 +12,7 @@
     "inputs": {
       "text": "soft light, cinematic, masterpiece, best quality, photograph",
       "clip": [
-        "2",
+        "106",
         1
       ]
     },
@@ -25,7 +25,7 @@
     "inputs": {
       "text": "bad quality, bad picture",
       "clip": [
-        "2",
+        "106",
         1
       ]
     },
@@ -381,7 +381,7 @@
       "scheduler": "karras",
       "denoise": 0.3,
       "model": [
-        "2",
+        "106",
         0
       ],
       "positive": [
@@ -463,5 +463,71 @@
     "_meta": {
       "title": "🔧 Mask Blur"
     }
+  },
+  "101": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [ "2", 0 ],
+      "clip": [ "2", 1 ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "lora_1" }
+  },
+  "102": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [ "101", 0 ],
+      "clip": [ "101", 1 ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "lora_2" }
+  },
+  "103": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [ "102", 0 ],
+      "clip": [ "102", 1 ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "lora_3" }
+  },
+  "104": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [ "103", 0 ],
+      "clip": [ "103", 1 ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "lora_4" }
+  },
+  "105": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [ "104", 0 ],
+      "clip": [ "104", 1 ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "lora_5" }
+  },
+  "106": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [ "105", 0 ],
+      "clip": [ "105", 1 ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "lora_6" }
   }
 }

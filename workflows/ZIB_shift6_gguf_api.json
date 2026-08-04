@@ -1,0 +1,209 @@
+{
+  "3": {
+    "inputs": {
+      "seed": 775290353643071,
+      "steps": 30,
+      "cfg": 4.25,
+      "sampler_name": "euler_ancestral",
+      "scheduler": "normal",
+      "denoise": 1,
+      "model": [
+        "29",
+        0
+      ],
+      "positive": [
+        "6",
+        0
+      ],
+      "negative": [
+        "27",
+        0
+      ],
+      "latent_image": [
+        "5",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "main_sampler"
+    }
+  },
+  "5": {
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "aspect_ratios_size"
+    }
+  },
+  "6": {
+    "inputs": {
+      "user_prompt": "redhead girl on sea shores",
+      "clip": ["90", 1],
+      "template_preset": "none",
+      "system_prompt": "",
+      "add_think_block": false,
+      "thinking_content": "",
+      "assistant_content": ""
+    },
+    "class_type": "ZImageTextEncoder",
+    "_meta": {
+      "title": "prompt"
+    }
+  },
+  "8": {
+    "inputs": {
+      "samples": [
+        "3",
+        0
+      ],
+      "vae": [
+        "21",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "16": {
+    "inputs": {
+      "images": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "SaveImageWebsocket",
+    "_meta": {
+      "title": "result_image"
+    }
+  },
+  "21": {
+    "inputs": {
+      "vae_name": "ae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "25": {
+    "inputs": {
+      "clip_name": "Qwen_3_4b-Q6_K.gguf",
+      "type": "lumina2"
+    },
+    "class_type": "CLIPLoaderGGUF",
+    "_meta": {
+      "title": "clip_model"
+    }
+  },
+  "26": {
+    "inputs": {
+      "unet_name": "Z-Image/z_image-Q8_0.gguf"
+    },
+    "class_type": "UnetLoaderGGUF",
+    "_meta": {
+      "title": "base_model"
+    }
+  },
+"27": {
+    "inputs": {
+      "user_prompt": "",
+      "clip": [
+        "25",
+        0
+      ],
+      "template_preset": "none",
+      "system_prompt": "",
+      "add_think_block": false,
+      "thinking_content": "",
+      "assistant_content": ""
+    },
+    "class_type": "ZImageTextEncoderSimple",
+    "_meta": {
+      "title": "negative_prompt"
+    }
+  },
+  "29": {
+    "inputs": {
+      "shift": 6.0,
+      "model": [
+        "106",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {
+      "title": "ModelSamplingAuraFlow"
+    }
+  },
+  "90": {
+    "inputs": {
+      "model": ["26", 0],
+      "clip": ["25", 0]
+    },
+    "class_type": "ModelPristineReset",
+    "_meta": {
+      "title": "Weight Wash"
+    }
+  },
+  "101": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "model": [ "90", 0 ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": { "title": "lora_1" }
+  },
+  "102": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "model": [ "101", 0 ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": { "title": "lora_2" }
+  },
+  "103": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "model": [ "102", 0 ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": { "title": "lora_3" }
+  },
+  "104": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "model": [ "103", 0 ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": { "title": "lora_4" }
+  },
+  "105": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "model": [ "104", 0 ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": { "title": "lora_5" }
+  },
+  "106": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "model": [ "105", 0 ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": { "title": "lora_6" }
+  }
+}

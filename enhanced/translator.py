@@ -41,9 +41,12 @@ def interpret_warn(txt_translate, txt_no_translate = '', silent = False):
     gr.Warning(txt_translated)
     return
 
-def translate(txt_translate, auto=False):
-    # auto = txt_translate entered by code, not from UI Translate button
-    # do not translate English or pre-translated text that starts with a space)
+
+def render(txt_translate, auto=False):
+    # auto = txt_translate entered by code,
+    # not from UI Translate button.
+    # Do not translate English or
+    # pre-translated text that starts with a space
     global english_from_language, english_to_language, language_from_english, language_to_english
     if not args.language.startswith('en') and txt_translate and common.prompt_translator:
         if txt_translate.startswith(' ') and auto:

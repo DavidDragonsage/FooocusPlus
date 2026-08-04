@@ -105,11 +105,8 @@ import torchruntime
 import platform
 from modules.user_structure import cleanup_structure
 
-try:    # prevent error during upgrade to 1.0.8
-    cleanup_structure(args.directml, args.user_dir,
-        python_embedded_path, win32_root)
-except:
-    pass
+cleanup_structure(args.directml, args.user_dir,
+    python_embedded_path, win32_root)
 
 def prepare_environment():
     global torch_ver, fooocusplus_ver, hotfix
@@ -211,10 +208,8 @@ vae_approx_filenames = [
      'https://huggingface.co/mashb1t/misc/resolve/main/xl-to-v1_interposer-v4.0.safetensors')
 ]
 
-
 prepare_environment()
-interpret('Verifying the file structure...')
-
+interpret('Analyzing the graphics system...')
 
 # build_launcher()
 if args.gpu_device_id is not None:
@@ -224,7 +219,6 @@ if args.gpu_device_id is not None:
 if args.hf_mirror is not None:
     os.environ['HF_MIRROR'] = str(args.hf_mirror)
     print("The hf_mirror is:", args.hf_mirror)
-
 
 import common
 import modules.preset_resource as PR

@@ -416,48 +416,6 @@ def delete_image(state_params):
         )
 
 
-def load_log_info_into_prompt(state_params):
-    [choice, selected] = state_params["prompt_info"]
-
-    # 1. Retrieve the dictionary
-    metainfo = gallery.get_images_prompt(choice, selected, state_params["__max_per_page"])
-
-    # 2. Early return if no metadata found
-    if not metainfo or "[Gallery]" in metainfo:
-        return ""
-
-    # 3. Convert the dictionary back into
-    # the standard "Fooocus Log" string format
-    # that meta_parser.read_meta_from_log expects to see:
-    log_string = ""
-    for key, value in metainfo.items():
-        if key not in ["Filename", "Advanced_parameters"]:
-            log_string += f"{key}: {value}\n"
-
-    # Add advanced params if they exist
-    if "Advanced_parameters" in metainfo:
-        log_string += f"Advanced_parameters: {metainfo['Advanced_parameters']}\n"
-
-    return log_string
-
-
-def reset_params_by_meta(metadata, state_params, is_generating, inpaint_mode):
-    if metadata is None:
-        metadata = {}
-    metadata_scheme = meta_parser.MetadataScheme('simple')
-    metadata_parser = meta_parser.get_metadata_parser(metadata_scheme)
-    parsed_parameters = metadata_parser.to_json(metadata)
-
-    results = meta_parser.switch_layout_template(parsed_parameters,
-        state_params)
-    results += meta_parser.read_meta_from_log(parsed_parameters, is_generating, inpaint_mode)
-
-    engine_name = parsed_parameters.get("Backend Engine", parsed_parameters.get("backend_engine", "SDXL-Fooocus"))
-    interpret('[Toolbox] Loaded parameters from the metadata')
-    interpret('The image was created with the engine:', engine_name)
-    return results
-
-
 def apply_enabled_loras(loras):
         enabled_loras = []
         for lora_enabled, lora_model, lora_weight in loras:

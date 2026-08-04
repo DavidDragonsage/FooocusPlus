@@ -33,6 +33,7 @@
     "default_sample_sharpness": 8.0,
     "default_sampler": "dpmpp_2m",
     "default_scheduler": "karras",
+    "default_clip_skip": 2,
     "default_performance": "Speed",
     "default_prompt": "",
     "default_prompt_negative": "blurry background, bokeh",

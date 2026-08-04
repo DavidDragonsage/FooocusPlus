@@ -1,20 +1,23 @@
 import os
+import gradio as gr
 import json
 import re
+import time
+
 from abc import ABC, abstractmethod
 from pathlib import Path
-
-import gradio as gr
 from PIL import Image
 
 import common
 import args_manager as args
+import enhanced.gallery as gallery
 import enhanced.version
 import modules.config as config
 import modules.aspect_ratios as AR
 import modules.preset_resource as PR
 import modules.sdxl_styles
 import modules.user_structure as US
+
 from enhanced.translator import interpret
 from modules.flags import MetadataScheme, Performance, Steps, task_class_mapping, get_taskclass_by_fullname
 from modules.flags import default_class_params, scheduler_list, sampler_list, SAMPLERS, CIVITAI_NO_KARRAS
@@ -53,8 +56,20 @@ def get_layout_visible_inter_loras(y,z,max_number):
 def switch_layout_template(presetdata: dict | str, state_params, preset_url=''):
     presetdata_dict = US.verify_dictionary(presetdata)
     enginedata_dict = presetdata_dict.get('engine', {})
-    template_engine = get_taskclass_by_fullname(presetdata_dict.get('Backend Engine', presetdata_dict.get('backend_engine',
-        task_class_mapping[enginedata_dict.get('backend_engine', 'Fooocus')])))
+
+    # Resolve the engine name from
+    # any possible metadata field:
+    raw_engine = presetdata_dict.get('Backend Engine',
+                 presetdata_dict.get('backend_engine',
+                 task_class_mapping.get(enginedata_dict.get('backend_engine', 'Fooocus'))))
+
+    template_engine = get_taskclass_by_fullname(raw_engine)
+
+    # Safety: If resolution failed,
+    # default to Fooocus to prevent KeyError
+    if template_engine is None:
+        template_engine = 'Fooocus'
+
     default_params = default_class_params[template_engine]
     visible = enginedata_dict.get('disvisible', default_params.get('disvisible', default_class_params['Fooocus']['disvisible']))
     inter = enginedata_dict.get('disinteractive', default_params.get('disinteractive', default_class_params['Fooocus']['disinteractive']))
@@ -63,19 +78,29 @@ def switch_layout_template(presetdata: dict | str, state_params, preset_url=''):
 
     params_backend  = enginedata_dict.get('backend_params', modules.flags.get_engine_default_backend_params(template_engine))
     params_backend.update({'backend_engine': template_engine})
-    task_method = params_backend.get('task_method', None)
+
+    # Safe Fallback: Check both 'task_method' and
+    # 'workflow' before falling back to backend defaults
+    task_method = presetdata_dict.get('task_method',
+                  presetdata_dict.get('workflow',
+                  presetdata_dict.get('Workflow',
+                  params_backend.get('task_method', None))))
+    params_backend['task_method'] = task_method
+
     base_model_list = config.get_base_model_list(template_engine, task_method)
 
     results = [params_backend]
     results.append(get_layout_visible_inter('performance_selection', visible, inter))
-    results.append(get_layout_choices_visible_inter(scheduler_list, 'scheduler_name', visible, inter))
     results.append(get_layout_choices_visible_inter(sampler_list, 'sampler_name', visible, inter))
+    results.append(get_layout_choices_visible_inter(scheduler_list, 'scheduler_name', visible, inter))
     results.append(get_layout_toggle_visible_inter('input_image_checkbox', visible, inter))
     results.append(get_layout_toggle_visible_inter('enhance_checkbox', visible, inter))
     results.append(get_layout_choices_visible_inter(base_model_list, 'base_model', visible, inter))
     results.append(get_layout_visible_inter('refiner_model', visible, inter))
     results.append(get_layout_visible_inter('overwrite_step', visible, inter))
     results.append(get_layout_visible_inter('guidance_scale', visible, inter))
+
+    results.append(get_layout_visible_inter('sharpness', visible, inter))
     results.append(get_layout_empty_visible_inter('negative_prompt', visible, inter))
 
     # Force the obsolete help iFrame to remain hidden.
@@ -103,18 +128,62 @@ def switch_layout_template(presetdata: dict | str, state_params, preset_url=''):
     return results
 
 
+def get_sharpness(key: str, fallback: str | None, source_dict: dict, results: list, default=None) -> None:
+    """
+    Modular helper to parse the sharpness parameter and dynamically manage
+    its UI visibility based on whether the active engine is Comfy-based.
+    Supports both dynamic preset changes and raw log metadata imports.
+    """
+    try:
+        # 1. Attempt to extract and convert the sharpness value
+        h = source_dict.get(key, source_dict.get(fallback, default))
+        assert h is not None
+        h = float(h)
+
+        # 2. Determine Comfy mode using the global common state
+        is_comfy = bool(common.default_engine)
+
+        # 3. Fallback: If global is empty, inspect the local metadata dictionary (critical for log loads)
+        if not is_comfy:
+            engine_name = source_dict.get('Backend Engine', source_dict.get('backend_engine'))
+            if not engine_name and 'engine' in source_dict:
+                engine_name = source_dict['engine'].get('backend_engine')
+
+            if engine_name:
+                is_comfy = engine_name not in ['Fooocus', 'SDXL-Fooocus']
+
+        # 4. Append the visibility-aware update to results
+        results.append(gr.update(value=h, visible=not is_comfy))
+    except Exception:
+        # Fallback block: Manage visibility even if the value is missing
+        is_comfy = bool(common.default_engine)
+        if not is_comfy:
+            engine_name = source_dict.get('Backend Engine', source_dict.get('backend_engine'))
+            if not engine_name and 'engine' in source_dict:
+                engine_name = source_dict['engine'].get('backend_engine')
+            if engine_name:
+                is_comfy = engine_name not in ['Fooocus', 'SDXL-Fooocus']
+
+        results.append(gr.update(visible=not is_comfy))
+
+    return
+
+
 def process_dictionary(loaded_parameter_dict, is_generating, inpaint_mode, results):
+
+    # Ensure all variant substyle keys
+    # map to the internal v2_substyle
+    for key in ['substyle', 'Substyle']:
+        if key in loaded_parameter_dict:
+            loaded_parameter_dict['v2_substyle'] = loaded_parameter_dict.pop(key)
+
     # Dynamic extension resolver:
     # Match the stem against the real files on disk
     # Wrapped in a try/except block with local
     # imports to prevent any silent NameErrors
     try:
-
-        # Map lowercase 'substyle' to 'v2_substyle' to ensure perfect clipboard JSON parsing
-        if 'substyle' in loaded_parameter_dict:
-            loaded_parameter_dict['v2_substyle'] = loaded_parameter_dict.pop('substyle')
-
-        # Dynamically resolve model filename extensions (.pth, .ckpt, .bin, .safetensors, .fooocus.patch, .gguf)
+        # Dynamically resolve model filename extensions
+        # (.pth, .ckpt, .bin, .safetensors, .fooocus.patch, .gguf)
         valid_extensions = ['.pth', '.ckpt', '.bin', '.safetensors', '.fooocus.patch', '.gguf']
         for model_key in ['base_model', 'Base Model', 'refiner_model', 'Refiner Model']:
             if model_key in loaded_parameter_dict:
@@ -150,7 +219,9 @@ def process_dictionary(loaded_parameter_dict, is_generating, inpaint_mode, resul
             common.resolution = arg_resolution
             interpret('[MetaParser] Resolution set by preset or metadata:', arg_resolution)
     get_number('guidance_scale', 'Guidance Scale', loaded_parameter_dict, results)
-    get_number('sharpness', 'Sharpness', loaded_parameter_dict, results)
+
+    get_sharpness('sharpness', 'Sharpness', loaded_parameter_dict, results)
+
     get_adm_guidance('adm_guidance', 'ADM Guidance', loaded_parameter_dict, results)
     get_str('refiner_swap_method', 'Refiner Swap Method', loaded_parameter_dict, results)
     get_number('adaptive_cfg', 'CFG Mimicking from TSNR', loaded_parameter_dict, results)
@@ -192,44 +263,97 @@ def process_dictionary(loaded_parameter_dict, is_generating, inpaint_mode, resul
     return results
 
 
+def parse_log_text_to_dict(raw_metadata: str) -> dict:
+    """
+    Parses raw metadata from clipboard. Handles both
+    JSON objects and Multiline 'Key: Value' text logs.
+    """
+    loaded_parameter_dict = {}
+    if not isinstance(raw_metadata, str) or not raw_metadata.strip():
+        return loaded_parameter_dict
+
+    clean_input = raw_metadata.strip()
+
+    # 1. Handle JSON Clipboard Content
+    if clean_input.startswith("{") and clean_input.endswith("}"):
+        try:
+            data = json.loads(clean_input)
+            if isinstance(data, dict):
+                loaded_parameter_dict = data
+                # Normalize common metadata keys to internal standards
+                if "Workflow" in loaded_parameter_dict:
+                    loaded_parameter_dict["task_method"] = loaded_parameter_dict.pop("Workflow")
+                if "Preset" in loaded_parameter_dict:
+                    loaded_parameter_dict["current_preset"] = loaded_parameter_dict.pop("Preset")
+                if "substyle" in loaded_parameter_dict:
+                    loaded_parameter_dict["v2_substyle"] = loaded_parameter_dict.pop("substyle")
+        except Exception as e:
+            print(f'[MetaParser] JSON Parse fallback triggered: {e}')
+
+    # 2. Handle Multiline Text Logs (if not JSON or JSON failed)
+    if not loaded_parameter_dict:
+        for line in clean_input.split("\n"):
+            separator = ":" if ":" in line else "\t" if "\t" in line else None
+            if separator:
+                key, value = line.split(separator, 1)
+                clean_key = key.strip().lower().replace(" ", "_")
+
+                if clean_key == "preset": clean_key = "current_preset"
+                if clean_key == "workflow": clean_key = "task_method"
+                if clean_key == "fooocus_v2_expansion": clean_key = "prompt_expansion"
+                if clean_key == "substyle": clean_key = "v2_substyle"
+
+                loaded_parameter_dict[clean_key] = value.strip()
+
+    # CRITICAL: Always run modernization on the resulting dict to ensure
+    # Engine/Workflow technical data is fused from the .json file.
+    return PR.modernize_legacy_metadata(loaded_parameter_dict)
+
+
 # Directly called by load metadata from
 # log via clipboard and prompt,
 # or from Toolbox Load Log Info.
 # Also called indirectly by load metadata from image
 def read_meta_from_log(raw_metadata: dict | str, is_generating: bool, inpaint_mode: str):
-
-    # --- NEW: MULTILINE PARSING BRIDGE ---
     if isinstance(raw_metadata, str) and not raw_metadata.strip().startswith("{"):
-        loaded_parameter_dict = {}
-        for line in raw_metadata.strip().split("\n"):
-            if ":" in line:
-                key, value = line.split(":", 1)
-
-                # NORMALIZATION STEP:
-                # 1. Lowercase: 'Negative Prompt' -> 'negative prompt'
-                # 2. Underscores: 'negative prompt' -> 'negative_prompt'
-                clean_key = key.strip().lower().replace(" ", "_")
-
-                # 3. Specific mapping for 'preset' vs 'current_preset'
-                if clean_key == "preset":
-                    clean_key = "current_preset"
-                if clean_key == "fooocus_v2_expansion":
-                    clean_key = "prompt_expansion"
-                if clean_key == "substyle":
-                    clean_key = "v2_substyle"
-
-                loaded_parameter_dict[clean_key] = value.strip()
+        loaded_parameter_dict = parse_log_text_to_dict(raw_metadata)
     else:
-        # Standard JSON path
         loaded_parameter_dict = US.verify_dictionary(raw_metadata)
-    # -------------------------------------
+        # Apply modernization to ensure Fusion data is present
+        loaded_parameter_dict = PR.modernize_legacy_metadata(loaded_parameter_dict)
 
-    if not common.log_metadata:
+    # --- INTELLIGENT CACHE MANAGEMENT ---
+    # Detect if this is a 'Real' update
+    # (User loading an image)
+    # or a 'Hollow' update (Gradio UI artifacts).
+    is_real_update = any(k in loaded_parameter_dict for k in ['prompt', 'Prompt', 'seed', 'Seed'])
+
+    if not common.log_metadata or is_real_update:
+        # This is either the first pass
+        # or a deliberate switch to a new image.
+        # We allow it to overwrite the cache entirely.
         common.log_metadata = loaded_parameter_dict
     else:
-        loaded_parameter_dict = common.log_metadata
+        # This is a 'Hollow' middle pass.
+        # Perform a defensive merge.
+        # Only accept updates that aren't
+        # trying to downgrade the engine to Fooocus.
+        clean_updates = {}
+        for k, v in loaded_parameter_dict.items():
+            if v in [None, 'None', '']: continue
 
-    # Safety check: ensure we actually have a dict now
+            if k in ['backend_engine', 'Backend Engine'] and v in ['Fooocus', 'SDXL-Fooocus']:
+                existing = common.log_metadata.get('backend_engine', common.log_metadata.get('Backend Engine'))
+                if existing and existing not in ['Fooocus', 'SDXL-Fooocus']:
+                    # Block the 'Fooocus' flip during middle-passes
+                    continue
+
+            clean_updates[k] = v
+
+        common.log_metadata.update(clean_updates)
+        loaded_parameter_dict = common.log_metadata
+    # ----------------------------------------
+
     if not isinstance(loaded_parameter_dict, dict):
         print("Dictionary not valid")
         return [gr.update()]
@@ -237,20 +361,14 @@ def read_meta_from_log(raw_metadata: dict | str, is_generating: bool, inpaint_mo
     results = [True] if len(loaded_parameter_dict) > 0 else [gr.update()]
 
     if not common.metadata_loading:
-        arg_preset = ''
-        if loaded_parameter_dict.get("current_preset"):
-            arg_preset = loaded_parameter_dict.get("current_preset")
-        elif loaded_parameter_dict.get("Preset"):
-            arg_preset = loaded_parameter_dict.get("Preset")
+        arg_preset = loaded_parameter_dict.get("current_preset", loaded_parameter_dict.get("Preset", ""))
         if arg_preset:
             PR.current_preset = arg_preset
             preset_content = PR.get_preset_content(PR.current_preset, quiet=False)
             parse_meta_from_preset(preset_content)
         PR.category_selection = PR.find_preset_category(PR.current_preset)
 
-    results = process_dictionary(loaded_parameter_dict, is_generating, inpaint_mode, results)
-
-    return results
+    return process_dictionary(loaded_parameter_dict, is_generating, inpaint_mode, results)
 
 
 def load_parameters(raw_metadata: dict | str, is_generating: bool, inpaint_mode: str):
@@ -455,7 +573,7 @@ def get_freeu(key: str, fallback: str | None, source_dict: dict, results: list, 
         results.append(gr.update())
 
 
-def get_lora(key: str, fallback: str | None, source_dict: dict, results: list, performance_filename: str | None):
+def get_lora(key: str, fallback: str | None, source_dict: dict, results: list, performance_filename: str | None) -> None:
     try:
         split_data = source_dict.get(key, source_dict.get(fallback)).split(' : ')
         enabled = True
@@ -472,13 +590,22 @@ def get_lora(key: str, fallback: str | None, source_dict: dict, results: list, p
         w_min = float(source_dict.get('loras_min_weight', config.default_loras_min_weight))
         w_max = float(source_dict.get('loras_max_weight', config.default_loras_max_weight))
         weight = float(weight)
+
         results.append(enabled)
-        results.append(name)
+
+        # --- DYNAMIC CHOICES UPDATE ---
+        # Instead of a raw string, we return a gr.update containing the active filtered choices
+        results.append(gr.update(choices=['None'] + config.lora_filenames, value=name))
+        # ------------------------------
+
         results.append(gr.update(value=weight, minimum=w_min, maximum=w_max))
-    except:
+    except Exception:
         results.append(True)
-        results.append('None')
+        # Update empty fallback slots with the filtered choices as well
+        results.append(gr.update(choices=['None'] + config.lora_filenames, value='None'))
         results.append(1)
+
+    return
 
 
 def get_sha256(filepath):
@@ -812,42 +939,102 @@ class FooocusMetadataParser(MetadataParser):
 
     @staticmethod
     def replace_value_with_filename(key, value, filenames):
+        if not value or value == 'None': return 'None'
+        if key in ['vae', 'VAE'] and value == 'Default (model)': return value
+
+        # Handle LoRA format: "True : lora_name : 1.0"
+        if key.startswith('LoRA '):
+            try:
+                parts = value.split(' : ')
+                name = parts[1] if len(parts) == 3 else parts[0]
+                weight_suffix = f" : {parts[2]}" if len(parts) == 3 else f" : {parts[1]}"
+                enabled_prefix = f"{parts[0]} : " if len(parts) == 3 else ""
+
+                for filename in filenames:
+                    if Path(name).stem == Path(filename).stem or name == filename:
+                        return f"{enabled_prefix}{filename}{weight_suffix}"
+                return 'None'
+            except:
+                return 'None'
+
+        # Handle Standard Models
         for filename in filenames:
-            path = Path(filename)
-            if key.startswith('lora_combined_'):
-                name, weight = value.split(' : ')
-                if name == path.stem:
-                    return f'{filename} : {weight}'
-            elif value == path.stem:
+            # Check if the stems match (e.g., 'model' == 'SDXL/model.safetensors')
+            if Path(value).stem == Path(filename).stem or value == filename:
                 return filename
 
-        return None
+        return 'None'
+
 
 class SIMPLEMetadataParser(MetadataParser):
     def get_scheme(self) -> MetadataScheme:
         return MetadataScheme.SIMPLE
 
-
     def to_json(self, metadata: dict) -> dict:
-        engine = get_taskclass_by_fullname(metadata.get('Backend Engine', metadata.get('backend_engine', task_class_mapping['Fooocus'])))
-        model_filenames = config.get_base_model_list(engine)
-        for key, value in metadata.items():
-            if value in ['', 'None']:
-                if key in ['base_model', 'refiner_model', 'Base Model', 'Refiner Model']:
-                    metadata[key] = 'None'
-                continue
-            if key in ['base_model', 'refiner_model', 'Base Model', 'Refiner Model']:
-                metadata[key] = self.replace_value_with_filename(key, value, model_filenames)
-                if metadata[key]=='None':
-                    interpret('[MetaParser] ⚠️  WARNING! The model is not available:', value)
+        def safe_get(d, keys, default=None):
+            if not isinstance(d, dict): return default
+            for k in keys:
+                val = d.get(k)
+                if val and str(val) not in [None, 'None', '', 'NoneType']:
+                    return val
+            return default
+
+        # Resolve Engine and Workflow keys
+        task_method_val = safe_get(metadata, ['task_method', 'Workflow'])
+        if not task_method_val:
+            task_method_val = metadata.get('default_engine', {}).get('backend_params', {}).get('task_method')
+
+        engine_name = safe_get(metadata, ['backend_engine', 'Backend Engine'])
+        if not engine_name:
+             engine_name = metadata.get('default_engine', {}).get('backend_engine', 'Fooocus')
+
+        engine = get_taskclass_by_fullname(engine_name)
+        metadata['backend_engine'] = engine_name
+        metadata['task_method'] = task_method_val
+
+        # Find 'CLIP Skip' or 'clip_skip'
+        clip_skip = safe_get(metadata, ['clip_skip', 'CLIP Skip'])
+
+        # Fallback: to 2 SDXL standard
+        if clip_skip is None:
+            clip_skip = config.default_clip_skip
+
+        # If found, ensure it is an integer
+        # for the Gradio Slider
+        if clip_skip is not None:
+            try:
+                metadata['clip_skip'] = int(float(clip_skip))
+            except:
+                metadata['clip_skip'] = 2
+
+        # fetch the lists required to turn
+        # stems back into full paths
+        model_filenames = config.get_base_model_list(engine, task_method_val, for_import=True)
+        lora_filenames = config.get_lora_model_list(engine, task_method_val, for_import=True)
+        vae_filenames = config.vae_filenames
+
+        for key in list(metadata.keys()):
+            val = metadata[key]
+            if val in ['', 'None', None]: continue
+
+            if key in ['Base Model', 'base_model']:
+                resolved = self.replace_value_with_filename(key, val, model_filenames)
+                metadata['base_model'] = resolved if resolved != 'None' else val
+
+            elif key in ['Refiner Model', 'refiner_model']:
+                resolved = self.replace_value_with_filename(key, val, model_filenames)
+                metadata['refiner_model'] = resolved if resolved != 'None' else val
+
             elif key.startswith('LoRA '):
-                metadata[key] = self.replace_value_with_filename(key, value, config.lora_filenames)
-            elif key in ['vae', 'VAE']:
-                metadata[key] = self.replace_value_with_filename(key, value, config.vae_filenames)
-            else:
-                continue
+                resolved = self.replace_value_with_filename(key, val, lora_filenames)
+                metadata[key] = resolved if resolved != 'None' else val
+
+            elif key in ['VAE', 'vae']:
+                resolved = self.replace_value_with_filename(key, val, vae_filenames)
+                metadata['vae'] = resolved if resolved != 'None' else val
 
         return metadata
+
 
     def to_string(self, metadata: list) -> str:
         for li, (label, key, value) in enumerate(metadata):
@@ -908,6 +1095,7 @@ def get_metadata_parser(metadata_scheme: MetadataScheme) -> MetadataParser:
         case _:
             raise NotImplementedError
 
+
 def read_meta_from_image(file) -> tuple[str | None, MetadataScheme | None]:
     items = (file.info or {}).copy()
 
@@ -947,6 +1135,161 @@ def read_meta_from_image(file) -> tuple[str | None, MetadataScheme | None]:
         if isinstance(parameters, str):
             metadata_scheme = MetadataScheme.A1111
     return parameters, metadata_scheme
+
+
+def extract_preset_name_from_image(image_file):
+    # Extracts and modernizes metadata from an image
+    # Updates the UI preset components
+
+    common.log_metadata = {}
+
+    if image_file is None:
+        return gr.update(), gr.update(), gr.update()
+
+    # 1. If image_file is a path (string),
+    # open it as an Image object.
+    # If it's already an image object,
+    # use it directly.
+    try:
+        if isinstance(image_file, str):
+            with Image.open(image_file) as img:
+                parameters, scheme = read_meta_from_image(img)
+        else:
+            parameters, scheme = read_meta_from_image(image_file)
+    except Exception as e:
+        interpret(f'[MetaParser] ⚠️ Failed to read image file: {e}')
+        return gr.update(), gr.update(), gr.update()
+
+    if parameters is None:
+        interpret('[MetaParser] ⚠️ No valid metadata found in image.')
+        return gr.update(), gr.update(), gr.update()
+
+    # 2. Convert to dictionary and Modernize/Fuse
+    # SIMPLEMetadataParser.to_json handles the normalization for us
+    metadata_scheme = MetadataScheme('simple')
+    metadata_parser = get_metadata_parser(metadata_scheme)
+    loaded_dict = metadata_parser.to_json(parameters)
+
+    # Ensure Z-Image renaming and technical fusion occurs
+    loaded_dict = PR.modernize_legacy_metadata(loaded_dict)
+
+    # 3. Resolve the Name
+    preset_name = loaded_dict.get('current_preset', 'Default')
+
+    # 4. Sync global state
+    common.log_metadata = loaded_dict
+    common.metadata_loading = True
+    PR.current_preset = preset_name
+
+    # 5. Resolve UI categories/choices
+    category = PR.find_preset_category(preset_name)
+    PR.category_selection = category
+    preset_choices = PR.get_presetnames_in_folder(category)
+
+    return (
+        gr.update(value=category),
+        gr.update(choices=preset_choices, value=preset_name),
+        gr.update(value=preset_name)
+    )
+
+
+def extract_preset_name_from_log(raw_metadata: str):
+    # Extracts and modernizes metadata from the log
+    # Updates the UI preset components
+
+    # 1. Clear previous cache
+    common.log_metadata = {}
+
+    # 2. Parse and Modernize
+    # parse_log_text_to_dict now handles JSON and Multiline robustly
+    loaded_dict = parse_log_text_to_dict(raw_metadata)
+
+    # 3. Resolve the Name (Checks every key we've ever used)
+    preset_name = loaded_dict.get('current_preset',
+                  loaded_dict.get('Preset',
+                  loaded_dict.get('preset', 'Default')))
+
+    # 4. Sync global state
+    common.log_metadata = loaded_dict
+    common.metadata_loading = True
+    PR.current_preset = preset_name
+
+    # 5. Resolve category and list choices for the UI
+    category = PR.find_preset_category(preset_name)
+    PR.category_selection = category
+    preset_choices = PR.get_presetnames_in_folder(category)
+
+    # Return the triplet for immediate UI synchronization
+    return (
+        gr.update(value=category),
+        gr.update(choices=preset_choices, value=preset_name),
+        gr.update(value=preset_name)
+    )
+
+
+def load_log_info_into_prompt(state_params):
+    [choice, selected] = state_params["prompt_info"]
+
+    # 1. Retrieve the dictionary
+    metainfo = gallery.get_images_prompt(choice, selected, state_params["__max_per_page"])
+
+    # 2. Early return if no metadata found
+    if not metainfo or "[Gallery]" in metainfo:
+        return ""
+
+    # 3. Convert the dictionary back into
+    # the standard "Fooocus Log" string format
+    # that meta_parser.read_meta_from_log expects to see:
+    log_string = ""
+    for key, value in metainfo.items():
+        if key not in ["Filename", "Advanced_parameters"]:
+            log_string += f"{key}: {value}\n"
+
+    # Add advanced params if they exist
+    if "Advanced_parameters" in metainfo:
+        log_string += f"Advanced_parameters: {metainfo['Advanced_parameters']}\n"
+
+    return log_string
+
+
+def reset_params_by_meta(metadata, state_params, is_generating, inpaint_mode):
+    # 1. Convert string to dict immediately
+    if isinstance(metadata, str) and not metadata.strip().startswith("{"):
+        metadata = parse_log_text_to_dict(metadata)
+
+    elif isinstance(metadata, str) and metadata.strip().startswith("{"):
+
+        metadata = json.loads(metadata)
+
+    if metadata is None or metadata == {}:
+        metadata = {}
+
+    # --- THE CRITICAL FIX: Modernize BEFORE Parsing ---
+    # This ensures to_json() has access to fused Workflow/Engine data
+    metadata = PR.modernize_legacy_metadata(metadata)
+    # --------------------------------------------------
+
+    metadata_scheme = MetadataScheme('simple')
+    metadata_parser = get_metadata_parser(metadata_scheme)
+
+    # 2. Run the Parser (now restored with safe_get)
+    parsed_parameters = metadata_parser.to_json(metadata)
+
+    # 3. Synchronize UI
+    results = switch_layout_template(parsed_parameters, state_params)
+
+    # replace the technical dict with
+    # a neutral update to fix the shif:
+    if results and isinstance(results[0], dict) and 'backend_engine' in results[0]:
+        results[0] = gr.update()
+
+    results += read_meta_from_log(parsed_parameters, is_generating, inpaint_mode)
+
+    engine_name = parsed_parameters.get("Backend Engine", parsed_parameters.get("backend_engine", "SDXL-Fooocus"))
+    wf_name = parsed_parameters.get("task_method", "None")
+    interpret('[MetaParser] The image was created with the engine:', engine_name)
+    interpret('using the Workflow:', wf_name)
+    return results
 
 
 def params_lora_fixed(parameters):

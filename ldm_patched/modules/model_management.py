@@ -276,6 +276,43 @@ def get_torch_device_name(device):
     else:
         return "CUDA {}: {}".format(device, torch.cuda.get_device_name(device))
 
+
+def get_GPU_name():
+    global directml_enabled, cpu_state
+
+    # 1. Handle DirectML (AMD / Intel on Windows)
+    if directml_enabled:
+        try:
+            import torch_directml
+            # torch_directml uses device indexes (0, 1, etc.)
+            return torch_directml.device_name(0)
+        except:
+            return "DirectML Compatible GPU"
+
+    # 2. Handle Apple Silicon (MPS)
+    if cpu_state == CPUState.MPS:
+        # Torch doesn't have a direct 'get_device_name' for MPS,
+        # but the hardware is always Apple Silicon.
+        return "Apple Silicon GPU"
+
+    # 3. Handle Intel XPU (Arc / Iris / Data Center)
+    if is_intel_xpu():
+        try:
+            return torch.xpu.get_device_name(torch.xpu.current_device())
+        except:
+            return "Intel XPU GPU"
+
+    # 4. Handle CPU Mode
+    if cpu_state == CPUState.CPU:
+        return "System CPU"
+
+    # 5. Handle NVIDIA CUDA (Standard)
+    try:
+        # Aligns with torch.device(torch.cuda.current_device())
+        return torch.cuda.get_device_name(torch.cuda.current_device())
+    except:
+        return "Generic NVIDIA CUDA GPU"
+
 try:
     interpret("Device:", get_torch_device_name(get_torch_device()))
     import common

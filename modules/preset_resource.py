@@ -10,6 +10,8 @@ import modules.config as config
 import modules.user_structure as US
 from ldm_patched.modules import model_management
 from enhanced.translator import interpret
+from modules.flags import default_class_params, \
+    task_class_mapping
 from modules.ui_features import add_to_favorites, \
     remove_from_favorites
 from pathlib import Path
@@ -21,10 +23,100 @@ random_block = False # used by Random Preset Category
 # used by Add/Remove preset from Favorites
 favorite_preset = 'Default'
 favorite_category = 'Favorite'
+# disable adaptive CFG & Step slider control:
+revert_fooocus = False
+
+
+def modernize_legacy_metadata(metadata):
+    """
+    Universal Technical Bridge for Legacy Logs.
+    Fuses technical Engine/Workflow data from
+    ANY preset file into the metadata dictionary
+    to prevent the UI from wiping the backend state.
+    """
+    # 1. Preset Name Normalization
+    preset_name = metadata.get('current_preset',
+                  metadata.get('Preset',
+                  metadata.get('preset', '')))
+
+    if preset_name == 'ZI-TurboDIT':
+        preset_name = 'ZI-Turbo'
+
+    if preset_name:
+        metadata['current_preset'] = preset_name
+        metadata['Preset'] = preset_name
+    else:
+        return metadata
+
+    # Ensure the dictionary is updated so extract_preset_name_from_log sees it
+    metadata['current_preset'] = preset_name
+    metadata['Preset'] = preset_name
+
+    # 2. Universal Deep Fusion
+    current_wf = str(metadata.get('task_method', ''))
+    if 'default_engine' not in metadata or current_wf in ['None', '', 'NoneType']:
+        preset_file = None
+        for path in Path('presets').rglob('*.json'):
+            if path.stem == preset_name:
+                preset_file = path
+                break
+
+        if preset_file:
+            try:
+                with open(preset_file, "r", encoding="utf-8") as f:
+                    content = json.load(f)
+                    engine_data = content.get('default_engine', content.get('engine', {}))
+                    if engine_data:
+                        metadata['default_engine'] = engine_data
+                        metadata['engine'] = engine_data
+                        short_engine = engine_data.get('backend_engine')
+                        full_engine = task_class_mapping.get(short_engine, short_engine)
+                        metadata['backend_engine'] = full_engine
+                        metadata['Backend Engine'] = full_engine
+
+                        engine_defaults = default_class_params.get(short_engine, {})
+                        if 'engine' not in metadata: metadata['engine'] = {}
+
+                        metadata['engine']['disvisible'] = engine_data.get('disvisible', engine_defaults.get('disvisible', []))
+                        metadata['engine']['disinteractive'] = engine_data.get('disinteractive', engine_defaults.get('disinteractive', []))
+
+                        wf = engine_data.get('backend_params', {}).get('task_method')
+                        if not wf or str(wf) == 'None':
+                            wf = default_class_params.get(short_engine, {}).get('backend_params', {}).get('task_method')
+
+                        metadata['task_method'] = wf
+                        metadata['Workflow'] = wf
+
+                        interpret('[Preset] Extracted preset name from metadata:', preset_name)
+                        interpret(f'Preset Engine: {full_engine}, Workflow: {wf}')
+
+                        # Find 'default_clip_skip'
+                        # in the preset
+                        cs = content.get('default_clip_skip')
+
+                        # Fuse the value so the
+                        # Finalizer can see it
+                        if cs is not None:
+                            metadata['clip_skip'] = cs
+
+            except Exception as e:
+                interpret(f'[Preset] ⚠️ Modernizer error: {e}')
+        else:
+            interpret(f'[Preset] ⚠️ Modernizer file not found for: {preset_name}')
+
+    return metadata
+
+
+def normalize_preset_loading():
+    common.metadata_loading = False
+    common.log_metadata = ''
+    config.default_prompt = ''
+    return
 
 
 def find_preset_file(preset):
     global presets_path
+
     preset_file_path = ''
     preset_name_path = Path(preset)
     if preset_name_path.suffix != 'json':
@@ -152,10 +244,11 @@ def get_random_preset_in_category(rand_category):
     if rand_category == 'All':
         rand_category = presets_path
     preset_list = get_presetnames_in_folder(rand_category)
-    if len(preset_list) >1:
+    if len(preset_list) > 1 and config.enable_random_preset_in_category:
         random_index = random.randint(0, (len(preset_list)-1))
-        random_preset_path = Path(preset_list[random_index])
-        random_preset_name = random_preset_path.stem
+        # Assign the string directly to prevent
+        # pathlib from stripping the decimal part
+        random_preset_name = preset_list[random_index]
     else:
         try:
             random_preset_name = preset_list[0]
@@ -191,6 +284,37 @@ def select_data_from_preset(preset_content):
     global current_preset
     preset_prepared = {}
     items = US.verify_dictionary(preset_content)
+
+    # --- DYNAMIC ENGINE SYNCHRONIZATION ---
+    # Update common.default_engine instantly
+    # so downstream sliders don't lag behind
+    if 'default_engine' in items:
+        common.default_engine = items.get('default_engine')
+    else:
+        common.default_engine = {}
+
+    if common.default_engine:
+        # Clear engine string to allow Comfy operations
+        config.backend_engine = ''
+    else:
+        # Restore standard Fooocus operation
+        config.backend_engine = getattr(config, 'default_engine', {}).get('backend_engine', 'Fooocus')
+
+    # Force global model name synchronization during preset loads
+    preset_model = items.get('default_model')
+    if preset_model and preset_model != 'None':
+        config.default_base_model_name = preset_model
+
+    # Force global refiner name synchronization during preset loads
+    preset_refiner = items.get('default_refiner')
+    if preset_refiner and preset_refiner != 'None':
+        config.default_refiner = preset_refiner
+
+    # Force global lora_filenames list synchronization during preset loads
+    engine = common.default_engine.get('backend_engine', 'Fooocus') if common.default_engine else 'Fooocus'
+    task_method = common.default_engine.get('backend_params', {}).get('task_method') if common.default_engine else None
+    config.lora_filenames = config.get_lora_model_list(engine, task_method)
+    # --------------------------------------
 
     # for presets that do not have a default prompt or negative prompt
     # and almost all presets do not have an image quantity
@@ -298,7 +422,8 @@ def preset_favorite_value():
 
 def set_preset_selection(arg_preset_selection, state_params):
     # called by webui preset_selection.change()
-    global category_selection, current_preset, random_block
+    global category_selection, current_preset, \
+        random_block, revert_fooocus
 
     if arg_preset_selection == '' and not random_block:
         if current_preset == '':
@@ -321,6 +446,124 @@ def set_preset_selection(arg_preset_selection, state_params):
         preset_content = get_preset_content(current_preset, quiet = True)
     preset_content = select_data_from_preset(preset_content)
 
+    # -- DYNAMIC OVERWRITE STEP BOUNDARY CALCULATOR --
+
+    lora_warning = False
+    slider_min = -1
+    if revert_fooocus:
+        slider_max = 200
+    else:
+        slider_max = 100
+    slider_info = 'Set to -1 to disable'
+    slider_value = config.default_overwrite_step
+
+    # If we are using a Comfy-mode preset, enforce
+    # strict bounds and clear the description
+    if common.default_engine:
+        preset_lower = current_preset.lower()
+        # Remove "Set to -1 to disable" from the UI:
+        slider_info = ''
+
+        # Use non-adaptive step control if using debug
+        # "Revert CFG & Step to Fooocus Standards"
+        if revert_fooocus:
+            slider_min = 1
+
+        # Hyper-distilled 4-step models
+        # e.g. Flux Schnell and SD3.5 Large Turbo
+        elif 'schnell' in preset_lower or 'large-turbo' in preset_lower:
+            slider_min = 4
+            slider_max = 12
+            if slider_value < 4 or slider_value > 12:
+                slider_value = 4
+
+        # Distilled 8-step models
+        # e.g. Z-Image Turbo and KolorsFast
+        elif 'turbo' in preset_lower or 'fast' in preset_lower:
+            slider_min = 4
+            slider_max = 20
+            if slider_value < 4 or slider_value > 20:
+                slider_value = 8
+
+        # SD1.5 Models use the SDXL defaults
+        elif 'sd1' in preset_lower:
+            pass
+
+        # SD3.5 / SD3x Models
+        elif 'sd3' in preset_lower:
+            slider_min = 15
+            slider_max = 45
+            if slider_value < 15 or slider_value > 45:
+                slider_value = 30
+
+        # Standard DiT models
+        # (Flux Dev, Kolors, HyDiT, Z-Image Base)
+        else:
+            slider_min = 10
+            slider_max = 60
+            if slider_value < 10 or slider_value > 60:
+                slider_value = 30 if 'kolors' in preset_lower or 'hydit' in preset_lower else 20
+
+        # Update config to keep it in sync
+        # with the auto-corrected slider value
+        config.default_overwrite_step = slider_value
+
+        # Check if the active engine is Flux,
+        # and if the model is an FP8 safetensors format
+        if common.default_engine and common.default_engine.get('backend_engine') == 'Flux':
+            model_name = preset_content.get('default_model', '').lower()
+            if 'fp8' in model_name and '.gguf' not in model_name:
+                lora_warning = True
+
+    # -- DYNAMIC CFG (GUIDANCE) BOUNDARY CALCULATOR --
+
+    if revert_fooocus:
+        cfg_min = 0.1
+        cfg_step = 0.1
+    else:
+        cfg_min = 1.0
+        cfg_step = 0.05
+    cfg_max = 30.0
+
+    cfg_value = config.default_cfg_scale
+    preset_lower = current_preset.lower()
+
+    # If we are using a Comfy-mode preset:
+    if common.default_engine:
+
+        # Use non-adaptive Guidance Scale if using debug
+        # "Revert CFG & Step to Fooocus Standards"
+        if revert_fooocus:
+            pass
+
+        # Hyper-Distilled (Turbo/Schnell)
+        elif 'turbo' in preset_lower or 'schnell' in preset_lower or ('zi-base' in preset_lower and 'fast' in preset_lower):
+            cfg_max = 2.0
+
+        # Z-Image Base (AuraFlow)
+        elif 'zi-base' in preset_lower or 'zib' in preset_lower:
+            cfg_max = 6.0
+
+        # Standard DiT / MM-DiT (SD3.5, Flux, HyDiT)
+        elif 'sd3' in preset_lower or 'flux' in preset_lower or 'hydit' in preset_lower:
+            cfg_max = 10.0
+
+        # Kolors (SDXL-based but refined)
+        elif 'kolors' in preset_lower:
+            cfg_max = 15.0
+
+        # SD1.5 Models
+        elif 'sd1' in preset_lower:
+            cfg_max = 20.0
+
+    # ensure the value doesn't exceed the new max
+    if cfg_value > cfg_max:
+        cfg_value = cfg_max
+
+    config.default_cfg_scale = cfg_value
+
+    # ------------------------------------------------
+
     return (gr.update(value=current_preset),
         gr.update(value=state_params),
         gr.update(value=current_preset),
@@ -333,7 +576,14 @@ def set_preset_selection(arg_preset_selection, state_params):
         gr.update(value=config.default_sampler),
         gr.update(value=config.default_scheduler),
         gr.update(interactive=current_preset != 'Default'),
-        gr.update(value=preset_favorite_value()))
+        gr.update(value=preset_favorite_value()),
+        gr.update(value=slider_value,
+            minimum=slider_min,
+            maximum=slider_max,
+            info=slider_info),
+        gr.update(visible=lora_warning),
+        gr.update(value=cfg_value, minimum=cfg_min,
+            maximum=cfg_max, step=cfg_step))
 
 def bar_button_change(bar_button, state_params):
     global category_selection, current_preset

@@ -1,0 +1,202 @@
+{
+  "3": {
+    "inputs": {
+      "seed": 102371946114,
+      "steps": 4,
+      "cfg": 1.0,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "sgm_uniform",
+      "denoise": 1.0,
+      "model": [
+        "106",
+        0
+      ],
+      "positive": [
+        "6",
+        0
+      ],
+      "negative": [
+        "7",
+        0
+      ],
+      "latent_image": [
+        "5",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "4": {
+    "inputs": {
+      "unet_name": "SD3x/sd3.5_large_turbo-Q8_0.gguf"
+    },
+    "class_type": "UnetLoaderGGUF",
+    "_meta": {
+      "title": "base_model"
+    }
+  },
+  "5": {
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "aspect_ratios_size"
+    }
+  },
+  "6": {
+    "inputs": {
+      "text": "A beautiful scenic landscape, cinematic photography, high detail",
+      "clip": [
+        "106",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "prompt"
+    }
+  },
+  "7": {
+    "inputs": {
+      "text": "",
+      "clip": [
+        "106",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "negative_prompt"
+    }
+  },
+  "8": {
+    "inputs": {
+      "samples": [
+        "3",
+        0
+      ],
+      "vae": [
+        "10",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "9": {
+    "inputs": {
+      "images": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "SaveImageWebsocket",
+    "_meta": {
+      "title": "result_image"
+    }
+  },
+  "10": {
+    "inputs": {
+      "vae_name": "sd3x_fp16.vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "vae"
+    }
+  },
+  "11": {
+    "inputs": {
+      "clip_name1": "clip_g.safetensors",
+      "clip_name2": "clip_l.safetensors",
+      "clip_name3": "t5xxl_fp8_e4m3fn.safetensors"
+    },
+    "class_type": "TripleCLIPLoader",
+    "_meta": {
+      "title": "clip_model"
+    }
+  },
+  "90": {
+    "inputs": {
+      "model": ["4", 0],
+      "clip": ["11", 0]
+    },
+    "class_type": "ModelPristineReset",
+    "_meta": {
+      "title": "Weight Wash"
+    }
+  },
+  "101": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [ "90", 0 ],
+      "clip": [ "90", 1 ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "lora_1" }
+  },
+  "102": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [ "101", 0 ],
+      "clip": [ "101", 1 ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "lora_2" }
+  },
+  "103": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [ "102", 0 ],
+      "clip": [ "102", 1 ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "lora_3" }
+  },
+  "104": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [ "103", 0 ],
+      "clip": [ "103", 1 ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "lora_4" }
+  },
+  "105": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [ "104", 0 ],
+      "clip": [ "104", 1 ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "lora_5" }
+  },
+  "106": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [ "105", 0 ],
+      "clip": [ "105", 1 ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "lora_6" }
+  }
+}

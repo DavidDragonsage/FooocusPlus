@@ -154,7 +154,6 @@ path_layer_model = get_dir_or_set_default('path_layer_model', Path(path_models_r
 paths_diffusers = get_dir_or_set_default('path_diffusers', [Path(path_models_root/'diffusers').resolve()], True, False)
 path_outputs = get_path_output()
 print()
-interpret('Analyzing the graphics system...')
 
 from enhanced.backend import init_modelsinfo
 modelsinfo = init_modelsinfo(path_models_root, dict(
@@ -1117,6 +1116,65 @@ with open(config_comfy_path, "w", encoding="utf-8") as comfy_file:
     comfy_file.write(config_comfy_text)
 
 
+def get_lora_model_list(engine='Fooocus', task_method=None, for_import=False) -> list:
+    """
+    Dynamically and recursively filters your LoRA files based on the active model family.
+    - Flux: Shows only 'Flux/' folder LoRAs
+    - SD3.5: Shows only 'SD3x/' folder LoRAs
+    - SD1.5: Shows only 'SD1.5/' folder LoRAs
+    - Pony: Shows only 'Pony/' folder LoRAs
+    - Z-Image: Shows only 'Z-Image/' folder LoRAs
+    - SDXL (Standard): Shows only flat, root-level LoRAs, hiding all subfolders
+    """
+    global modelsinfo, default_base_model_name
+
+    # Fetch all raw LoRA files (recursive list)
+    raw_loras = modelsinfo.get_model_names('loras')
+
+    # Bypassed by metadata importer to ensure paths are resolved regardless of UI state
+    if for_import:
+        return raw_loras
+
+    # Extract state strings for checking
+    model_lower = default_base_model_name.lower() if default_base_model_name else ''
+    method_lower = str(task_method).lower() if task_method else ''
+
+    # Identify Z-Image specific state
+    is_z_image = any(x in model_lower for x in ['z-image', 'z_image']) or \
+                 any(x in method_lower for x in ['zit', 'zib'])
+
+    # Z-Image checked before the general Flux check
+    if is_z_image:
+        return [f for f in raw_loras if 'z-image' in f.lower() or 'z_image' in f.lower()]
+
+    # Flux Engine check
+    if engine == 'Flux':
+        # Show only Flux/ folder, and explicitly EXCLUDE Z-Image to keep lists clean
+        return [f for f in raw_loras if 'flux' in f.lower() and 'z-image' not in f.lower() and 'z_image' not in f.lower()]
+
+    # SD3x Engine check
+    if engine == 'SD3x':
+        return [f for f in raw_loras if 'sd3x' in f.lower()]
+
+    # SD1 (SD1.5) Engine check
+    if engine == 'SD1' or 'sd15' in method_lower:
+        # Normalize separators for consistent folder detection
+        return [f for f in raw_loras if 'sd1.5' in f.replace('\\', '/').lower()]
+
+    # Pony Sub-Family (SDXL Checkpoints)
+    if 'pony' in model_lower:
+        return [f for f in raw_loras if 'pony' in f.lower()]
+
+    # Standard SDXL (Fooocus / Comfy)
+    # If using SDXL, show ONLY the root level LoRAs.
+    # Hide the sub-family folders (Flux, SD3, Z-Image, etc.)
+    if engine in ['Fooocus', 'Comfy']:
+        return [f for f in raw_loras if '/' not in f and '\\' not in f]
+
+    # Fallback: return everything
+    return raw_loras
+
+
 def get_model_filenames(folder_paths, extensions=None, name_filter=None):
     if extensions is None:
         extensions = ['.pth', '.ckpt', '.bin', '.safetensors', '.fooocus.patch', '.gguf']
@@ -1130,16 +1188,73 @@ def get_model_filenames(folder_paths, extensions=None, name_filter=None):
     return files
 
 
-def get_base_model_list(engine='Fooocus', task_method=None):
-    global modelsinfo
+def get_base_model_list(engine='Fooocus', task_method=None, for_import=False):
+    global modelsinfo, default_base_model_name
+
+    # If called by the metadata importer,
+    # bypass all UI filters and return the raw list
+    if for_import:
+        return modelsinfo.get_model_names('checkpoints')
+
+    # 1. Fetch the default filter and get the matching model list
     file_filter = flags.model_file_filter.get(engine, [])
     base_model_list = modelsinfo.get_model_names('checkpoints', file_filter)
+
+    # Inspect the currently selected model name
+    # to determine the dynamic filter mode
+    model_lower = default_base_model_name.lower() if default_base_model_name else ''
+    method_lower = str(task_method).lower() if task_method else ''
+
+    # 2. For SD1.5 (Comfy SD1.5) engine modes:
+    # Check if the model name or engine indicates SD1.5
+    if 'sd1.5' in model_lower or engine == 'SD1':
+        return [f for f in base_model_list if 'sd1.5' in f.replace('\\', '/').lower()]
+
+    # 3. For standard Fooocus or Comfy (SDXL / SD1.5) modes:
+    # Exclude specialized models (SD3, Flux, HyDiT) and any models inside subdirectories
     if engine in ['Fooocus', 'Comfy']:
         base_model_list = modelsinfo.get_model_names('checkpoints', flags.model_file_filter['Fooocus'], reverse=True)
-    elif task_method == 'flux_base2_gguf':
-        # adjusted the GGUF filter to include "flux" and "schnell",
-        # not just "hyperflux"
-        base_model_list = [f for f in base_model_list if ("hyp8" in f or "hyp16" in f or "flux" in f or "schnell" in f) and f.endswith("gguf")]
+        # Keep only the flat/root models (filter out anything containing path separators)
+        return [f for f in base_model_list if '/' not in f and '\\' not in f]
+
+    # 4. For Flux engine modes:
+    elif engine == 'Flux':
+
+        # We determine the GGUF state purely from the active model name to prevent timing lags
+        is_gguf_mode = '.gguf' in model_lower
+
+        is_z_image = 'z-image' in model_lower or 'z_image' in model_lower or 'zit' in method_lower or 'zib' in method_lower
+        is_turbo = 'turbo' in model_lower or 'zit' in method_lower
+
+        # A. Z-Image Sub-Family (Early Return)
+        if is_z_image:
+            if is_turbo:
+                if is_gguf_mode:
+                    # Turbo GGUF (e.g. z_image_turbo-Q8_0.gguf)
+                    return [f for f in base_model_list if 'turbo' in f.lower() and f.endswith('gguf') and ('z-image' in f.lower() or 'z_image' in f.lower())]
+                else:
+                    # Turbo Safetensors (e.g. z-image-turbo-fp8-e4m3fn.safetensors)
+                    return [f for f in base_model_list if 'turbo' in f.lower() and not f.endswith('gguf') and ('z-image' in f.lower() or 'z_image' in f.lower())]
+            else:
+                # Base GGUF (e.g. z_image-Q8_0.gguf, z_image-Q5_K_M.gguf)
+                return [f for f in base_model_list if 'turbo' not in f.lower() and f.endswith('gguf') and ('z-image' in f.lower() or 'z_image' in f.lower())]
+
+        # B. Flux Schnell Sub-Family (Early Return)
+        if 'schnell' in model_lower or 'schnell' in method_lower:
+            if is_gguf_mode:
+                # GGUF Schnell only
+                return [f for f in base_model_list if 'schnell' in f.lower() and f.endswith('gguf')]
+            else:
+                # FP8/Standard Schnell only (exclude GGUF)
+                return [f for f in base_model_list if 'schnell' in f.lower() and not f.endswith('gguf')]
+
+        # C. Standard Flux GGUF (excluding Schnell and Z-Image) (Early Return)
+        if is_gguf_mode:
+            return [f for f in base_model_list if f.endswith('gguf') and 'schnell' not in f.lower() and 'z-image' not in f.lower() and 'z_image' not in f.lower()]
+
+        # D. Standard Flux FP8 / Safetensors (excluding Schnell, GGUF, and Z-Image) (Early Return)
+        return [f for f in base_model_list if not f.endswith('gguf') and 'schnell' not in f.lower() and 'z-image' not in f.lower() and 'z_image' not in f.lower()]
+
     return base_model_list
 
 
@@ -1148,7 +1263,7 @@ def update_files(engine='Fooocus', task_method=None):
     global modelsinfo, model_filenames, lora_filenames, vae_filenames, wildcard_filenames
     modelsinfo.refresh_from_path()
     model_filenames = get_base_model_list(engine, task_method)
-    lora_filenames = modelsinfo.get_model_names('loras')
+    lora_filenames = get_lora_model_list(engine, task_method)
     vae_filenames = modelsinfo.get_model_names('vae')
     wildcard_filenames = US.list_files_by_patterns(path_wildcards, ['*.txt'])
     return model_filenames, lora_filenames, vae_filenames
@@ -1381,11 +1496,11 @@ def downloading_base_sd15_model():
 
 def downloading_sd3_medium_model():
     load_file_from_url(
-        url='https://huggingface.co/lone682/sd3/resolve/2d024507b65a18772e10825f4dd383cdc3800a9f/sd3_medium_incl_clips_t5xxlfp8.safetensors?download=true',
+        url='https://huggingface.co/Comfy-Org/stable-diffusion-3.5-fp8/resolve/main/sd3.5_medium_incl_clips_t5xxlfp8scaled.safetensors',
         model_dir=paths_checkpoints[0] + '\SD3x',
-        file_name='sd3_medium_incl_clips_t5xxlfp8.safetensors'
+        file_name='sd3.5_medium_incl_clips_t5xxlfp8scaled.safetensors'
     )
-    return os.path.join(paths_checkpoints[0] + '\SD3x', 'sd3_medium_incl_clips_t5xxlfp8.safetensors')
+    return os.path.join(paths_checkpoints[0] + '\SD3x', 'sd3.5_medium_incl_clips_t5xxlfp8scaled.safetensors')
 
 def downloading_sd35_large_model():
     load_file_from_url(
@@ -1430,6 +1545,9 @@ common.current_tab_name = default_selected_image_input_tab_id.split('_')[0]
 # Common FreeU defaults
 common.freeu_settings = [False] + list(default_freeu)
 common.freeu_preset_name = flags.DEFAULT_FREEU_KEY
+
+# Common support for Comfy Kolors node
+common.path_diffusers = paths_diffusers[0]
 
 # Common support for performance
 common.performance_selection = default_performance

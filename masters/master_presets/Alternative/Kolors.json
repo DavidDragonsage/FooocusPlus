@@ -1,0 +1,60 @@
+{
+    "default_engine": {
+        "backend_engine": "Kolors+",
+        "disvisible": ["backend_selection", "performance_selection", "refiner_model", "sharpness"],
+        "disinteractive": [ "base_model",
+            "enhance_checkbox",
+            "input_image_checkbox",
+            "refiner_model"],
+        "backend_params": {
+            "task_method": "kolors_text2image",
+            "llms_model": "auto"
+		}
+	},
+    "default_model": "None",
+    "default_refiner": "None",
+    "default_refiner_switch": 0.6,
+    "default_loras": [
+        [
+            true,
+            "None",
+            1.0
+        ],
+        [
+            true,
+            "None",
+            1.0
+        ],
+        [
+            true,
+            "None",
+            1.0
+        ],
+        [
+            true,
+            "None",
+            1.0
+        ],
+        [
+            true,
+            "None",
+            1.0
+        ]
+    ],
+    "default_cfg_scale": 3.5,
+    "default_sample_sharpness": 1.8,
+    "default_sampler": "euler_ancestral",
+    "default_scheduler": "sgm_uniform",
+    "default_clip_skip": 2,
+    "default_performance": "",
+    "default_styles": [
+        "Fooocus V2",
+        "Fooocus Enhance"
+    ],
+    "v2_substyle": "Unlit",
+    "default_aspect_ratio": "0*0",
+    "default_overwrite_step": 30,
+    "checkpoint_downloads": {},
+    "embeddings_downloads": {},
+    "lora_downloads": {}
+}

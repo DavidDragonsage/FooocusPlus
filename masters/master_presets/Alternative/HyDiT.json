@@ -1,8 +1,8 @@
 {
     "default_engine": {
 	"backend_engine": "HyDiT+",
-	"disvisible": ["backend_selection", "performance_selection", "refiner_model"],
-	"disinteractive": ["input_image_checkbox", "enhance_checkbox", "base_model", "loras", "scheduler_name"],
+	"disvisible": ["backend_selection", "performance_selection", "refiner_model", "sharpness"],
+	"disinteractive": ["base_model", "enhance_checkbox", "input_image_checkbox", "refiner_model", "scheduler_name"],
 	"backend_params": {
 		"task_method": "hydit_base"
 		}
@@ -41,13 +41,15 @@
     "default_sample_sharpness": 2,
     "default_sampler": "euler",
     "default_scheduler": "sgm_uniform",
-    "default_performance": "Speed",
+    "default_clip_skip": 1,
+    "default_performance": "",
     "default_styles": [
         "Fooocus V2",
         "Fooocus Enhance"
     ],
     "v2_substyle": "Default",
     "default_aspect_ratio": "0*0",
+    "default_overwrite_step": 30,
     "checkpoint_downloads": {
         "Alternative/hunyuan_dit_1.2.safetensors": "https://huggingface.co/comfyanonymous/hunyuan_dit_comfyui/resolve/main/hunyuan_dit_1.2.safetensors"
     },

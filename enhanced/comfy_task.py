@@ -1,9 +1,9 @@
-import os
-import zipfile
-import shutil
+from pathlib import Path
+
 import common
 import ldm_patched
 import modules.config as config
+
 from enhanced.backend import ComfyTaskParams
 from enhanced.translator import interpret_warn
 from modules.model_loader import load_file_from_url
@@ -38,15 +38,13 @@ def is_lowlevel_device():
 def is_highlevel_device():
     return ldm_patched.modules.model_management.get_vram()>VRAM16G
 
-default_base_SD15_name = 'SD1.5\\realisticVisionV60B1_v51VAE.safetensors'
-default_base_SD3m_name_list = ['SD3x\sd3_medium_incl_clips.safetensors', 'SD3x\sd3_medium_incl_clips_t5xxlfp8.safetensors', 'SD3x\sd3_medium_incl_clips_t5xxlfp16.safetensors']
-default_base_SD3x_name_list = ['SD3x\stableDiffusion35_large.safetensors', 'SD3x\sd3_medium_incl_clips_t5xxlfp8.safetensors', 'SD3x\sd3_medium_incl_clips_t5xxlfp16.safetensors']
+default_base_SD15_name = 'SD1.5/realisticVisionV60B1_v51VAE.safetensors'
+default_base_SD3m_name_list = ['SD3x/sd3.5_medium_incl_clips_t5xxlfp8scaled.safetensors']
+default_base_SD3x_name_list = ['SD3x/sd3.5_medium_incl_clips_t5xxlfp8scaled.safetensors']
 
-default_base_Flux_name_list = ['flux1-schnell-bnb-nf4.safetensors', 'flux1-dev-bnb-nf4.safetensors', 'flux-hyp8-Q5_K_M.gguf']
+default_base_Flux_name_list = ['FluxDev/flux1-dev-Q5_K_S.gguf']
 flux_model_urls = {
-    "flux1-schnell-bnb-nf4.safetensors": "https://huggingface.co/silveroxides/flux1-nf4-weights/resolve/main/flux1-schnell-bnb-nf4.safetensors?download=true",
-    "flux1-dev-bnb-nf4-v2.safetensors": "https://huggingface.co/lllyasviel/flux1-dev-bnb-nf4/resolve/main/flux1-dev-bnb-nf4-v2.safetensors?download=true",
-    "Flux\\hyperfluxDiversity_q5KS.gguf": "https://civitai.com/api/download/models/1147912?type=Model&format=GGUF&size=pruned&fp=fp8"
+    "FluxDev/flux1-dev-Q5_K_S.gguf": "https://huggingface.co/lllyasviel/FLUX.1-dev-gguf/resolve/main/flux1-dev-Q5_K_S.gguf?download=true"
     }
 
 quick_prompts = [
@@ -89,11 +87,16 @@ class ComfyTask:
 def get_comfy_task(task_name, task_method, default_params, input_images, options={}):
     global default_method_names, default_method_list
 
+    comfy_params = ComfyTaskParams(default_params)
+    base_model = default_params.get('base_model', '')
+
     if task_name == 'default':
-        comfy_params = ComfyTaskParams(default_params)
         if input_images is None:
             raise ValueError("input_images cannot be None for this method")
         images = {"input_image": input_images[0]}
+
+        # IC-Light is the only active feature
+        # handled by the 'default' task name
         if 'iclight_enable' in options and options["iclight_enable"]:
             if common.MODELS_INFO.exists_model(catalog="checkpoints", model_path=default_base_SD15_name):
                 config.downloading_base_sd15_model()
@@ -104,107 +107,138 @@ def get_comfy_task(task_name, task_method, default_params, input_images, options
                 comfy_params.update_params({
                     "light_source_text_switch": True,
                     "light_source_text": iclight_source_text[options["iclight_source_radio"]]
-                    })
+                })
             return ComfyTask(default_method_list[task_method], comfy_params, images)
         else:
-            width, height = fixed_width_height(default_params["width"], default_params["height"], 64)
-            comfy_params.update_params({
-                "layer_diffuse_cond": "SDXL, Foreground",
-                "width": width,
-                "height": height,
-                })
-            comfy_params.delete_params(['denoise'])
-            return ComfyTask('layerdiffuse_cond', comfy_params, images)
+            raise ValueError("IC-Light must be enabled to run the 'default' Comfy task engine.")
 
     elif task_name == 'SD3x':
-        if not common.MODELS_INFO.exists_model(catalog="checkpoints", model_path=default_params["base_model"]):
-            config.downloading_sd35_large_model()
-        if 'base_model_dtype' in default_params:
+        if '.gguf' in base_model.lower():
+            # route GGUF models to the GGUF workflow
+            task_method = 'sd3x_base_gguf'
             comfy_params.delete_params(['base_model_dtype'])
+        else:
+            if not common.MODELS_INFO.exists_model(catalog="checkpoints", model_path=default_params["base_model"]):
+                config.downloading_sd3_medium_model()
+            if 'base_model_dtype' in default_params:
+                comfy_params.delete_params(['base_model_dtype'])
         return ComfyTask(task_method, comfy_params)
 
-    elif task_name in ['Kolors+', 'Kolors']:
-        comfy_params = ComfyTaskParams(default_params)
+    elif task_name == 'Kolors+':
         total_vram = ldm_patched.modules.model_management.get_vram()
         if 'llms_model' not in default_params or default_params['llms_model'] == 'auto':
             comfy_params.update_params({
-                "llms_model": 'quant4' if total_vram<VRAM8G else 'quant8' if total_vram<VRAM16G else 'fp16'
-                })
-        check_download_kolors_model(config.path_models_root)
-        if task_name == 'Kolors':
-            comfy_params.delete_params(['sampler'])
+                "llms_model": 'quant4' if total_vram < VRAM8G else 'quant8' if total_vram < VRAM16G else 'fp16'
+            })
+        check_download_kolors_model()
         return ComfyTask(task_method, comfy_params)
 
-    elif task_name in ['HyDiT+', 'HyDiT']:
-        comfy_params = ComfyTaskParams(default_params)
+    elif task_name in ['HyDiT+']:
         if not common.MODELS_INFO.exists_model(catalog="checkpoints", model_path=default_params["base_model"]):
             config.downloading_hydit_model()
         return ComfyTask(task_method, comfy_params)
 
     elif task_name == 'Flux':
-        comfy_params = ComfyTaskParams(default_params)
-        base_model = default_params['base_model']
-        try:
-            clip_model = default_params['clip_model']
-        except:
-            clip_model = 'auto'
+        base_model = default_params.get('base_model', '')
+        is_z_model = 'z-image' in base_model.lower() or 'z_image' in base_model.lower()
+
+        # 1. Handle Z-IMAGE Models (Exclusive Logic)
+        if is_z_model:
+            # If the preset provides a specific
+            # Z-workflow (like shift6), keep it.
+            # Otherwise, auto-assign the
+            # correct Z-workflow.
+            if not (isinstance(task_method, str) and ('ZIB' in task_method or 'ZIT' in task_method)):
+                if '.gguf' in base_model.lower():
+                    task_method = 'ZIT_gguf' if 'turbo' in base_model.lower() else 'ZIB_gguf'
+                else:
+                    task_method = 'ZIT' if 'turbo' in base_model.lower() else 'ZIB'
+
+            # Resolve 'clip_model' if set to 'auto'
+            if comfy_params.params.get('clip_model') == 'auto':
+                comfy_params.update_params({'clip_model': 'Qwen_3_4b-Q6_K.gguf'})
+
+            if '.gguf' in base_model.lower():
+                comfy_params.delete_params(['base_model_dtype'])
+            elif comfy_params.params.get('base_model_dtype') == 'auto':
+                comfy_params.update_params({'base_model_dtype': 'fp8_e4m3fn'})
+
+            return ComfyTask(task_method, comfy_params)
+
+        # -------------------------------------------
+        # FLUX DEV/SCHENLL/KREA/ALL-IN-ONE FP8
+        # -------------------------------------------
         total_ram = ldm_patched.modules.model_management.get_sysram()
         total_vram = ldm_patched.modules.model_management.get_vram()
+
+        # SAFETY CHECK: If a Z-Image workflow is
+        # lingering but the model is standard,
+        # we MUST reset to a standard Flux workflow
+        # or it will crash (Shape Mismatch).
+        if isinstance(task_method, str) and ('ZIB' in task_method or 'ZIT' in task_method):
+            task_method = 'flux_base_gguf' if '.gguf' in base_model.lower() else 'flux_base'
+
+        # Handle 'auto' model selection
         if base_model == 'auto':
-            model_dev = 'FluxDev\\flux1-dev-bnb-nf4-v2.safetensors'
-            model_nf4 = 'FluxDev\\flux1-dev-bnb-nf4-v2.safetensors'
+            model_dev = 'FluxDev\\FluxDev/flux1-dev-Q5_K_S.gguf'
             model_hyp8 = 'FluxDev\\hyperfluxDiversity_q5KS.gguf'
-            base_model = model_nf4 if total_vram<=VRAM8G1 else model_dev
-            if not common.MODELS_INFO.exists_model(catalog="checkpoints", model_path=base_model) and common.MODELS_INFO.exists_model(catalog="checkpoints", model_path=model_hyp8):
+            if not common.MODELS_INFO.exists_model(catalog='checkpoints', model_path=base_model) and common.MODELS_INFO.exists_model(catalog='checkpoints', model_path=model_hyp8):
                 base_model = model_hyp8
                 default_params['steps'] = 12
             default_params['base_model'] = base_model
-        base_model_key = f'checkpoints/{base_model}'
-        if 'nf4' in base_model.lower() and 'bnb' in base_model.lower():
-            if total_vram<VRAM8G:
-                task_method = 'flux_base_nf4_2'
-            else:
-                task_method = 'flux_base_nf4'
-            comfy_params.delete_params(['clip_model', 'base_model_dtype', 'lora_1', 'lora_1_strength'])
-        elif 'fp8' in base_model.lower() and common.MODELS_INFO.exists_model_key(base_model_key)  and common.MODELS_INFO.get_model_key_info(base_model_key)["size"]/(1024*1024*1024)>15:
-            task_method = 'flux_base_fp8'
-            if 'lora_1' in default_params:
-                task_method = 'flux_base2_fp8'
-            comfy_params.delete_params(['clip_model', 'base_model_dtype'])
-        else:
-            if 'clip_model' not in default_params or default_params['clip_model'] == 'auto':
-                clip_model = 't5xxl_fp16.safetensors' if total_vram>VRAM8G1 and total_ram>RAM32G1 else 't5xxl_fp8_e4m3fn.safetensors'
-                if not common.MODELS_INFO.exists_model("clip", clip_model):
-                    if clip_model == 't5xxl_fp16.safetensors' and common.MODELS_INFO.exists_model("clip", 't5xxl_fp8_e4m3fn.safetensors'):
-                        clip_model = 't5xxl_fp8_e4m3fn.safetensors'
-                comfy_params.update_params({"clip_model": clip_model})
-            if 'base_model_dtype' not in default_params or default_params['base_model_dtype'] == 'auto':
-                comfy_params.update_params({
-                    "base_model_dtype": 'fp8_e4m3fn' if total_vram<VRAM16G or total_ram<=RAM32G1 or 'fp8' in base_model.lower() or 'lora_1' in default_params else 'default' #'fp16'
-                })
-            else:
-                base_model_dtype = default_params['base_model_dtype']
-                if base_model_dtype == 'fp16':
-                    base_model_dtype = 'default'
-                elif base_model_dtype != 'default':
-                    base_model_dtype = 'fp8_e4m3fn'
 
-                if base_model_dtype == 'default' and 'lora_1' in default_params:
-                    base_model_dtype = 'fp8_e4m3fn'
-                comfy_params.update_params({"base_model_dtype": base_model_dtype})
-            if 'lora_1' in default_params and '.gguf' not in base_model:
-                task_method = 'flux_base2'
-            if '.gguf' in base_model:
-                task_method = 'flux_base_gguf'
-                if 'lora_1' in default_params:
-                    task_method = 'flux_base2_gguf'
-                comfy_params.delete_params(['base_model_dtype'])
-        check_download_flux_model(default_params["base_model"], default_params.get("clip_model", None))
-        return ComfyTask(task_method, comfy_params)
-    else:  # SeamlessTiled
-        comfy_params = ComfyTaskParams(default_params)
-        #check_download_base_model(default_params["base_model"])
-        return ComfyTask(task_method, comfy_params)
+        base_model_key = f'checkpoints/{base_model}'
+
+        if 'fp8' in base_model.lower() and common.MODELS_INFO.exists_model_key(base_model_key) and common.MODELS_INFO.get_model_key_info(base_model_key)['size']/(1024*1024*1024) > 15:
+            if task_method == 'flux_base':
+                task_method = 'flux_base_fp8'
+            comfy_params.delete_params(['clip_model', 'base_model_dtype'])
+            return ComfyTask(task_method, comfy_params)
+
+        # -------------------------------------------
+        # 4. FLUX SPLIT MODEL ARCHITECTURES
+        # (UNet + CLIP + VAE)
+        # -------------------------------------------
+        # Determine clip_model based on safe, conservative VRAM threshold (VRAM16G)
+        if 'clip_model' not in default_params or default_params['clip_model'] == 'auto':
+            clip_model = 't5xxl_fp16.safetensors' if total_vram > VRAM16G and total_ram > RAM32G1 else 't5xxl_fp8_e4m3fn.safetensors'
+
+            # Check for file existence, falling back to FP8 if FP16 is missing
+            if not common.MODELS_INFO.exists_model('clip', clip_model):
+                if clip_model == 't5xxl_fp16.safetensors' and common.MODELS_INFO.exists_model('clip', 't5xxl_fp8_e4m3fn.safetensors'):
+                    clip_model = 't5xxl_fp8_e4m3fn.safetensors'
+            comfy_params.update_params({'clip_model': clip_model})
+
+        # Force FP8 model-weights on GPUs with less than 16GB VRAM
+        if 'base_model_dtype' not in default_params or default_params['base_model_dtype'] == 'auto':
+            comfy_params.update_params({
+                'base_model_dtype': 'fp8_e4m3fn' if total_vram < VRAM16G or total_ram <= RAM32G1 or 'fp8' in base_model.lower() or 'lora_1' in default_params else 'default'
+            })
+        else:
+            base_model_dtype = default_params['base_model_dtype']
+            if base_model_dtype == 'fp16':
+                base_model_dtype = 'default'
+            elif base_model_dtype != 'default':
+                base_model_dtype = 'fp8_e4m3fn'
+
+            if base_model_dtype == 'default' and 'lora_1' in default_params:
+                base_model_dtype = 'fp8_e4m3fn'
+            comfy_params.update_params({'base_model_dtype': base_model_dtype})
+
+        # Delete base_model_dtype only for GGUF formats
+        if '.gguf' in base_model.lower():
+            comfy_params.delete_params(['base_model_dtype'])
+
+        # Assign task method based on standard Flux model format (standard vs GGUF)
+        if '.gguf' in base_model:
+            task_method = 'flux_base_gguf'
+        else:
+            task_method = 'flux_base'
+
+    # This is the fallback for SD1 (SD1.5)
+    # and all other custom presets
+    return ComfyTask(task_method, comfy_params)
+
 
 def fixed_width_height(width, height, factor):
     fixed_width = int(((height // factor + 1) * factor * width)/height)
@@ -227,69 +261,83 @@ def check_task_model():
     #check_model_files_from_download_of_preset_file
     pass
 
-def check_download_kolors_model(path_root):
+
+def check_download_kolors_model() -> None:
+    """
+    Checks for the existence of the Kolors diffuser models in the active
+    user-configured models directory. Downloads and extracts them if missing.
+    """
+    import shutil
+    import zipfile
+    from tqdm import tqdm
+
+    # 1. Standardized paths using relative keys
     check_model_file = [
-            "diffusers/Kolors/text_encoder/pytorch_model-00007-of-00007.bin",
-            "diffusers/Kolors/unet/diffusion_pytorch_model.fp16.safetensors",
-            "diffusers/Kolors/vae/diffusion_pytorch_model.fp16.safetensors",
-            ]
-    path_temp = os.path.join(path_root, 'temp')
-    if not os.path.exists(path_temp):
-        os.makedirs(path_temp)
+        'diffusers/Kolors/text_encoder/pytorch_model-00007-of-00007.bin',
+        'diffusers/Kolors/unet/diffusion_pytorch_model.fp16.safetensors',
+        'diffusers/Kolors/vae/diffusion_pytorch_model.fp16.safetensors',
+    ]
+
+    # 2. Derive the correct user-configured models directory from paths_diffusers[0]
+    # config.paths_diffusers[0] points to '.../models/diffusers'
+    diffusers_path = Path(common.path_diffusers)
+    path_root = diffusers_path.parent  # Resolves to the parent '.../models' root directory
+
+    path_temp = path_root / 'temp'
+    if not path_temp.exists():
+        path_temp.mkdir(parents=True, exist_ok=True)
+
+    # 3. Check for existence in the registered search paths
     if not common.MODELS_INFO.exists_model_key(check_model_file[0]):
+        downfile = path_temp / 'KwaiKolors.zip'
         load_file_from_url(
             url='https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/KwaiKolors.zip',
-            model_dir=path_temp,
+            model_dir=str(path_temp),
             file_name='KwaiKolors.zip'
         )
-        downfile = os.path.join(path_temp, 'KwaiKolors.zip')
+
         with zipfile.ZipFile(downfile, 'r') as zipf:
+            file_list = zipf.infolist()
             print(f'[ComfyTask] Extracting: {downfile} to {path_root}')
-            zipf.extractall(path_root)
-        if os.path.exists(downfile): os.remove(downfile)
-        if os.path.exists(path_temp) and os.path.isdir(path_temp):
+
+            # Extract each file sequentially
+            # to drive the console progress bar
+            for member in tqdm(file_list, desc='Extracting Kolors Shards', unit='file'):
+                zipf.extract(member, path_root)
+
+        if downfile.exists():
+            downfile.unlink()
+        if path_temp.exists() and path_temp.is_dir():
             shutil.rmtree(path_temp)
 
+    # 4. Copy unet and vae using pathlib
     if not common.MODELS_INFO.exists_model_key(check_model_file[1]):
-        path_dst = os.path.join(config.paths_diffusers[0], 'Kolors/unet/diffusion_pytorch_model.fp16.safetensors')
-        path_org = os.path.join(config.path_unet, 'kolors_unet_fp16.safetensors')
+        path_dst = diffusers_path / 'Kolors/unet/diffusion_pytorch_model.fp16.safetensors'
+        path_org = Path(config.path_unet) / 'kolors_unet_fp16.safetensors'
+
+        # Ensure destination subfolders exist
+        path_dst.parent.mkdir(parents=True, exist_ok=True)
+
         print(f'[ComfyTask] Model file copy: {path_org} to {path_dst}')
         shutil.copy(path_org, path_dst)
 
     if not common.MODELS_INFO.exists_model_key(check_model_file[2]):
-        path_dst = os.path.join(config.paths_diffusers[0], 'Kolors/vae/diffusion_pytorch_model.fp16.safetensors')
-        path_org = os.path.join(config.path_vae, 'sdxl_fp16.vae.safetensors')
+        path_dst = diffusers_path / 'Kolors/vae/diffusion_pytorch_model.fp16.safetensors'
+        path_org = Path(config.path_vae) / 'sdxl_fp16.vae.safetensors'
+
+        # Ensure destination subfolders exist
+        path_dst.parent.mkdir(parents=True, exist_ok=True)
+
         print(f'[ComfyTask] Model file copy: {path_org} to {path_dst}')
         shutil.copy(path_org, path_dst)
 
     common.MODELS_INFO.refresh_from_path()
     return
 
-def check_download_base_model(base_model):
-    if not common.MODELS_INFO.exists_model(catalog="checkpoints", model_path=base_model):
-        load_file_from_url(
-            url='https://huggingface.co/silveroxides/flux1-nf4-weights/resolve/main/{base_model}',
-            model_dir=config.paths_checkpoints[0],
-            file_name=base_model
-        )
-    return
 
 def check_download_flux_model(base_model, clip_model=None):
     if not common.MODELS_INFO.exists_model(catalog="checkpoints", model_path=base_model):
-        if 'nf4' in base_model:
-            if 'schnell' in base_model:
-                load_file_from_url(
-                    url=f'https://huggingface.co/silveroxides/flux1-nf4-weights/resolve/main/{base_model}',
-                    model_dir=config.paths_checkpoints[0],
-                    file_name=base_model
-                )
-            else:
-                load_file_from_url(
-                    url=f'https://huggingface.co/lllyasviel/flux1-dev-bnb-nf4/resolve/main/{base_model}',
-                    model_dir=config.paths_checkpoints[0],
-                    file_name=base_model
-                )
-        elif 'fp8' in base_model:
+        if 'fp8' in base_model:
             if 'schnell' in base_model:
                 load_file_from_url(
                     url=f'https://huggingface.co/Comfy-Org/flux1-schnell/resolve/main/{base_model}',

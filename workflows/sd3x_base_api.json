@@ -1,41 +1,78 @@
 {
   "3": {
     "inputs": {
-      "seed": 297491696968509,
-      "steps": 28,
+      "seed": 102371946114,
+      "steps": 30,
       "cfg": 4.5,
       "sampler_name": "dpmpp_2m",
       "scheduler": "sgm_uniform",
-      "denoise": 1,
+      "denoise": 1.0,
       "model": [
-        "55",
+        "106",
         0
       ],
       "positive": [
-        "16",
+        "6",
         0
       ],
       "negative": [
-        "56",
+        "7",
         0
       ],
       "latent_image": [
-        "53",
+        "5",
         0
       ]
     },
     "class_type": "KSampler",
     "_meta": {
-      "title": "main_sampler"
+      "title": "KSampler"
     }
   },
   "4": {
     "inputs": {
-      "ckpt_name": "juggernautXL_juggXIByRundiffusion.safetensors"
+      "ckpt_name": "SD3x/sd3.5_medium_incl_clips_t5xxlfp8scaled.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {
-      "title": "base_model"
+      "title": "Load Checkpoint"
+    }
+  },
+  "5": {
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  },
+  "6": {
+    "inputs": {
+      "text": "A beautiful scenic landscape, cinematic photography, high detail",
+      "clip": [
+        "106",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive)"
+    }
+  },
+  "7": {
+    "inputs": {
+      "text": "low quality, blurry, distorted",
+      "clip": [
+        "106",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Negative)"
     }
   },
   "8": {
@@ -45,8 +82,8 @@
         0
       ],
       "vae": [
-        "61",
-        0
+        "4",
+        2
       ]
     },
     "class_type": "VAEDecode",
@@ -54,44 +91,7 @@
       "title": "VAE Decode"
     }
   },
-  "16": {
-    "inputs": {
-      "text": "a bottle with a pink and red galaxy inside it on top of a wooden table on a table in the middle of a modern kitchen",
-      "clip": [
-        "60",
-        0
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "prompt"
-    }
-  },
-  "40": {
-    "inputs": {
-      "text": "",
-      "clip": [
-        "60",
-        0
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "negative_prompt"
-    }
-  },
-  "53": {
-    "inputs": {
-      "width": 1024,
-      "height": 1024,
-      "batch_size": 1
-    },
-    "class_type": "EmptySD3LatentImage",
-    "_meta": {
-      "title": "aspect_ratios_size"
-    }
-  },
-  "54": {
+"9": {
     "inputs": {
       "images": [
         "8",
@@ -100,96 +100,83 @@
     },
     "class_type": "SaveImageWebsocket",
     "_meta": {
-      "title": "SaveImageWebsocket"
+      "title": "result_image"
     }
   },
-  "55": {
+  "90": {
     "inputs": {
-      "shift": 3,
-      "model": [
-        "4",
-        0
-      ]
+      "model": ["4", 0],
+      "clip": ["4", 1]
     },
-    "class_type": "ModelSamplingSD3",
+    "class_type": "ModelPristineReset",
     "_meta": {
-      "title": "ModelSamplingSD3"
+      "title": "Weight Wash"
     }
   },
-  "56": {
+  "101": {
     "inputs": {
-      "conditioning_1": [
-        "58",
-        0
-      ],
-      "conditioning_2": [
-        "59",
-        0
-      ]
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [ "90", 0 ],
+      "clip": [ "90", 1 ]
     },
-    "class_type": "ConditioningCombine",
-    "_meta": {
-      "title": "Conditioning (Combine)"
-    }
+    "class_type": "LoraLoader",
+    "_meta": { "title": "lora_1" }
   },
-  "57": {
+  "102": {
     "inputs": {
-      "conditioning": [
-        "40",
-        0
-      ]
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [ "101", 0 ],
+      "clip": [ "101", 1 ]
     },
-    "class_type": "ConditioningZeroOut",
-    "_meta": {
-      "title": "ConditioningZeroOut"
-    }
+    "class_type": "LoraLoader",
+    "_meta": { "title": "lora_2" }
   },
-  "58": {
+  "103": {
     "inputs": {
-      "start": 0.1,
-      "end": 1,
-      "conditioning": [
-        "57",
-        0
-      ]
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [ "102", 0 ],
+      "clip": [ "102", 1 ]
     },
-    "class_type": "ConditioningSetTimestepRange",
-    "_meta": {
-      "title": "ConditioningSetTimestepRange"
-    }
+    "class_type": "LoraLoader",
+    "_meta": { "title": "lora_3" }
   },
-  "59": {
+  "104": {
     "inputs": {
-      "start": 0,
-      "end": 0.1,
-      "conditioning": [
-        "40",
-        0
-      ]
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [ "103", 0 ],
+      "clip": [ "103", 1 ]
     },
-    "class_type": "ConditioningSetTimestepRange",
-    "_meta": {
-      "title": "ConditioningSetTimestepRange"
-    }
+    "class_type": "LoraLoader",
+    "_meta": { "title": "lora_4" }
   },
-  "60": {
+  "105": {
     "inputs": {
-      "clip_name1": "t5xxl_fp8_e4m3fn.safetensors",
-      "clip_name2": "clip_l.safetensors",
-      "type": "sd3"
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [ "104", 0 ],
+      "clip": [ "104", 1 ]
     },
-    "class_type": "DualCLIPLoader",
-    "_meta": {
-      "title": "clip_model"
-    }
+    "class_type": "LoraLoader",
+    "_meta": { "title": "lora_5" }
   },
-  "61": {
+  "106": {
     "inputs": {
-      "vae_name": "sd3x_fp16.vae.safetensors"
+      "lora_name": "None",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [ "105", 0 ],
+      "clip": [ "105", 1 ]
     },
-    "class_type": "VAELoader",
-    "_meta": {
-      "title": "Load VAE"
-    }
+    "class_type": "LoraLoader",
+    "_meta": { "title": "lora_6" }
   }
 }

@@ -393,7 +393,9 @@ def check_performance_handler():
     torch_base_path = get_torch_base_path()
 
     # Pre-translate modular UI labels silently to minimize console noise
-    header_check = interpret('NVIDIA Performance Check', silent=True)
+    header_check = interpret('Video Performance Check', silent=True)
+    gpu_label = interpret('AI Processor:', silent=True)
+    gpu_val = model_management.get_GPU_name()
     status_label = interpret('Status:', silent=True)
     details_label = interpret('Details:', silent=True)
 
@@ -412,14 +414,15 @@ def check_performance_handler():
 
                 msg = (
                     f"### **{header_check}**\n\n"
+                    f"**{gpu_label}** {gpu_val}\n\n"
                     f"**{status_label}** {status_val}\n\n"
                     f"**{details_label}** {message}\n\n"
                     f"{already_upgraded}\n\n"
                 )
                 return (
                     gr.update(visible=True),                             # perf_modal_box
-                    gr.update(value=msg),                                 # perf_modal_header_msg
-                    gr.update(value=stats_msg, visible=bool(stats_msg)),  # perf_modal_metrics_msg (at bottom)
+                    gr.update(value=msg),                                # perf_modal_header_msg
+                    gr.update(value=stats_msg, visible=bool(stats_msg)), # perf_modal_metrics_msg (at bottom)
                     gr.update(visible=True),                             # perf_ok_btn (Show bottom OK)
                     gr.update(visible=False),                            # perf_upgrade_btn
                     gr.update(visible=False)                             # perf_cancel_btn
@@ -427,12 +430,13 @@ def check_performance_handler():
             else:
                 # Scenario A2: Blackwell running old version (Prompt Upgrade)
                 status_val = interpret('Running in Compatibility Mode using CUDA 12.8', silent=True)
-                gpu_support = interpret('Your Blackwell GPU supports full native CUDA 13.0 with Blackwell FP4 performance.', silent=True)
+                gpu_support = interpret('Your Blackwell GPU supports full native CUDA 13.0 with Blackwell FP4 performance. With the current configuration, Flux generation speed will be about 11% slower than it needs to be.', silent=True)
                 ask_upgrade = interpret('Do you want to enable the high-performance environment upgrade?', silent=True)
                 restart_warn = interpret('This will automatically download then reconfigure PyTorch and its dependencies on your next restart.', silent=True)
 
                 msg = (
                     f"### **{header_check}**\n\n"
+                    f"**{gpu_label}** {gpu_val}\n\n"
                     f"**{status_label}** {status_val}\n\n"
                     f"**{details_label}** {message}\n\n"
                     f"{gpu_support}\n\n"
@@ -442,8 +446,8 @@ def check_performance_handler():
                 )
                 return (
                     gr.update(visible=True),                             # perf_modal_box
-                    gr.update(value=msg),                                 # perf_modal_header_msg
-                    gr.update(value=stats_msg, visible=bool(stats_msg)),  # perf_modal_metrics_msg (below buttons)
+                    gr.update(value=msg),                                # perf_modal_header_msg
+                    gr.update(value=stats_msg, visible=bool(stats_msg)), # perf_modal_metrics_msg (below buttons)
                     gr.update(visible=False),                            # perf_ok_btn (Hide bottom OK)
                     gr.update(visible=True),                             # perf_upgrade_btn (Show action)
                     gr.update(visible=True)                              # perf_cancel_btn (Show cancel)
@@ -456,6 +460,7 @@ def check_performance_handler():
 
             msg = (
                 f"### **{header_check}**\n\n"
+                f"**{gpu_label}** {gpu_val}\n\n"
                 f"**{status_label}** {status_val}\n\n"
                 f"**{details_label}** {message}\n\n"
                 f"{driver_old}\n\n"
@@ -463,8 +468,8 @@ def check_performance_handler():
             )
             return (
                 gr.update(visible=True),                             # perf_modal_box
-                gr.update(value=msg),                                 # perf_modal_header_msg
-                gr.update(value=stats_msg, visible=bool(stats_msg)),  # perf_modal_metrics_msg
+                gr.update(value=msg),                                # perf_modal_header_msg
+                gr.update(value=stats_msg, visible=bool(stats_msg)), # perf_modal_metrics_msg
                 gr.update(visible=True),                             # perf_ok_btn (Show bottom OK)
                 gr.update(visible=False),                            # perf_upgrade_btn
                 gr.update(visible=False)                             # perf_cancel_btn
@@ -484,6 +489,7 @@ def check_performance_handler():
 
                 msg = (
                     f"### **{header_check}**\n\n"
+                    f"**{gpu_label}** {gpu_val}\n\n"
                     f"**{status_label}** {status_val}\n\n"
                     f"**{details_label}** {message}\n\n"
                     f"{experimental_warn}\n\n"
@@ -493,8 +499,8 @@ def check_performance_handler():
                 )
                 return (
                     gr.update(visible=True),                             # perf_modal_box
-                    gr.update(value=msg),                                 # perf_modal_header_msg
-                    gr.update(value=stats_msg, visible=bool(stats_msg)),  # perf_modal_metrics_msg (below buttons)
+                    gr.update(value=msg),                                # perf_modal_header_msg
+                    gr.update(value=stats_msg, visible=bool(stats_msg)), # perf_modal_metrics_msg (below buttons)
                     gr.update(visible=False),                            # perf_ok_btn (Hide bottom OK)
                     gr.update(visible=True),                             # perf_upgrade_btn (Show action)
                     gr.update(visible=True)                              # perf_cancel_btn (Show cancel)
@@ -507,14 +513,15 @@ def check_performance_handler():
 
                 msg = (
                     f"### **{header_check}**\n\n"
+                    f"**{gpu_label}** {gpu_val}\n\n"
                     f"**{status_label}** {status_val}\n\n"
                     f"**{details_label}** {message}\n\n"
                     f"{already_optimal}\n\n"
                 )
                 return (
                     gr.update(visible=True),                             # perf_modal_box
-                    gr.update(value=msg),                                 # perf_modal_header_msg
-                    gr.update(value=stats_msg, visible=bool(stats_msg)),  # perf_modal_metrics_msg
+                    gr.update(value=msg),                                # perf_modal_header_msg
+                    gr.update(value=stats_msg, visible=bool(stats_msg)), # perf_modal_metrics_msg
                     gr.update(visible=True),                             # perf_ok_btn (Show bottom OK)
                     gr.update(visible=False),                            # perf_upgrade_btn
                     gr.update(visible=False)                             # perf_cancel_btn
@@ -527,6 +534,7 @@ def check_performance_handler():
 
             msg = (
                 f"### **{header_check}**\n\n"
+                f"**{gpu_label}** {gpu_val}\n\n"
                 f"**{status_label}** {status_val}\n\n"
                 f"**{details_label}** {message}\n\n"
                 f"{driver_old}\n\n"
@@ -534,8 +542,8 @@ def check_performance_handler():
             )
             return (
                 gr.update(visible=True),                             # perf_modal_box
-                gr.update(value=msg),                                 # perf_modal_header_msg
-                gr.update(value=stats_msg, visible=bool(stats_msg)),  # perf_modal_metrics_msg
+                gr.update(value=msg),                                # perf_modal_header_msg
+                gr.update(value=stats_msg, visible=bool(stats_msg)), # perf_modal_metrics_msg
                 gr.update(visible=True),                             # perf_ok_btn (Show bottom OK)
                 gr.update(visible=False),                            # perf_upgrade_btn
                 gr.update(visible=False)                             # perf_cancel_btn

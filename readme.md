@@ -12,7 +12,8 @@ FooocusPlus is a community-developed AI image generation application that makes 
 - Enhance existing images using AI – banish Photoshop editing with advanced image modification tools, or even use an existing picture as inspiration for a new creation!
 - Bring the power of community home – use LoRA models from websites like Civitai to add new concepts to your images
 - Full control at your fingertips – simple one-click access to advanced generation options, letting you use custom settings like a pro without ever leaving our friendly user interface
-- Multilingual – full support for English, French, and Simplified Chinese out of the box
+- Simple image adjustments and background transparency functions using the built-in Image Editor
+- Multilingual – full support for English, French, Portuguese and Spanish out of the box, partial support for Simplified Chinese and limited support for over 40 other languages
 - Private – runs on your computer and does not send information about your identity or AI art generation to third parties without your consent
 
 ## Supported Models
@@ -23,14 +24,14 @@ FooocusPlus gives you access to a diversity of AI image generation base models, 
 - Pony Diffusion XL
 - Flux from Black Forest Labs
 - Hunyuan-DiT
-- Kwai Kolors (temporarily disabled)
+- Kwai Kolors
 - Playground 2.5
 - Segmind-Vega
 - Stable Diffusion 1.5 (SD1.5)
-- Stable Diffusion 3.5 (temporarily disabled)
-- Z-Image Turbo DIT
+- Stable Diffusion 3.5 Large & Medium
+- Z-Image Base & Turbo
 
-If you’re new to AI art, don’t worry! Our built-in presets will give you one-click access to all of those exciting AI image generation models without any prior knowledge required. Favorite presets are located in a bar at the top of the FooocusPlus main canvas, and the whole preset collection is available from two dropdown menus located under the Settings tab. You'll be able to choose your own favorite model in no time.
+If you’re new to AI art, don’t worry! Our built-in presets will give you one-click access to all of those exciting AI image generation models without any prior knowledge required. Favorite presets are located in a bar at the top of the FooocusPlus main canvas, and the whole preset collection is available from two dropdown menus located under the Settings tab. You'll be able to choose your own favorite model in no time. Favorites can be added or removed using the Favorite Preset Control accordion located right below the Extras tab.
 
 ## System Requirements
 
@@ -46,7 +47,9 @@ For those systems that are capable of generating FooocusPlus images with only 4G
 
 FooocusPlus supports NVIDIA graphics cards on Windows and Linux, macOS on Silicon, and many AMD graphics cards on Linux. We also support using AMD graphics cards on Windows at a reduced speed, and provide limited support for macOS on Intel.
 
-Torchruntime is integrated into FooocusPlus. Please check their [compatibility tables](https://github.com/easydiffusion/torchruntime/blob/main/README.md#compatibility-table) for more details on hardware and software support.
+Torchruntime is integrated into FooocusPlus. Please check their [compatibility tables](https://github.com/easydiffusion/torchruntime/blob/main/README.md#compatibility-table) for more details on hardware and software support. But unlike Torchruntime, FooocusPlus does support NVIDIA Blackwell 50xx graphics cards in full native mode.
+
+The Comfy generative system is integrated into FooocusPlus to provide support for non-SDXL models. Comfy no longer supports legacy video cards that require PyTorch 2.4 or earlier software. Rather than completely disabling Comfy for older graphics cards we have left it up to the user if they wish to try using Comfy mode.
 
 ## Installing FooocusPlus
 
@@ -97,7 +100,7 @@ This software was made possible by integrating open-source technologies from pro
 - torchruntime by cmdr2 and the easydiffusion team
 - OneButtonPrompt by AIrjen, via SimpleSDXL2 and RuinedFooocus
 - Superprompter by sammcj
-- Stable Diffusion 1.5 (SD1.5) support by Irmagon (Thomas Gaud)
+- Z-Image Turbo DIT and Stable Diffusion 1.5 (SD1.5) support by Irmagon (Thomas Gaud)
 - the "All 276 Styles in Fooocus (Google table)", also by Irmagon (Thomas Gaud)
 - the members of the Pure Fooocus Facebook group for their encouragement, enthusiasm, Beta testing and the Founders Project welcome images
 

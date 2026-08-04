@@ -57,7 +57,9 @@ def parse_meta_from_preset(preset_content):
         print()
         if common.log_metadata:
             preset_content = common.log_metadata
-            interpret('[Preset Support] Reloading', common.log_metadata)
+            interpret('[Preset Support] Reloading Log Metadata:')
+            print(common.log_metadata)
+            print()
         else:
             interpret('[Preset Support] Could not find', 'metadata!')
             return ''
@@ -170,6 +172,11 @@ def parse_meta_from_preset(preset_content):
 
         if settings_key in ["default_model", "default_refiner"]:
             preset_prepared[meta_key] = preset_prepared[meta_key].replace('\\', os.sep).replace('/', os.sep)
+
+        # Ensure steps are explicitly mapped prior to
+        # returning the prepared dictionary
+        if 'default_overwrite_step' in items:
+            preset_prepared['steps'] = items['default_overwrite_step']
 
     return preset_prepared
 

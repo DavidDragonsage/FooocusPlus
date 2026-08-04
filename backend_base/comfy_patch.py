@@ -1,4 +1,5 @@
 # backend_base/comfy_patch.py
+import os
 import re
 from pathlib import Path
 from common import ROOT
@@ -6,9 +7,20 @@ from common import ROOT
 
 def apply_comfy_patch():
     """
-    Executes all automated path injections, selective logging mutes,
-    and file patching required to keep ComfyUI fully stable under CUDA 13.
+    Executes all automated path injections,
+    selective logging mutes, and file patching
+    required to keep ComfyUI fully stable under CUDA 13.
     """
+    #  Clean the local system PATH to prevent
+    #  PyTorch/CUDA from resolving obsolete PhysX DLLs
+    try:
+        path_env = os.environ.get('PATH', '')
+        if 'PhysX' in path_env:
+            cleaned_paths = [p for p in path_env.split(os.pathsep) if 'PhysX' not in p]
+            os.environ['PATH'] = os.pathsep.join(cleaned_paths)
+    except Exception as e:
+        print('[ComfyPatch] Warning: Failed to clean local PATH environment: ' + str(e))
+
     try:
         comfy_dir = (Path(ROOT) / 'comfy').resolve()
         comfy_main = comfy_dir / 'main.py'
