@@ -80,7 +80,8 @@
 * placed Create New Preset functions in an accordion
   * located in Extras under Favorite Preset Control
 * Release Date: August 4th, 2026<br/>
-* Hotfix0:
+* Hotfix1: Added the ZI-Base & ZI-BaseX presets
+  * ZI-Base & ZI-Turbo are now in separate categories
 <br/><br/>
 
 

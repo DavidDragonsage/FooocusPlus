@@ -140,7 +140,7 @@ def get_comfy_task(task_name, task_method, default_params, input_images, options
 
     elif task_name == 'Flux':
         base_model = default_params.get('base_model', '')
-        is_z_model = 'z-image' in base_model.lower() or 'z_image' in base_model.lower()
+        is_z_model = 'z-image' in base_model.lower() or 'z_image' in base_model.lower() or 'z-img' in base_model.lower() or 'z_img' in base_model.lower()
 
         # 1. Handle Z-IMAGE Models (Exclusive Logic)
         if is_z_model:

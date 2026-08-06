@@ -1,0 +1,67 @@
+{
+    "default_engine": {
+        "backend_engine": "Flux",
+        "disvisible": ["backend_selection", "performance_selection", "refiner_model", "sharpness"],
+        "disinteractive": ["enhance_checkbox", "input_image_checkbox", "refiner_model"],
+        "backend_params": {
+            "task_method": "ZIB",
+            "clip_model": "Qwen_3_4b-Q6_K.gguf",
+            "base_model_dtype": "fp8_e4m3fn"
+        }
+    },
+    "default_model": "z-img_fp8-e4m3fn.safetensors",
+    "default_refiner": "None",
+    "default_refiner_switch": 0.6,
+    "default_loras": [
+        [
+            true,
+            "None",
+            1.0
+        ],
+        [
+            true,
+            "None",
+            1.0
+        ],
+        [
+            true,
+            "None",
+            1.0
+        ],
+        [
+            true,
+            "None",
+            1.0
+        ],
+        [
+            true,
+            "None",
+            1.0
+        ]
+    ],
+    "default_cfg_scale": 3.5,
+    "default_sample_sharpness": 1,
+    "default_clip_skip": 1,
+    "default_sampler": "euler_ancestral",
+    "default_scheduler": "normal",
+    "default_performance": "",
+    "default_styles": [
+        "Fooocus V2",
+        "Fooocus Enhance"
+    ],
+    "v2_substyle": "Unlit",
+    "default_aspect_ratio": "0*0",
+    "default_overwrite_step": 30,
+    "checkpoint_downloads": {
+        "z-img_fp8-e4m3fn.safetensors": "https://huggingface.co/drbaph/Z-Image-fp8/resolve/main/z-img_fp8-e4m3fn.safetensors"
+    },
+    "clip_downloads": {
+        "Qwen_3_4b-Q6_K.gguf": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/Qwen_3_4b-Q6_K.gguf"
+    },
+    "lora_downloads": {},
+    "vae_downloads": {
+        "UltraFlux.safetensors": "https://huggingface.co/Owen777/UltraFlux-v1/resolve/main/vae/diffusion_pytorch_model.safetensors?download=true"
+    },
+    "default_vae": "UltraFlux.safetensors",
+    "default_inpaint_engine": {}
+}

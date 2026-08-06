@@ -40,18 +40,25 @@ class ModelPristineReset:
             pass
 
         # GGUF Safety: Force buffer refresh
-        if hasattr(model, "weight_inplace_update"):
+        if hasattr(model, 'weight_inplace_update'):
             model.weight_inplace_update = False
+        if hasattr(clip, 'weight_inplace_update'):
+            clip.weight_inplace_update = False
 
         # Create fresh wrappers
-        # with empty instruction lists
         new_model = model.clone()
         new_model.patch_list = []
         new_model.object_patches = {}
 
+        # Prevent FP8 rounding noise
+        new_model.weight_inplace_update = False
+
+        # Patch the returned CLIP clone
         new_clip = clip.clone()
         if hasattr(new_clip, 'patch_list'):
             new_clip.patch_list = []
+
+        new_clip.weight_inplace_update = False
 
         return (new_model, new_clip)
 
