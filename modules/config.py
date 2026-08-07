@@ -1243,6 +1243,7 @@ def get_base_model_list(engine='Fooocus', task_method=None, for_import=False):
                     # Base Safetensors / FP8 (e.g. z-img_fp8-e4m3fn.safetensors)
                     return [f for f in base_model_list if 'turbo' not in f.lower() and not f.endswith('gguf') and ('z-image' in f.lower() or 'z_image' in f.lower() or 'z-img' in f.lower() or 'z_img' in f.lower())]
 
+        # B. Flux Schnell Sub-Family (Early Return)
         if 'schnell' in model_lower or 'schnell' in method_lower:
             if is_gguf_mode:
                 # GGUF Schnell only

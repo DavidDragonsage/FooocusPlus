@@ -68,9 +68,10 @@
   * Renamed flux_base2_gguf to flux_base_gguf
   * Upgraded sd3x_base for SD3.5 Large & Medium
   * Added sd3x_base_gguf for SD3.5 Turbo support
-  * Added ZIB_gguf for Z-Image Base support
-  * Added ZIB_fast_gguf for 8 step Base generation
-  * Added ZIB_shift6_gguf for Base "X" variant
+  * Added ZIB_gguf for Z-Image Base GGUF support
+  * Added ZIB_shift6_gguf for Base GGUF "X" variant
+  * Added ZIB for Z-Image Base support
+  * Added ZIB_shift6 for the Base "X" variant
   * Renamed ZIT_DIT_TG to ZIT
   * Added ZIT_shift6 for Turbo "X" variant
   * Added ZIT_gguf to support Turbo GGUF models
@@ -80,6 +81,7 @@
 * placed Create New Preset functions in an accordion
   * located in Extras under Favorite Preset Control
 * Release Date: August 4th, 2026<br/>
+* Hotfix2: Added Preset info to Performance Check
 * Hotfix1: Added the ZI-Base & ZI-BaseX presets
   * ZI-Base & ZI-Turbo are now in separate categories
 <br/><br/>

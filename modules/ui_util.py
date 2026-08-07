@@ -24,6 +24,7 @@ from modules.util import cleanup_temp_files, save_image_grid
 batch_counter = 0
 last_batch_size = 1
 last_execution_time = 0.0
+last_preset = args.preset
 
 
 def init_batch_counter():
@@ -69,6 +70,11 @@ def sort_enhance_images(images, task):
 
 
 def generate_clicked(task: worker.AsyncTask):
+    global batch_counter, last_batch_size, \
+        last_execution_time, last_preset
+
+    last_preset = args.preset
+
     with model_management.interrupt_processing_mutex:
         model_management.interrupt_processing = False
 
@@ -124,7 +130,6 @@ def generate_clicked(task: worker.AsyncTask):
             if flag == 'finish':
                 product = sort_enhance_images(product, task)
 
-                global last_batch_size
                 if isinstance(product, list):
                     last_batch_size = len(product)
                 else:
@@ -142,7 +147,6 @@ def generate_clicked(task: worker.AsyncTask):
     execution_time = time.perf_counter() - execution_start_time
     interpret('[UI Util] Total time in seconds:', f'{execution_time:.2f}')
 
-    global last_execution_time
     last_execution_time = execution_time
 
     if config.default_generate_image_grid:
@@ -323,7 +327,8 @@ def format_last_generation_time():
     Returns:
         str: Localized markdown with compact, single-spaced throughput statistics.
     """
-    global last_batch_size, last_execution_time
+    global last_batch_size, last_execution_time, \
+        last_preset
 
     if last_execution_time <= 0.0:
         return ''
@@ -346,6 +351,7 @@ def format_last_generation_time():
 
     # Pre-translate modular labels silently
     lbl_metrics = interpret('Last Generation Metrics', silent=True)
+    lbl_preset = interpret('Preset: ', silent=True)
     lbl_duration = interpret('Generation Time:', silent=True)
     lbl_throughput = interpret('Throughput:', silent=True)
     lbl_sec_img = interpret('seconds/image', silent=True)
@@ -358,6 +364,7 @@ def format_last_generation_time():
         f'<hr style="margin: 18px 0; border: 0; border-top: 1px solid;" />\n'  # Increased vertical margins to 18px
         f'<h3 style="margin: 0 0 10px 0; font-size: 1.1em; font-weight: bold;">{lbl_metrics}</h3>\n'
         f'<div style="line-height: 1.6; margin-top: 6px;">\n'  # Container enforcing clean line-height
+        f'<strong>{lbl_preset}</strong> {last_preset}<br />\n'
         f'<strong>{lbl_duration}</strong> {time_str}<br />\n'
         f'<strong>{lbl_batch_size}</strong> {last_batch_size}<br />\n'
         f'<strong>{lbl_throughput}</strong> {img_per_min:.2f} {lbl_img_min}<br />\n'
