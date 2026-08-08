@@ -572,6 +572,13 @@ def replace_obsolete_categories(user_presets_path):
     arg_old_dir = Path(user_presets_path/'HyperFlux')
     arg_new_dir = Path(user_presets_path/'HyperFlux1D')
     replace_dir(arg_old_dir, arg_new_dir)
+
+    # from 1.1.3
+    arg_old_dir = Path(user_presets_path/'Z-Image')
+    arg_new_dir = Path(user_presets_path/'Z-Image Turbo')
+    move_files_excluding(arg_old_dir, arg_new_dir, '')
+    remove_empty_dir(arg_old_dir)
+
     return
 
 
