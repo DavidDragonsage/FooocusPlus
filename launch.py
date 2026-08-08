@@ -3,10 +3,17 @@ import importlib
 import common
 import enhanced.version as version
 
+# preserve the update event flag before reloading
+cached_version_update = getattr(common, 'version_update', 0)
+
 # Force-reload these modules immediately to
 # avoid stale cache problems when updating
 importlib.reload(common)
 importlib.reload(version)
+
+# restore the update event flag
+# so that the UI will announce the changes
+common.version_update = cached_version_update
 
 fooocusplus_ver, hotfix, hotfix_title = version.get_fooocusplus_ver()
 
