@@ -81,6 +81,7 @@
 * placed Create New Preset functions in an accordion
   * located in Extras under Favorite Preset Control
 * Release Date: August 4th, 2026<br/>
+* Hotfix5: Improve Z-Image model file detection.
 * Hotfix4: Restore the Hotfix UI announcement.
 * Hotfix3: Removed the phantom ZI-Base category
 * Hotfix2: Added Preset info to Performance Check

@@ -194,6 +194,15 @@ COMFY_SCHEDULER_NAMES = [
 comfy_scheduler_list = COMFY_SCHEDULER_NAMES
 
 
+# Strings to look for in Z-Image model filenames
+Z_IMAGE_MODEL_KEYWORDS = ['z-image', 'z_image', 'zimage', 'z-img', 'z_img', 'zimg']
+TURBO_MODEL_KEYWORDS = ['turbo']
+
+# Strings to look for in Z-Image workflows
+Z_IMAGE_METHOD_KEYWORDS = ['zit', 'zib']
+TURBO_METHOD_KEYWORDS = ['zit']
+
+
 backend_engines = ['Fooocus', 'Comfy', 'Kolors+', 'SD3x', 'HyDiT+', 'Flux']
 
 model_file_filter = {

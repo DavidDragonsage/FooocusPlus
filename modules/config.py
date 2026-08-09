@@ -1223,8 +1223,15 @@ def get_base_model_list(engine='Fooocus', task_method=None, for_import=False):
         # We determine the GGUF state purely from the active model name to prevent timing lags
         is_gguf_mode = '.gguf' in model_lower
 
-        is_z_image = 'z-image' in model_lower or 'z_image' in model_lower or 'zit' in method_lower or 'zib' in method_lower
-        is_turbo = 'turbo' in model_lower or 'zit' in method_lower
+        is_z_image = (
+            any(kw in model_lower for kw in flags.Z_IMAGE_MODEL_KEYWORDS) or
+            any(kw in method_lower for kw in flags.Z_IMAGE_METHOD_KEYWORDS)
+        )
+
+        is_turbo = (
+            any(kw in model_lower for kw in flags.TURBO_MODEL_KEYWORDS) or
+            any(kw in method_lower for kw in flags.TURBO_METHOD_KEYWORDS)
+        )
 
         # A. Z-Image Sub-Family (Early Return)
         if is_z_image:
