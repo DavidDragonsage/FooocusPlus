@@ -1,10 +1,12 @@
 from collections import OrderedDict
+import torch
 
 import modules.core as core
-import torch
+import modules.loader as loader
+from enhanced.translator import interpret
 from ldm_patched.contrib.external_upscale_model import ImageUpscaleWithModel
 from ldm_patched.pfn.architecture.RRDB import RRDBNet as ESRGAN
-from modules.config import downloading_upscale_model
+
 
 opImageUpscaleWithModel = ImageUpscaleWithModel()
 model = None
@@ -13,10 +15,10 @@ model = None
 def perform_upscale(img):
     global model
 
-    print(f'Upscaling image with shape {str(img.shape)}...')
+    interpret('Upscaling image with shape', f'{str(img.shape)}...')
 
     if model is None:
-        model_filename = downloading_upscale_model()
+        model_filename = loader.download_upscale_model()
         sd = torch.load(model_filename, weights_only=True)
         sdo = OrderedDict()
         for k, v in sd.items():

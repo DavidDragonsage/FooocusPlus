@@ -12,18 +12,21 @@ ROOT = str(Path.cwd())
 # use for Comfy port tracking
 # now that it is dynamic
 comfy_port = 8187
-# Common support for Comfy Kolors node
-path_diffusers = ''
 
 # Version control for major updates
 # read by launch.py
-REQUIRED_VERSION = '1.1.3'
+REQUIRED_VERSION = '1.1.4'
 
 # tracks update events
 # set by entry_with_update, checked by webui
 # and processed by enhanced.version.announce_version()
 # 0 = no change, 1 = hotfix, 2 = new version
 version_update = 0
+
+# old NVIDIA GPU flag, PyTorch <= 2.4
+# set by launch_support
+# read by launch
+torch_status = "New"
 
 # Set in UIS.process_before_generation() and
 # cleared by gallery images_list_update()
@@ -201,3 +204,25 @@ debugging_inpaint_preprocessor = False
 debugging_dino = False
 debugging_enhance_masks = False
 debug_substyles = False
+
+# Path Registries
+# set by config, most read by loader
+# as well as several other places
+paths_checkpoints = []
+path_clip = ''
+path_clip_vision = ''
+paths_controlnet = []
+path_diffusers = ''
+path_embeddings = ''
+path_fooocus_expansion = ''
+paths_inpaint = []
+path_layer_model = ''
+paths_llms = []
+paths_loras = []
+path_rembg = ''
+path_safety_checker = ''
+path_sam = ''
+path_upscale_models = ''
+path_unet = ''
+path_vae = ''
+path_vae_approx = ''

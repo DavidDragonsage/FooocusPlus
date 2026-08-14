@@ -4,18 +4,21 @@ import math
 import numbers
 import common
 import string # required by prompt_array_separator verification
+from pathlib import Path
+
 import modules.constants as constants
 import modules.user_structure as US
 import tempfile
 import modules.flags as flags
+import modules.loader as loader
 
-from modules.flags import EditFormat, OutputFormat, \
-    Performance, MetadataScheme
-from pathlib import Path
+from modules.flags import EditFormat, \
+    MetadataScheme, OutputFormat, Performance
 from args_manager import args
+from enhanced.backend import init_modelsinfo
 from enhanced.translator import interpret
 from modules.extra_utils import get_files_from_folder, try_eval_env_var
-from modules.model_loader import load_file_from_url
+from modules.loader import load_file_from_url
 from modules.ui_features import control_notification
 
 current_dir = Path.cwd().resolve()
@@ -24,14 +27,7 @@ user_dir = Path(args.user_dir).resolve()
 config_dict = {}
 always_save_keys = []
 visited_keys = []
-path_wildcards = Path(current_dir/'wildcards')
 wildcards_max_bfs_depth = 64
-
-available_presets = []
-model_filenames = []
-lora_filenames = []
-vae_filenames = []
-wildcard_filenames = []
 
 
 def get_dir_or_set_default(key, default_value, as_array=False, make_directory=False):
@@ -135,28 +131,61 @@ interpret('Generative models are stored in:', path_models_root)
 interpret('Models may also be stored in other locations, as defined in', 'config.txt')
 
 paths_checkpoints = get_dir_or_set_default('path_checkpoints', [Path(path_models_root/'checkpoints').resolve(), Path(user_dir/'models/checkpoints').resolve()], True, False)
+common.paths_checkpoints = paths_checkpoints
+
 paths_loras = get_dir_or_set_default('path_loras', [Path(path_models_root/'loras').resolve(), Path(user_dir/'models/loras').resolve()], True, False)
+common.paths_loras = paths_loras
+
 path_embeddings = get_dir_or_set_default('path_embeddings', Path(path_models_root/'embeddings').resolve())
+common.path_embeddings = path_embeddings
+
 path_vae_approx = get_dir_or_set_default('path_vae_approx', Path(path_models_root/'vae_approx').resolve())
+common.path_vae_approx = path_vae_approx
+
 path_vae = get_dir_or_set_default('path_vae', Path(path_models_root/'vae').resolve())
+common.path_vae = path_vae
+
 path_upscale_models = get_dir_or_set_default('path_upscale_models', Path(path_models_root/'upscale_models').resolve())
+common.path_upscale_models = path_upscale_models
+
 paths_inpaint = get_dir_or_set_default('path_inpaint', [Path(path_models_root/'inpaint').resolve(), Path(user_dir/'models/inpaint').resolve()], True, False)
-path_sam = paths_inpaint[0]
+common.paths_inpaint = paths_inpaint
+common.path_sam = paths_inpaint[0]
+
 paths_controlnet = get_dir_or_set_default('path_controlnet', [Path(path_models_root/'controlnet').resolve(), Path(user_dir/'models/controlnet').resolve()], True, False)
+common.paths_controlnet = paths_controlnet
+
 path_clip = get_dir_or_set_default('path_clip', Path(path_models_root/'clip').resolve())
+common.path_clip = path_clip
+
 path_clip_vision = get_dir_or_set_default('path_clip_vision', Path(path_models_root/'clip_vision').resolve())
+common.path_clip_vision = path_clip_vision
+
 path_fooocus_expansion = get_dir_or_set_default('path_fooocus_expansion', Path(path_models_root/'prompt_expansion/fooocus_expansion').resolve())
+common.path_fooocus_expansion = path_fooocus_expansion
+
 paths_llms = get_dir_or_set_default('path_llms', [Path(path_models_root/'llms').resolve()], True, False)
+common.paths_llms = paths_llms
+
 path_safety_checker = get_dir_or_set_default('path_safety_checker', Path(path_models_root/'safety_checker').resolve())
+common.path_safety_checker = path_safety_checker
+
 path_unet = get_dir_or_set_default('path_unet', Path(path_models_root/'unet').resolve())
+common.path_unet = path_unet
+
 path_rembg = get_dir_or_set_default('path_rembg', Path(path_models_root/'rembg').resolve())
+common.path_rembg = path_rembg
+
 path_layer_model = get_dir_or_set_default('path_layer_model', Path(path_models_root/'layer_model').resolve())
+common.path_layer_model = path_layer_model
+
 paths_diffusers = get_dir_or_set_default('path_diffusers', [Path(path_models_root/'diffusers').resolve()], True, False)
+common.paths_diffusers = paths_diffusers
+
 path_outputs = get_path_output()
 print()
 
-from enhanced.backend import init_modelsinfo
-modelsinfo = init_modelsinfo(path_models_root, dict(
+init_modelsinfo(path_models_root, dict(
     checkpoints=paths_checkpoints,
     loras=paths_loras,
     embeddings=[path_embeddings],
@@ -469,12 +498,13 @@ default_engine = get_config_item_or_set_default(
 )
 backend_engine = default_engine.get("backend_engine", "Fooocus")
 
-default_base_model_name = default_model = get_config_item_or_set_default(
+default_model = get_config_item_or_set_default(
     key='default_model',
     default_value='model.safetensors',
     validator=lambda x: isinstance(x, str),
     expected_type=str
 ).replace('\\', os.sep).replace('/', os.sep)
+loader.base_model_name = default_model
 
 previous_default_models = get_config_item_or_set_default(
     key='previous_default_models',
@@ -1111,415 +1141,25 @@ comfyui:
      '''
 
 paths2str = lambda p,n: p[0] if len(p)<=1 else '|\n'+''.join([' ']*(5+len(n)))+''.join(['\n']+[' ']*(5+len(n))).join(p)
-config_comfy_text = config_comfy_formatted_text.format(models_root=path_models_root, checkpoints=paths2str(paths_checkpoints,'checkpoints'), clip_vision=path_clip_vision, clip=path_clip, controlnets=paths2str(paths_controlnet,'controlnet'), diffusers=paths2str(paths_diffusers,'diffusers'), embeddings=path_embeddings, loras=paths2str(paths_loras, 'loras'), upscale_models=path_upscale_models, unet=paths2str([path_unet]+paths_checkpoints, 'unet'), rembg=path_rembg, layer_model=path_layer_model, vae=path_vae)
+
+config_comfy_text = config_comfy_formatted_text.format(
+    models_root=path_models_root,
+    checkpoints=paths2str(paths_checkpoints, 'checkpoints'),
+    clip_vision=path_clip_vision,
+    clip=path_clip,
+    controlnets=paths2str(paths_controlnet, 'controlnet'),
+    diffusers=paths2str(paths_diffusers, 'diffusers'),
+    embeddings=path_embeddings,
+    loras=paths2str(paths_loras, 'loras'),
+    upscale_models=path_upscale_models,
+    unet=paths2str([path_unet] + paths_checkpoints, 'unet'),
+    rembg=path_rembg,
+    layer_model=path_layer_model,
+    vae=path_vae
+)
+
 with open(config_comfy_path, "w", encoding="utf-8") as comfy_file:
     comfy_file.write(config_comfy_text)
-
-
-def get_lora_model_list(engine='Fooocus', task_method=None, for_import=False) -> list:
-    """
-    Dynamically and recursively filters your LoRA files based on the active model family.
-    - Flux: Shows only 'Flux/' folder LoRAs
-    - SD3.5: Shows only 'SD3x/' folder LoRAs
-    - SD1.5: Shows only 'SD1.5/' folder LoRAs
-    - Pony: Shows only 'Pony/' folder LoRAs
-    - Z-Image: Shows only 'Z-Image/' folder LoRAs
-    - SDXL (Standard): Shows only flat, root-level LoRAs, hiding all subfolders
-    """
-    global modelsinfo, default_base_model_name
-
-    # Fetch all raw LoRA files (recursive list)
-    raw_loras = modelsinfo.get_model_names('loras')
-
-    # Bypassed by metadata importer to ensure paths are resolved regardless of UI state
-    if for_import:
-        return raw_loras
-
-    # Extract state strings for checking
-    model_lower = default_base_model_name.lower() if default_base_model_name else ''
-    method_lower = str(task_method).lower() if task_method else ''
-
-    # Identify Z-Image specific state
-    is_z_image = any(x in model_lower for x in ['z-image', 'z_image']) or \
-                 any(x in method_lower for x in ['zit', 'zib'])
-
-    # Z-Image checked before the general Flux check
-    if is_z_image:
-        return [f for f in raw_loras if 'z-image' in f.lower() or 'z_image' in f.lower()]
-
-    # Flux Engine check
-    if engine == 'Flux':
-        # Show only Flux/ folder, and explicitly EXCLUDE Z-Image to keep lists clean
-        return [f for f in raw_loras if 'flux' in f.lower() and 'z-image' not in f.lower() and 'z_image' not in f.lower()]
-
-    # SD3x Engine check
-    if engine == 'SD3x':
-        return [f for f in raw_loras if 'sd3x' in f.lower()]
-
-    # SD1 (SD1.5) Engine check
-    if engine == 'SD1' or 'sd15' in method_lower:
-        # Normalize separators for consistent folder detection
-        return [f for f in raw_loras if 'sd1.5' in f.replace('\\', '/').lower()]
-
-    # Pony Sub-Family (SDXL Checkpoints)
-    if 'pony' in model_lower:
-        return [f for f in raw_loras if 'pony' in f.lower()]
-
-    # Standard SDXL (Fooocus / Comfy)
-    # If using SDXL, show ONLY the root level LoRAs.
-    # Hide the sub-family folders (Flux, SD3, Z-Image, etc.)
-    if engine in ['Fooocus', 'Comfy']:
-        return [f for f in raw_loras if '/' not in f and '\\' not in f]
-
-    # Fallback: return everything
-    return raw_loras
-
-
-def get_model_filenames(folder_paths, extensions=None, name_filter=None):
-    if extensions is None:
-        extensions = ['.pth', '.ckpt', '.bin', '.safetensors', '.fooocus.patch', '.gguf']
-    files = []
-
-    if not isinstance(folder_paths, list):
-        folder_paths = [folder_paths]
-    for folder in folder_paths:
-        files += get_files_from_folder(folder, extensions, name_filter)
-
-    return files
-
-
-def get_base_model_list(engine='Fooocus', task_method=None, for_import=False):
-    global modelsinfo, default_base_model_name
-
-    # If called by the metadata importer,
-    # bypass all UI filters and return the raw list
-    if for_import:
-        return modelsinfo.get_model_names('checkpoints')
-
-    # 1. Fetch the default filter and get the matching model list
-    file_filter = flags.model_file_filter.get(engine, [])
-    base_model_list = modelsinfo.get_model_names('checkpoints', file_filter)
-
-    # Inspect the currently selected model name
-    # to determine the dynamic filter mode
-    model_lower = default_base_model_name.lower() if default_base_model_name else ''
-    method_lower = str(task_method).lower() if task_method else ''
-
-    # 2. For SD1.5 (Comfy SD1.5) engine modes:
-    # Check if the model name or engine indicates SD1.5
-    if 'sd1.5' in model_lower or engine == 'SD1':
-        return [f for f in base_model_list if 'sd1.5' in f.replace('\\', '/').lower()]
-
-    # 3. For standard Fooocus or Comfy (SDXL / SD1.5) modes:
-    # Exclude specialized models (SD3, Flux, HyDiT) and any models inside subdirectories
-    if engine in ['Fooocus', 'Comfy']:
-        base_model_list = modelsinfo.get_model_names('checkpoints', flags.model_file_filter['Fooocus'], reverse=True)
-        # Keep only the flat/root models (filter out anything containing path separators)
-        return [f for f in base_model_list if '/' not in f and '\\' not in f]
-
-    # 4. For Flux engine modes:
-    elif engine == 'Flux':
-
-        # We determine the GGUF state purely from the active model name to prevent timing lags
-        is_gguf_mode = '.gguf' in model_lower
-
-        is_z_image = (
-            any(kw in model_lower for kw in flags.Z_IMAGE_MODEL_KEYWORDS) or
-            any(kw in method_lower for kw in flags.Z_IMAGE_METHOD_KEYWORDS)
-        )
-
-        is_turbo = (
-            any(kw in model_lower for kw in flags.TURBO_MODEL_KEYWORDS) or
-            any(kw in method_lower for kw in flags.TURBO_METHOD_KEYWORDS)
-        )
-
-        # A. Z-Image Sub-Family (Early Return)
-        if is_z_image:
-            if is_turbo:
-                if is_gguf_mode:
-                    # Turbo GGUF (e.g. z_image_turbo-Q8_0.gguf)
-                    return [f for f in base_model_list if 'turbo' in f.lower() and f.endswith('gguf') and ('z-image' in f.lower() or 'z_image' in f.lower())]
-                else:
-                    # Turbo Safetensors (e.g. z-image-turbo-fp8-e4m3fn.safetensors)
-                    return [f for f in base_model_list if 'turbo' in f.lower() and not f.endswith('gguf') and ('z-image' in f.lower() or 'z_image' in f.lower())]
-            else:
-                if is_gguf_mode:
-                    # Base GGUF (e.g. z_image-Q8_0.gguf, z_image-Q5_K_M.gguf)
-                    return [f for f in base_model_list if 'turbo' not in f.lower() and f.endswith('gguf') and ('z-image' in f.lower() or 'z_image' in f.lower() or 'z-img' in f.lower() or 'z_img' in f.lower())]
-                else:
-                    # Base Safetensors / FP8 (e.g. z-img_fp8-e4m3fn.safetensors)
-                    return [f for f in base_model_list if 'turbo' not in f.lower() and not f.endswith('gguf') and ('z-image' in f.lower() or 'z_image' in f.lower() or 'z-img' in f.lower() or 'z_img' in f.lower())]
-
-        # B. Flux Schnell Sub-Family (Early Return)
-        if 'schnell' in model_lower or 'schnell' in method_lower:
-            if is_gguf_mode:
-                # GGUF Schnell only
-                return [f for f in base_model_list if 'schnell' in f.lower() and f.endswith('gguf')]
-            else:
-                # FP8/Standard Schnell only (exclude GGUF)
-                return [f for f in base_model_list if 'schnell' in f.lower() and not f.endswith('gguf')]
-
-        # C. Standard Flux GGUF (excluding Schnell and Z-Image) (Early Return)
-        if is_gguf_mode:
-            return [f for f in base_model_list if f.endswith('gguf') and 'schnell' not in f.lower() and 'z-image' not in f.lower() and 'z_image' not in f.lower()]
-
-        # D. Standard Flux FP8 / Safetensors (excluding Schnell, GGUF, and Z-Image) (Early Return)
-        return [f for f in base_model_list if not f.endswith('gguf') and 'schnell' not in f.lower() and 'z-image' not in f.lower() and 'z_image' not in f.lower()]
-
-    return base_model_list
-
-
-def update_files(engine='Fooocus', task_method=None):
-    # called by the webui update button & by launch.py
-    global modelsinfo, model_filenames, lora_filenames, vae_filenames, wildcard_filenames
-    modelsinfo.refresh_from_path()
-    model_filenames = get_base_model_list(engine, task_method)
-    lora_filenames = get_lora_model_list(engine, task_method)
-    vae_filenames = modelsinfo.get_model_names('vae')
-    wildcard_filenames = US.list_files_by_patterns(path_wildcards, ['*.txt'])
-    return model_filenames, lora_filenames, vae_filenames
-
-
-def downloading_inpaint_models(v):
-    if not v:
-        v = 'v2.6'
-
-    load_file_from_url(
-        url='https://huggingface.co/lllyasviel/fooocus_inpaint/resolve/main/fooocus_inpaint_head.pth',
-        model_dir=paths_inpaint[0],
-        file_name='fooocus_inpaint_head.pth'
-    )
-    head_file = os.path.join(paths_inpaint[0], 'fooocus_inpaint_head.pth')
-    patch_file = None
-
-    if v == 'v2.5':
-        load_file_from_url(
-            url='https://huggingface.co/lllyasviel/fooocus_inpaint/resolve/main/inpaint_v25.fooocus.patch',
-            model_dir=paths_inpaint[0],
-            file_name='inpaint_v25.fooocus.patch'
-        )
-        patch_file = os.path.join(paths_inpaint[0], 'inpaint_v25.fooocus.patch')
-    else:   # i.e. v=='v2.6'
-        load_file_from_url(
-            url='https://huggingface.co/lllyasviel/fooocus_inpaint/resolve/main/inpaint_v26.fooocus.patch',
-            model_dir=paths_inpaint[0],
-            file_name='inpaint_v26.fooocus.patch'
-        )
-        patch_file = os.path.join(paths_inpaint[0], 'inpaint_v26.fooocus.patch')
-
-    return head_file, patch_file
-
-
-def downloading_sdxl_lcm_lora():
-    load_file_from_url(
-        url='https://huggingface.co/lllyasviel/misc/resolve/main/sdxl_lcm_lora.safetensors',
-        model_dir=paths_loras[0],
-        file_name=flags.PerformanceLoRA.Extreme_Speed.value
-    )
-    return flags.PerformanceLoRA.Extreme_Speed.value
-
-
-def downloading_sdxl_lightning_lora():
-    load_file_from_url(
-        url='https://huggingface.co/mashb1t/misc/resolve/main/sdxl_lightning_4step_lora.safetensors',
-        model_dir=paths_loras[0],
-        file_name=flags.PerformanceLoRA.Lightning.value
-    )
-    return flags.PerformanceLoRA.Lightning.value
-
-
-def downloading_sdxl_hyper_sd_lora():
-    load_file_from_url(
-        url='https://huggingface.co/mashb1t/misc/resolve/main/sdxl_hyper_sd_4step_lora.safetensors',
-        model_dir=paths_loras[0],
-        file_name=flags.PerformanceLoRA.Hyper_SD.value
-    )
-    return flags.PerformanceLoRA.Hyper_SD.value
-
-
-def downloading_controlnet_canny():
-    load_file_from_url(
-        url='https://huggingface.co/lllyasviel/misc/resolve/main/control-lora-canny-rank128.safetensors',
-        model_dir=paths_controlnet[0],
-        file_name='control-lora-canny-rank128.safetensors'
-    )
-    return os.path.join(paths_controlnet[0], 'control-lora-canny-rank128.safetensors')
-
-
-def downloading_controlnet_cpds():
-    load_file_from_url(
-        url='https://huggingface.co/lllyasviel/misc/resolve/main/fooocus_xl_cpds_128.safetensors',
-        model_dir=paths_controlnet[0],
-        file_name='fooocus_xl_cpds_128.safetensors'
-    )
-    return os.path.join(paths_controlnet[0], 'fooocus_xl_cpds_128.safetensors')
-
-
-def downloading_ip_adapters(v):
-    assert v in ['ip', 'face']
-
-    results = []
-
-    load_file_from_url(
-        url='https://huggingface.co/lllyasviel/misc/resolve/main/clip_vision_vit_h.safetensors',
-        model_dir=path_clip_vision,
-        file_name='clip_vision_vit_h.safetensors'
-    )
-    results += [os.path.join(path_clip_vision, 'clip_vision_vit_h.safetensors')]
-
-    load_file_from_url(
-        url='https://huggingface.co/lllyasviel/misc/resolve/main/fooocus_ip_negative.safetensors',
-        model_dir=paths_controlnet[0],
-        file_name='fooocus_ip_negative.safetensors'
-    )
-    results += [os.path.join(paths_controlnet[0], 'fooocus_ip_negative.safetensors')]
-
-    if v == 'ip':
-        load_file_from_url(
-            url='https://huggingface.co/lllyasviel/misc/resolve/main/ip-adapter-plus_sdxl_vit-h.bin',
-            model_dir=paths_controlnet[0],
-            file_name='ip-adapter-plus_sdxl_vit-h.bin'
-        )
-        results += [os.path.join(paths_controlnet[0], 'ip-adapter-plus_sdxl_vit-h.bin')]
-
-    if v == 'face':
-        load_file_from_url(
-            url='https://huggingface.co/lllyasviel/misc/resolve/main/ip-adapter-plus-face_sdxl_vit-h.bin',
-            model_dir=paths_controlnet[0],
-            file_name='ip-adapter-plus-face_sdxl_vit-h.bin'
-        )
-        results += [os.path.join(paths_controlnet[0], 'ip-adapter-plus-face_sdxl_vit-h.bin')]
-
-    return results
-
-
-def downloading_upscale_model():
-    load_file_from_url(
-        url='https://huggingface.co/lllyasviel/misc/resolve/main/fooocus_upscaler_s409985e5.bin',
-        model_dir=path_upscale_models,
-        file_name='fooocus_upscaler_s409985e5.bin'
-    )
-    return os.path.join(path_upscale_models, 'fooocus_upscaler_s409985e5.bin')
-
-def downloading_safety_checker_model():
-    load_file_from_url(
-        url='https://huggingface.co/mashb1t/misc/resolve/main/stable-diffusion-safety-checker.bin',
-        model_dir=path_safety_checker,
-        file_name='stable-diffusion-safety-checker.bin'
-    )
-    return os.path.join(path_safety_checker, 'stable-diffusion-safety-checker.bin')
-
-def download_sam_model(sam_model: str) -> str:
-    match sam_model:
-        case 'vit_b':
-            return downloading_sam_vit_b()
-        case 'vit_l':
-            return downloading_sam_vit_l()
-        case 'vit_h':
-            return downloading_sam_vit_h()
-        case _:
-            raise ValueError(f"sam model {sam_model} does not exist.")
-
-
-def downloading_sam_vit_b():
-    load_file_from_url(
-        url='https://huggingface.co/mashb1t/misc/resolve/main/sam_vit_b_01ec64.pth',
-        model_dir=path_sam,
-        file_name='sam_vit_b_01ec64.pth'
-    )
-    return os.path.join(path_sam, 'sam_vit_b_01ec64.pth')
-
-
-def downloading_sam_vit_l():
-    load_file_from_url(
-        url='https://huggingface.co/mashb1t/misc/resolve/main/sam_vit_l_0b3195.pth',
-        model_dir=path_sam,
-        file_name='sam_vit_l_0b3195.pth'
-    )
-    return os.path.join(path_sam, 'sam_vit_l_0b3195.pth')
-
-
-def downloading_sam_vit_h():
-    load_file_from_url(
-        url='https://huggingface.co/mashb1t/misc/resolve/main/sam_vit_h_4b8939.pth',
-        model_dir=path_sam,
-        file_name='sam_vit_h_4b8939.pth'
-    )
-    return os.path.join(path_sam, 'sam_vit_h_4b8939.pth')
-
-def downloading_superprompter_model():
-    path_superprompter = os.path.join(paths_llms[0], "superprompt-v1")
-    load_file_from_url(
-        url='https://huggingface.co/roborovski/superprompt-v1/resolve/main/model.safetensors',
-        model_dir=path_superprompter,
-        file_name='model.safetensors'
-    )
-    load_file_from_url(
-    url='https://huggingface.co/roborovski/superprompt-v1/resolve/main/config.json',
-    model_dir=path_superprompter,
-    file_name='config.json'
-    )
-    load_file_from_url(
-    url='https://huggingface.co/roborovski/superprompt-v1/resolve/main/generation_config.json',
-    model_dir=path_superprompter,
-    file_name='generation_config.json'
-    )
-    load_file_from_url(
-    url='https://huggingface.co/roborovski/superprompt-v1/resolve/main/README.md',
-    model_dir=path_superprompter,
-    file_name='README.md'
-    )
-    load_file_from_url(
-    url='https://huggingface.co/roborovski/superprompt-v1/resolve/main/spiece.model',
-    model_dir=path_superprompter,
-    file_name='spiece.model'
-    )
-    load_file_from_url(
-    url='https://huggingface.co/roborovski/superprompt-v1/resolve/main/tokenizer.json',
-    model_dir=path_superprompter,
-    file_name='tokenizer.json'
-    )
-    load_file_from_url(
-    url='https://huggingface.co/roborovski/superprompt-v1/resolve/main/tokenizer_config.json',
-    model_dir=path_superprompter,
-    file_name='tokenizer_config.json'
-    )
-    return os.path.join(path_superprompter, 'model.safetensors')
-
-
-def downloading_hydit_model():
-    load_file_from_url(
-        url='https://huggingface.co/comfyanonymous/hunyuan_dit_comfyui/resolve/main/hunyuan_dit_1.2.safetensors',
-        model_dir=paths_checkpoints[0] + '\Alternative',
-        file_name='hunyuan_dit_1.2.safetensors'
-    )
-    return os.path.join(paths_checkpoints[0] + '\Alternative', 'hunyuan_dit_1.2.safetensors')
-
-def downloading_base_sd15_model():
-    model_path = Path(user_dir/'models/checkpoints/SD1.5/')
-    model_file_name = 'realisticVisionV60B1_v51VAE.safetensors'
-    load_file_from_url(
-        url= 'https://huggingface.co/moiu2998/mymo/resolve/3c3093fa083909be34a10714c93874ce5c9dabc4/realisticVisionV60B1_v51VAE.safetensors?download=true',
-        model_dir = model_path,
-        file_name = model_file_name
-    )
-    return str(Path(model_path/model_file_name))
-
-def downloading_sd3_medium_model():
-    load_file_from_url(
-        url='https://huggingface.co/Comfy-Org/stable-diffusion-3.5-fp8/resolve/main/sd3.5_medium_incl_clips_t5xxlfp8scaled.safetensors',
-        model_dir=paths_checkpoints[0] + '\SD3x',
-        file_name='sd3.5_medium_incl_clips_t5xxlfp8scaled.safetensors'
-    )
-    return os.path.join(paths_checkpoints[0] + '\SD3x', 'sd3.5_medium_incl_clips_t5xxlfp8scaled.safetensors')
-
-def downloading_sd35_large_model():
-    load_file_from_url(
-        url='https://civitai.com/api/download/models/983309?type=Model&format=SafeTensor&size=full&fp=fp32',
-        model_dir=paths_checkpoints[0] + '\SD3x',
-        file_name='stableDiffusion35_large.safetensors'
-    )
-    return os.path.join(paths_checkpoints[0] + '\SD3x', 'stableDiffusion35_large.safetensors')
 
 
 # initialize notification file status
@@ -1556,9 +1196,6 @@ common.current_tab_name = default_selected_image_input_tab_id.split('_')[0]
 # Common FreeU defaults
 common.freeu_settings = [False] + list(default_freeu)
 common.freeu_preset_name = flags.DEFAULT_FREEU_KEY
-
-# Common support for Comfy Kolors node
-common.path_diffusers = paths_diffusers[0]
 
 # Common support for performance
 common.performance_selection = default_performance

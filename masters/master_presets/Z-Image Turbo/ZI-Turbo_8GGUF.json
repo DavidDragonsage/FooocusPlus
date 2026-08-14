@@ -42,6 +42,7 @@
     "default_sample_sharpness": 1,
     "default_sampler": "euler",
     "default_scheduler": "simple",
+	"default_vae": "UltraFlux.safetensors",
     "default_clip_skip": 1,
     "default_performance": "",
     "default_styles": [
@@ -56,6 +57,5 @@
     "clip_downloads": {"Qwen_3_4b-Q6_K.gguf": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/Qwen_3_4b-Q6_K.gguf"},
     "lora_downloads": {},
     "vae_downloads": {"UltraFlux.safetensors": "https://huggingface.co/Owen777/UltraFlux-v1/resolve/main/vae/diffusion_pytorch_model.safetensors?download=true"},
-	"default_vae": "UltraFlux.safetensors",
     "default_inpaint_engine": {}
 }

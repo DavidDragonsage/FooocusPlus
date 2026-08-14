@@ -14,6 +14,7 @@ import enhanced.gallery as gallery
 import enhanced.version
 import modules.config as config
 import modules.aspect_ratios as AR
+import modules.loader as loader
 import modules.preset_resource as PR
 import modules.sdxl_styles
 import modules.user_structure as US
@@ -87,7 +88,7 @@ def switch_layout_template(presetdata: dict | str, state_params, preset_url=''):
                   params_backend.get('task_method', None))))
     params_backend['task_method'] = task_method
 
-    base_model_list = config.get_base_model_list(template_engine, task_method)
+    base_model_list = loader.get_base_model_list(template_engine, task_method)
 
     results = [params_backend]
     results.append(get_layout_visible_inter('performance_selection', visible, inter))
@@ -189,7 +190,7 @@ def process_dictionary(loaded_parameter_dict, is_generating, inpaint_mode, resul
             if model_key in loaded_parameter_dict:
                 val = loaded_parameter_dict[model_key]
                 if isinstance(val, str) and val != 'None' and not any(val.lower().endswith(ext) for ext in valid_extensions):
-                    for filename in getattr(config, 'model_filenames', []):
+                    for filename in getattr(loader, 'model_filenames', []):
                         if Path(filename).stem == val:
                             loaded_parameter_dict[model_key] = filename
                             break
@@ -595,14 +596,14 @@ def get_lora(key: str, fallback: str | None, source_dict: dict, results: list, p
 
         # --- DYNAMIC CHOICES UPDATE ---
         # Instead of a raw string, we return a gr.update containing the active filtered choices
-        results.append(gr.update(choices=['None'] + config.lora_filenames, value=name))
+        results.append(gr.update(choices=['None'] + loader.lora_filenames, value=name))
         # ------------------------------
 
         results.append(gr.update(value=weight, minimum=w_min, maximum=w_max))
     except Exception:
         results.append(True)
         # Update empty fallback slots with the filtered choices as well
-        results.append(gr.update(choices=['None'] + config.lora_filenames, value='None'))
+        results.append(gr.update(choices=['None'] + loader.lora_filenames, value='None'))
         results.append(1)
 
     return
@@ -786,9 +787,9 @@ class A1111MetadataParser(MetadataParser):
         for key in ['base_model', 'refiner_model', 'vae']:
             if key in data:
                 if key == 'vae':
-                    self.add_extension_to_filename(data, config.vae_filenames, 'vae')
+                    self.add_extension_to_filename(data, loader.vae_filenames, 'vae')
                 else:
-                    self.add_extension_to_filename(data, config.model_filenames, key)
+                    self.add_extension_to_filename(data, loader.model_filenames, key)
 
         lora_data = ''
         if 'lora_weights' in data and data['lora_weights'] != '':
@@ -801,7 +802,7 @@ class A1111MetadataParser(MetadataParser):
                 lora_split = lora.split(': ')
                 lora_name = lora_split[0]
                 lora_weight = lora_split[2] if len(lora_split) == 3 else lora_split[1]
-                for filename in config.lora_filenames:
+                for filename in loader.lora_filenames:
                     path = Path(filename)
                     if lora_name == path.stem:
                         data[f'lora_combined_{li + 1}'] = f'{filename} : {lora_weight}'
@@ -895,11 +896,11 @@ class FooocusMetadataParser(MetadataParser):
             if value in ['', 'None']:
                 continue
             if key in ['base_model', 'refiner_model']:
-                metadata[key] = self.replace_value_with_filename(key, value, config.model_filenames)
+                metadata[key] = self.replace_value_with_filename(key, value, loader.model_filenames)
             elif key.startswith('lora_combined_'):
-                metadata[key] = self.replace_value_with_filename(key, value, config.lora_filenames)
+                metadata[key] = self.replace_value_with_filename(key, value, loader.lora_filenames)
             elif key == 'vae':
-                metadata[key] = self.replace_value_with_filename(key, value, config.vae_filenames)
+                metadata[key] = self.replace_value_with_filename(key, value, loader.vae_filenames)
             else:
                 continue
 
@@ -1009,9 +1010,9 @@ class SIMPLEMetadataParser(MetadataParser):
 
         # fetch the lists required to turn
         # stems back into full paths
-        model_filenames = config.get_base_model_list(engine, task_method_val, for_import=True)
-        lora_filenames = config.get_lora_model_list(engine, task_method_val, for_import=True)
-        vae_filenames = config.vae_filenames
+        model_filenames = loader.get_base_model_list(engine, task_method_val, for_import=True)
+        lora_filenames = loader.get_lora_model_list(engine, task_method_val, for_import=True)
+        vae_filenames = loader.vae_filenames
 
         for key in list(metadata.keys()):
             val = metadata[key]

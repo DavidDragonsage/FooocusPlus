@@ -42,6 +42,7 @@
     "default_sample_sharpness": 2,
     "default_sampler": "euler",
     "default_scheduler": "simple",
+    "default_vae": "ae.safetensors",
     "default_clip_skip": 1,
     "default_performance": "",
     "default_prompt": "",

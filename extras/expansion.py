@@ -39,8 +39,8 @@ def remove_pattern(x, pattern):
 
 class FooocusExpansion:
     def __init__(self):
-        self.tokenizer = AutoTokenizer.from_pretrained(config.path_fooocus_expansion)
-        self.model = AutoModelForCausalLM.from_pretrained(config.path_fooocus_expansion)
+        self.tokenizer = AutoTokenizer.from_pretrained(common.path_fooocus_expansion)
+        self.model = AutoModelForCausalLM.from_pretrained(common.path_fooocus_expansion)
         self.model.eval()
 
         # Hardware Setup

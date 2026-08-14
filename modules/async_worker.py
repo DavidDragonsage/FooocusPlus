@@ -5,6 +5,7 @@ import copy
 import re
 import modules.config as config
 import modules.flags as flags
+import modules.loader as loader
 import modules.util as util
 from enhanced.translator import interpret, \
     interpret_warn, render
@@ -162,7 +163,7 @@ class AsyncTask:
         self.read_wildcards_in_order = common.read_wildcards_in_order
         self.sharpness = config.default_sample_sharpness
         self.cfg_scale = config.default_cfg_scale
-        self.base_model_name = config.default_base_model_name
+        self.base_model_name = loader.base_model_name
         self.refiner_model_name = config.default_refiner
         self.refiner_switch = config.default_refiner_switch
 
@@ -1135,7 +1136,7 @@ def worker():
         extra_positive_prompts = prompts[1:] if len(prompts) > 1 else []
         extra_negative_prompts = negative_prompts[1:] if len(negative_prompts) > 1 else []
 
-        lora_filenames = modules.util.remove_performance_lora(config.lora_filenames,
+        lora_filenames = modules.util.remove_performance_lora(loader.lora_filenames,
             async_task.performance_selection)
         loras, prompt = parse_lora_references_from_prompt(prompt,
             async_task.loras, config.default_max_lora_number,
@@ -1327,7 +1328,7 @@ def worker():
         if advance_progress:
             current_progress += 1
         progressbar(async_task, current_progress, 'Downloading Hyper-SD components...')
-        async_task.performance_loras += [(config.downloading_sdxl_hyper_sd_lora(), 0.8)]
+        async_task.performance_loras += [(loader.download_sdxl_hyper_sd_lora(), 0.8)]
         if async_task.refiner_model_name != 'None':
             interpret('Refiner disabled in Hyper-SD mode.')
         async_task.refiner_model_name = 'None'
@@ -1347,7 +1348,7 @@ def worker():
         if advance_progress:
             current_progress += 1
         progressbar(async_task, 1, 'Downloading Lightning components...')
-        async_task.performance_loras += [(config.downloading_sdxl_lightning_lora(), 1.0)]
+        async_task.performance_loras += [(loader.download_sdxl_lightning_lora(), 1.0)]
         if async_task.refiner_model_name != 'None':
             interpret('Refiner disabled in Lightning mode.')
         async_task.refiner_model_name = 'None'
@@ -1367,7 +1368,7 @@ def worker():
         if advance_progress:
             current_progress += 1
         progressbar(async_task, 1, 'Downloading LCM components ...')
-        async_task.performance_loras += [(config.downloading_sdxl_lcm_lora(), 1.0)]
+        async_task.performance_loras += [(loader.download_sdxl_lcm_lora(), 1.0)]
         if async_task.refiner_model_name != 'None':
             interpret(f'Refiner disabled in', 'LCM')
         async_task.refiner_model_name = 'None'
@@ -1383,9 +1384,9 @@ def worker():
         return current_progress
 
     def apply_image_input(async_task, base_model_additional_loras, clip_vision_path, controlnet_canny_path,
-                          controlnet_cpds_path, goals, inpaint_head_model_path, inpaint_image, inpaint_mask,
-                          inpaint_parameterized,  ip_adapter_face_path, ip_adapter_path, ip_negative_path,
-                          skip_prompt_processing, use_synthetic_refiner):
+            controlnet_cpds_path, goals, inpaint_head_model_path, inpaint_image, inpaint_mask,
+            inpaint_parameterized,  ip_adapter_face_path, ip_adapter_path, ip_negative_path,
+            skip_prompt_processing, use_synthetic_refiner):
         if (async_task.current_tab == 'uov' or (
                 async_task.current_tab == 'ip' and async_task.mixing_image_prompt_and_vary_upscale)) \
                 and async_task.uov_method != flags.disabled.casefold() and async_task.uov_input_image is not None:
@@ -1425,10 +1426,10 @@ def worker():
             if isinstance(inpaint_image, np.ndarray) and isinstance(inpaint_mask, np.ndarray) \
                     and (np.any(inpaint_mask > 127) or len(async_task.outpaint_selections) > 0):
                 progressbar(async_task, 1, 'Downloading upscale models...')
-                config.downloading_upscale_model()
+                loader.download_upscale_model()
                 if inpaint_parameterized:
                     progressbar(async_task, 1, 'Downloading inpainter...')
-                    inpaint_head_model_path, inpaint_patch_model_path = config.downloading_inpaint_models(
+                    inpaint_head_model_path, inpaint_patch_model_path = loader.download_inpaint_models(
                         async_task.inpaint_engine)
                     base_model_additional_loras += [(inpaint_patch_model_path, 1.0)]
                     interpret('Current Inpaint model is:', inpaint_patch_model_path)
@@ -1450,13 +1451,13 @@ def worker():
             goals.append('cn')
             progressbar(async_task, 1, 'Downloading control models...')
             if len(async_task.cn_tasks[flags.cn_canny]) > 0:
-                controlnet_canny_path = config.downloading_controlnet_canny()
+                controlnet_canny_path = loader.download_controlnet_canny()
             if len(async_task.cn_tasks[flags.cn_cpds]) > 0:
-                controlnet_cpds_path = config.downloading_controlnet_cpds()
+                controlnet_cpds_path = loader.download_controlnet_cpds()
             if len(async_task.cn_tasks[flags.cn_ip]) > 0:
-                clip_vision_path, ip_negative_path, ip_adapter_path = config.downloading_ip_adapters('ip')
+                clip_vision_path, ip_negative_path, ip_adapter_path = loader.download_ip_adapters('ip')
             if len(async_task.cn_tasks[flags.cn_ip_face]) > 0:
-                clip_vision_path, ip_negative_path, ip_adapter_face_path = config.downloading_ip_adapters(
+                clip_vision_path, ip_negative_path, ip_adapter_face_path = loader.download_ip_adapters(
                     'face')
         if async_task.current_tab == 'enhance' and async_task.enhance_input_image is not None:
             goals.append('enhance')
@@ -1480,7 +1481,7 @@ def worker():
             if advance_progress:
                 current_progress += 1
             progressbar(async_task, current_progress, 'Downloading upscale models...')
-            config.downloading_upscale_model()
+            loader.download_upscale_model()
         return uov_input_image, skip_prompt_processing, steps
 
     def prepare_enhance_prompt(prompt: str, fallback_prompt: str):
@@ -1535,7 +1536,7 @@ def worker():
 
         if 'inpaint' in goals and inpaint_parameterized:
             progressbar(async_task, current_progress, 'Downloading inpainter...')
-            inpaint_head_model_path, inpaint_patch_model_path = config.downloading_inpaint_models(
+            inpaint_head_model_path, inpaint_patch_model_path = loader.download_inpaint_models(
                 inpaint_engine)
             if inpaint_patch_model_path not in base_model_additional_loras:
                 base_model_additional_loras += [(inpaint_patch_model_path, 1.0)]
@@ -1733,6 +1734,7 @@ def worker():
 
         interpret('[Worker] Resolution =', async_task.aspect_ratios_selection)
         interpret('[Worker] Adaptive CFG =', async_task.adaptive_cfg)
+        interpret('[Worker] VAE =', async_task.vae_name)
         interpret('[Worker] CLIP Skip =', async_task.clip_skip)
         interpret('[Worker] Sharpness =', async_task.sharpness)
         interpret('[Worker] ControlNet Softness =', async_task.controlnet_softness)

@@ -2,10 +2,9 @@ import os
 import gradio as gr
 import sys
 import time
-import common
-
 from pathlib import Path
 
+import common
 import ldm_patched.modules.model_management as model_management
 import modules.async_worker as worker
 import modules.config as config
@@ -382,9 +381,11 @@ def check_performance_handler():
     determining optimal performance
     and configuring the UI popup.
     """
+    import torch
     # 1. Fetch the GPU's hardware architecture version via torchruntime
     from torchruntime.device_db import get_gpus
     from torchruntime.platform_detection import get_nvidia_arch
+
     gpu_infos = get_gpus()
     device_names = set(gpu.device_name for gpu in gpu_infos)
     arch_version = get_nvidia_arch(device_names)
@@ -393,7 +394,6 @@ def check_performance_handler():
     is_compatible, message = get_nvidia_driver_compatibility()
 
     # 3. Check the currently running PyTorch environment version
-    import torch
     is_running_cu130 = torch.__version__.startswith('2.10.')
     is_running_cu128 = torch.__version__.startswith('2.7.')
 
@@ -485,7 +485,7 @@ def check_performance_handler():
     # =============================================================================
     # PATH B: USER HAS NON-BLACKWELL GPU (RTX 20/30/40 series, CC <= 12.0)
     # =============================================================================
-    else:
+    elif common.torch_status == "New":
         if is_compatible:
             if is_running_cu130:
                 # Scenario B1: Non-Blackwell GPU running experimental CUDA 13.0
@@ -555,6 +555,27 @@ def check_performance_handler():
                 gr.update(visible=False),                            # perf_upgrade_btn
                 gr.update(visible=False)                             # perf_cancel_btn
             )
+    else:
+        # Legacy hardware running PyTorch 2.5 or earlier
+        status_val = interpret('Legacy Configuration using PyTorch', common.torch_status , silent=True)
+        message = interpret('No Longer Supported by ComfyUI', silent=True)
+        already_optimal = interpret('FooocusPlus has integrated ComfyUI to provide image generation with diverse models including Flux, HyDit, Kolors and SD1.5. The current version of ComfyUI (0.27.0) was adopted to support both SD3.5 and Z-Image. However, continuing investigation has shown that Comfy causes unsolvable problems with legacy hardware. For systems using PyTorch 2.5 and earlier, Comfy mode will be completely disabled in the near future.', silent=True)
+
+        msg = (
+            f"### **{header_check}**\n\n"
+            f"**{gpu_label}** {gpu_val}\n\n"
+            f"**{status_label}** {status_val}\n\n"
+            f"**{details_label}** {message}\n\n"
+            f"{already_optimal}\n\n"
+        )
+        return (
+            gr.update(visible=True),                             # perf_modal_box
+            gr.update(value=msg),                                # perf_modal_header_msg
+            gr.update(value=stats_msg, visible=bool(stats_msg)), # perf_modal_metrics_msg
+            gr.update(visible=True),                             # perf_ok_btn (Show bottom OK)
+            gr.update(visible=False),                            # perf_upgrade_btn
+            gr.update(visible=False)                             # perf_cancel_btn
+        )
 
 
 def execute_cuda13_upgrade():

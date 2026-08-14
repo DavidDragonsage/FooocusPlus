@@ -23,7 +23,6 @@ from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 from enhanced.backend import sync_model_info
 from enhanced.translator import interpret, interpret_info
-from modules.model_loader import load_file_from_url
 
 
 # Toolbox context

@@ -6,8 +6,9 @@ import sys
 from pathlib import Path
 from packaging.version import parse as parse_version
 
-from args_manager import args
+import common
 import modules.user_structure as US
+from args_manager import args
 from modules.launch_util import is_win32_standalone_build, \
     python_embedded_path, win32_root
 
@@ -116,11 +117,6 @@ def dependency_resolver():
     # check for latest NVIDIA driver
     # fallback to Torch "2.7.1" if not
     new_driver, driver_msg = get_nvidia_driver_compatibility()
-    print()
-    if new_driver:
-        print(f"Updated NVIDIA driver detected: {driver_msg}")
-    else:
-        print(f"This system does not use NVIDIA hardware or the NVIDIA driver has not been updated: {driver_msg}")
 
     # --gpu-type command line overrides:
     # in this case Torchruntime is ignored
@@ -270,10 +266,19 @@ def dependency_resolver():
             torch_platform_ver = torch_platform_default
         )
 
-    # Disable Comfy if torch_ver <= 2.4
-    # if torch_ver == "2.4.1" or torch_ver == "2.3.1" or torch_ver == "2.2.2" or torch_ver == "1.13.1":
-    #    args.disable_comfyd = True
-    # return the result
+    # Warn about Comfy compatibility if torch_ver <= 2.4
+    print()
+    if torch_ver == "2.5.1" or torch_ver == "2.4.1" or torch_ver == "2.3.1" or torch_ver == "2.2.2" or torch_ver == "1.13.1":
+        common.torch_status = torch_ver
+        print(f'The video system is set for PyTorch {torch_ver}')
+        print('This software library is required by legacy hardware.')
+    else:
+        common.torch_status = "New"
+        if new_driver:
+            print(f"Updated NVIDIA driver detected: {driver_msg}")
+        else:
+            print(f"This system does not use NVIDIA hardware or the NVIDIA driver has not been updated: {driver_msg}")
+
     return dependencies
 
 

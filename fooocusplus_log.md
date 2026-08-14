@@ -1,3 +1,26 @@
+# 1.1.4 Comfy Incompatible with Legacy GPUs
+
+* Comfy does not support PyTorch 2.5 or earlier
+  * FooocusPlus integrates Comfy for diverse model support
+    including Flux, HyDit, SD1.5, SD3.5 & Z-Image
+  * the Comfy upgrade to support Z-Image broke
+    compatibility with GPUs using PyTorch 2.5 & earlier
+  * PyTorch 2.5 and earlier are required by legacy GPUs
+  * legacy GPUs now have unsolvable problems in Comfy mode
+  * regrettably, Comfy mode will be disabled for these
+    GPUs in the near future
+  * FooocusPlus will continue to provide SDXL generative
+    AI for all the GPUs that it currently supports
+* debugged SDXL problems after using Z-Image presets
+* added ZI-TurboX_5GGUF & ZI-TurboX_4GGUF presets
+* the correct models are now shown for SD3.5 & Z-Image
+* debugged the Image Editor save function
+* moved loading/downloading from config.py to loader.py
+* Release Date: August 13th, 2026<br/>
+* Hotfix0:
+<br/><br/>
+
+
 # 1.1.3 Full Comfy LoRA Support & Base Model Restoration
 
 * users no longer have to download unused models
@@ -82,7 +105,7 @@
   * located in Extras under Favorite Preset Control
 * Release Date: August 4th, 2026<br/>
 * Hotfix5: Improve Z-Image model file detection.
-* Hotfix4: Restore the Hotfix UI announcement.
+* Hotfix4: Restore the Hotfix UI announcement
 * Hotfix3: Removed the phantom ZI-Base category
 * Hotfix2: Added Preset info to Performance Check
 * Hotfix1: Added the ZI-Base & ZI-BaseX presets

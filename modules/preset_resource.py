@@ -7,6 +7,7 @@ import gradio as gr
 import args_manager as args
 import common
 import modules.config as config
+import modules.loader as loader
 import modules.user_structure as US
 from ldm_patched.modules import model_management
 from enhanced.translator import interpret
@@ -150,7 +151,8 @@ def find_preset_category(preset):
 
 category_selection = find_preset_category(current_preset)
 
-def get_preset_list(): # called by update_files() in modules.config
+def get_preset_list():
+    # called by launch, preset_resource & webui
     preset_list = list(presets_path.rglob('*.json'))
     if not [preset_list]:   # also used to check if preset files exist
         interpret('[Preset] No presets found')
@@ -301,19 +303,25 @@ def select_data_from_preset(preset_content):
         config.backend_engine = getattr(config, 'default_engine', {}).get('backend_engine', 'Fooocus')
 
     # Force global model name synchronization during preset loads
-    preset_model = items.get('default_model')
+    preset_model = items.get('default_model', items.get('base_model', items.get('Base Model')))
     if preset_model and preset_model != 'None':
-        config.default_base_model_name = preset_model
+        loader.base_model_name = preset_model
+
+    # catches presets that do not set 'default_vae'
+    preset_vae = items.get('default_vae')
+    if preset_vae is None or preset_vae == 'None' or preset_vae == '':
+        preset_vae = 'Default (model)'
+    config.default_vae = preset_vae
 
     # Force global refiner name synchronization during preset loads
-    preset_refiner = items.get('default_refiner')
+    preset_refiner = items.get('default_refiner', items.get('refiner_model', items.get('Refiner Model')))
     if preset_refiner and preset_refiner != 'None':
         config.default_refiner = preset_refiner
 
-    # Force global lora_filenames list synchronization during preset loads
+    # Force loader.lora_filenames list synchronization during preset loads
     engine = common.default_engine.get('backend_engine', 'Fooocus') if common.default_engine else 'Fooocus'
     task_method = common.default_engine.get('backend_params', {}).get('task_method') if common.default_engine else None
-    config.lora_filenames = config.get_lora_model_list(engine, task_method)
+    loader.lora_filenames = loader.get_lora_model_list(engine, task_method)
     # --------------------------------------
 
     # for presets that do not have a default prompt or negative prompt

@@ -12,7 +12,7 @@ from hydit.config import get_args
 from hydit.inference import End2End
 from enhanced.translator import interpret
 from modules.config import path_models_root, paths_diffusers
-from modules.model_loader import load_file_from_url
+from modules.loader import load_file_from_url
 from modules.launch_util import is_installed
 
 from diffusers import HunyuanDiTPipeline, DDPMScheduler, DDIMScheduler, DPMSolverMultistepScheduler

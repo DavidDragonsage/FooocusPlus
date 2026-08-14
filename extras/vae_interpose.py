@@ -6,9 +6,9 @@ import safetensors.torch as sf
 import torch
 import torch.nn as nn
 
+import common
 import ldm_patched.modules.model_management
 from ldm_patched.modules.model_patcher import ModelPatcher
-from modules.config import path_vae_approx
 
 
 class ResBlock(nn.Module):
@@ -79,7 +79,7 @@ class InterposerModel(nn.Module):
 
 
 vae_approx_model = None
-vae_approx_filename = os.path.join(path_vae_approx, 'xl-to-v1_interposer-v4.0.safetensors')
+vae_approx_filename = os.path.join(common.path_vae_approx, 'xl-to-v1_interposer-v4.0.safetensors')
 
 
 def parse(x):

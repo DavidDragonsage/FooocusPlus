@@ -15,6 +15,7 @@ from PIL import Image
 from typing import List, Tuple, AnyStr, NamedTuple
 
 import modules.config as config
+import modules.loader as loader
 import modules.sdxl_styles
 import modules.user_structure as US
 from enhanced.translator import \
@@ -591,8 +592,8 @@ def apply_wildcards(wildcard_text, rng, i, read_wildcards_in_order) -> str:
         interpret('[Utility] Wildcard processing:', wildcard_text)
         for placeholder in placeholders:
             try:
-                matches = [x for x in config.wildcard_filenames if os.path.splitext(os.path.basename(x))[0] == placeholder]
-                words = open(os.path.join(config.path_wildcards, matches[0]), encoding='utf-8').read().splitlines()
+                matches = [x for x in loader.wildcard_filenames if os.path.splitext(os.path.basename(x))[0] == placeholder]
+                words = open(os.path.join(loader.path_wildcards, matches[0]), encoding='utf-8').read().splitlines()
                 words = [x for x in words if x != '']
                 assert len(words) > 0
                 if read_wildcards_in_order:

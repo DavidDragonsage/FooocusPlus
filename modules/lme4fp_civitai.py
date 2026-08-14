@@ -12,7 +12,7 @@ import hashlib
 import requests
 import time
 import args_manager as args
-import modules.config as config
+import common
 import modules.user_structure as US
 from datetime import datetime
 from PIL import Image
@@ -337,8 +337,8 @@ class LoraMetadataExtractor:
 def main():
     return
     """Example usage of LoraMetadataExtractor."""
-    print(f'Processing LoRAs from {config.paths_loras[0]}')
-    lora_dir = Path(config.paths_loras[0])
+    print(f'Processing LoRAs from {common.paths_loras[0]}')
+    lora_dir = Path(common.paths_loras[0])
     user_dir = Path(args.args.user_dir)
     output_dir = Path(user_dir/"lora_trigger_data")
 

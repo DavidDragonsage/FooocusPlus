@@ -10,7 +10,7 @@ import time
 import args_manager as args
 import comfy.comfyui_version
 import common
-import enhanced.superprompter
+import enhanced.superprompt
 import ldm_patched.modules.model_management as model_management
 import modules.aspect_ratios as AR
 import modules.async_worker as worker
@@ -19,6 +19,7 @@ import modules.constants as constants
 import modules.flags as flags
 import modules.gradio_hijack as grh
 import modules.html
+import modules.loader as loader
 import modules.meta_parser as meta_parser
 import modules.preset_resource as PR
 import modules.style_sorter as style_sorter
@@ -1723,13 +1724,13 @@ with common.GRADIO_ROOT:
                 with gr.Group():
                     base_model = gr.Dropdown(
                         label='Base Model',
-                        choices = config.model_filenames,
-                        value = config.default_base_model_name,
+                        choices = loader.model_filenames,
+                        value = loader.base_model_name,
                         show_label=True,)
 
                     refiner_model = gr.Dropdown(
                         label='Refiner (SDXL or SD 1.5)',
-                        choices=['None'] + config.model_filenames, value=config.default_refiner,
+                        choices=['None'] + loader.model_filenames, value=config.default_refiner,
                         show_label=True,
                         visible = not common.default_engine)
 
@@ -1769,7 +1770,7 @@ with common.GRADIO_ROOT:
                                 elem_classes='min_check')
                         with gr.Row():
                             lora_model = gr.Dropdown(label='',
-                                choices=['None'] + config.lora_filenames,
+                                choices=['None'] + loader.lora_filenames,
                                 value=filename)
                         with gr.Row():
                             lora_weight = gr.Slider(label='Weight',
@@ -1926,7 +1927,7 @@ with common.GRADIO_ROOT:
 
                         vae_name = gr.Dropdown(
                             label='VAE',
-                            choices=[modules.flags.default_vae] + config.vae_filenames,
+                            choices=[modules.flags.default_vae] + loader.vae_filenames,
                             value=config.default_vae,
                             show_label=True)
 
@@ -2320,7 +2321,7 @@ with common.GRADIO_ROOT:
 
 
     super_prompter.click(
-        lambda x, y, z: enhanced.superprompter.answer(
+        lambda x, y, z: enhanced.superprompt.answer(
             input_text=render(f'{y}{x}', True),
         seed=image_seed),
         inputs=[prompt, super_prompter_prompt, translation_methods],
@@ -4744,8 +4745,8 @@ with common.GRADIO_ROOT:
     # Models Tab Event Handlers & Helpers
 
     def set_base_model(arg_base_model):
-        config.default_base_model_name = arg_base_model
-        return gr.update(value=config.default_base_model_name)
+        loader.base_model_name = arg_base_model
+        return gr.update(value=loader.base_model_name)
 
     base_model.change(
         fn=set_base_model,
@@ -4785,8 +4786,8 @@ with common.GRADIO_ROOT:
         interpret_info('Refreshing all files...')
         US.create_user_structure(args.args.user_dir)
         US.create_model_structure(
-            config.paths_checkpoints,
-            config.paths_loras)
+            common.paths_checkpoints,
+            common.paths_loras)
 
         substyle_choices = US.list_files_by_patterns(
             './substyles', patterns=['*.txt'],
@@ -4798,7 +4799,7 @@ with common.GRADIO_ROOT:
         engine = state_params.get('engine', 'Fooocus')
         task_method = state_params.get('task_method', None)
         config.available_presets = PR.get_preset_list()
-        model_filenames, lora_filenames, vae_filenames = config.update_files(engine, task_method)
+        model_filenames, lora_filenames, vae_filenames = loader.update_files(engine, task_method)
 
         results = [gr.update(
             choices=substyle_choices, value='Default')]

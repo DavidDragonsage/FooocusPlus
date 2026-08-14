@@ -3,6 +3,7 @@ import einops
 import torch
 import numpy as np
 
+import common
 import ldm_patched.modules.model_management
 import ldm_patched.modules.model_detection
 import ldm_patched.modules.model_patcher
@@ -21,7 +22,6 @@ from ldm_patched.modules.sample import prepare_mask
 from modules.lora import match_lora
 from modules.util import get_file_from_folder_list
 from ldm_patched.modules.lora import model_lora_keys_unet, model_lora_keys_clip
-from modules.config import path_embeddings
 from ldm_patched.contrib.external_model_advanced import ModelSamplingDiscrete, ModelSamplingContinuousEDM
 
 opEmptyLatentImage = EmptyLatentImage()
@@ -84,7 +84,7 @@ class StableDiffusionModel:
             if os.path.exists(filename):
                 lora_filename = filename
             else:
-                lora_filename = get_file_from_folder_list(filename, modules.config.paths_loras)
+                lora_filename = get_file_from_folder_list(filename, common.paths_loras)
 
             if not os.path.exists(lora_filename):
                 interpret('[Core] File not found:', f'LoRA {lora_filename}')
@@ -151,7 +151,7 @@ def apply_controlnet(positive, negative, control_net, image, strength, start_per
 @torch.inference_mode()
 def load_model(ckpt_filename, vae_filename=None):
     unet, clip, vae, vae_filename, clip_vision = load_checkpoint_guess_config(ckpt_filename,
-        embedding_directory=path_embeddings,
+        embedding_directory=common.path_embeddings,
         vae_filename_param=vae_filename)
     return StableDiffusionModel(unet=unet, clip=clip, vae=vae, clip_vision=clip_vision, filename=ckpt_filename, vae_filename=vae_filename)
 
@@ -231,10 +231,9 @@ VAE_approx_models = {}
 def get_previewer(model):
     global VAE_approx_models
 
-    from modules.config import path_vae_approx
     is_sdxl = isinstance(model.model.latent_format,
         ldm_patched.modules.latent_formats.SDXL)
-    vae_approx_filename = os.path.join(path_vae_approx, 'xlvaeapp.pth' if is_sdxl else 'vaeapp_sd15.pth')
+    vae_approx_filename = os.path.join(common.path_vae_approx, 'xlvaeapp.pth' if is_sdxl else 'vaeapp_sd15.pth')
 
     if vae_approx_filename in VAE_approx_models:
         VAE_approx_model = VAE_approx_models[vae_approx_filename]

@@ -13,7 +13,9 @@ from PIL.PngImagePlugin import PngInfo
 from PIL.Image import Resampling
 
 import common
+import enhanced.gallery as gallery_util
 import modules.config as config
+import modules.loader as loader
 import modules.meta_parser as meta_parser
 import modules.user_structure as US
 
@@ -372,8 +374,6 @@ def save_metadata_logic(save_metadata_bool):
 # Refresh and index the catalog
 # after an Image Editor save
 def refresh_catalog_after_save(state_params):
-    import modules.config as config
-    import modules.gallery_util as gallery_util
 
     # 1. Scan the outputs directory
     # to capture the newly saved image
@@ -587,12 +587,12 @@ def save_image(output_image, format_str, save_meta):
             # with their full on-disk filenames.
             # Dynamic extension resolver for Base Model/Refiner Model inside the 'd' list
             if norm_key == 'base model' and value != 'None' and not any(str(value).lower().endswith(ext) for ext in valid_extensions):
-                for filename in getattr(config, 'model_filenames', []):
+                for filename in getattr(loader, 'model_filenames', []):
                     if Path(filename).stem == str(value):
                         value = filename
                         break
             elif norm_key == 'refiner model' and value != 'None' and not any(str(value).lower().endswith(ext) for ext in valid_extensions):
-                for filename in getattr(config, 'model_filenames', []):
+                for filename in getattr(loader, 'model_filenames', []):
                     if Path(filename).stem == str(value):
                         value = filename
                         break
@@ -605,11 +605,11 @@ def save_image(output_image, format_str, save_meta):
                 else:
                     label = "LoRA"
 
-                # Dynamically resolve LoRA filename extensions against config.lora_filenames
+                # Dynamically resolve LoRA filename extensions against loader.lora_filenames
                 if ' : ' in str(value):
                     lora_name, lora_weight = str(value).split(' : ', 1)
                     if not any(lora_name.lower().endswith(ext) for ext in valid_extensions):
-                        for filename in getattr(config, 'lora_filenames', []):
+                        for filename in getattr(loader, 'lora_filenames', []):
                             if Path(filename).stem == lora_name:
                                 lora_name = filename
                                 break
@@ -681,13 +681,13 @@ def save_image(output_image, format_str, save_meta):
                             '.bin', '.safetensors',
                             '.fooocus.patch', '.gguf']
         if base_model_name != 'None' and not any(base_model_name.lower().endswith(ext) for ext in valid_extensions):
-            for filename in getattr(config, 'model_filenames', []):
+            for filename in getattr(loader, 'model_filenames', []):
                 if Path(filename).stem == base_model_name:
                     base_model_name = filename
                     break
 
         if refiner_model_name != 'None' and not any(refiner_model_name.lower().endswith(ext) for ext in valid_extensions):
-            for filename in getattr(config, 'model_filenames', []):
+            for filename in getattr(loader, 'model_filenames', []):
                 if Path(filename).stem == refiner_model_name:
                     refiner_model_name = filename
                     break

@@ -228,26 +228,25 @@ if args.hf_mirror is not None:
     print("The hf_mirror is:", args.hf_mirror)
 
 import common
+import modules.loader as loader
 import modules.preset_resource as PR
 from enhanced.backend import comfyd
 from modules import config
 from modules.hash_cache import init_cache
 from modules.preset_support import init_config_preset
-from modules.model_loader import load_file_from_url
+from modules.loader import load_file_from_url
 from ldm_patched.modules.model_management import get_vram
-os.environ["U2NET_HOME"] = config.paths_inpaint[0]
-os.environ["BERT_HOME"] = config.paths_llms[0]
+os.environ["U2NET_HOME"] = common.paths_inpaint[0]
+os.environ["BERT_HOME"] = common.paths_llms[0]
 os.environ['GRADIO_TEMP_DIR'] = config.temp_path
 
 write_torch_base(torch_ver)
 
-print()
-interpret('Initializing preset support...')
 
 launch_vram = int(get_vram()/1000)
 if launch_vram<6:
     print()
-    interpret(f'The video card has only {launch_vram}GB of memory (VRAM) but FooocusPlus')
+    interpret(f'The video subsystem has only {launch_vram}GB of memory (VRAM) but FooocusPlus')
     interpret('will give you access to models that are optimized for Low VRAM systems.')
     interpret('However, any system with less than 6GB of VRAM will tend to be slow')
     interpret('and unreliable, and may or may not be able to generate Flux images.')
@@ -255,23 +254,41 @@ if launch_vram<6:
 
     if launch_vram<4: # some folks actually can run Flux with 4GB VRAM cards, so only lock out those with less than that
         print()
-        interpret('Systems with less than 4GB of VRAM are not be able to run large models, including:',
-            'Flux, SD3, Kolors, HyDiT')
+        interpret('Systems with less than 4GB of VRAM are not able to run large models, including:',
+            'Flux, SD3.5, Kolors, HyDiT and Z-Image')
         args.async_cuda_allocation = False
         args.disable_async_cuda_allocation = True
         args.disable_comfyd = True
     print()
 
+if common.torch_status != "New":
+    # \033[1;33m sets the terminal text color to Bold Yellow
+    print('\033[1;33m', end='')
+    print()
+    interpret('FooocusPlus uses ComfyUI to support diverse models such as Flux, Kolors, HyDit, SD1.5, SD3.5 and Z-Image.')
+    interpret('ComfyUI no longer supports legacy graphics hardware (GPUs) that requires PyTorch 2.5 or earlier.')
+    interpret('The installed GPU is using PyTorch', common.torch_status)
+    interpret('You may encounter intermittent and unsolvable problems when using these special models with your hardware.')
+    print()
+    interpret('For legacy GPUs, Comfy mode will be completely locked out in the near future.')
+    interpret("This was an agonizing choice but it is irresponsible to support a partially broken system.")
+    interpret("However FooocusPlus will continue to fully support SDXL mode (original Fooocus mode) which is completely independent of Comfy.")
+    # \033[0m resets the terminal text colour back to default
+    print()
+    print('\033[0m', end='')
+
+print()
+interpret('Initializing preset support...')
 
 def download_models(default_model, previous_default_models, checkpoint_downloads, embeddings_downloads, lora_downloads, vae_downloads):
     from modules.util import get_file_from_folder_list
 
     for file_name, url in vae_approx_filenames:
-        load_file_from_url(url=url, model_dir=config.path_vae_approx, file_name=file_name)
+        load_file_from_url(url=url, model_dir=common.path_vae_approx, file_name=file_name)
 
     load_file_from_url(
         url='https://huggingface.co/lllyasviel/misc/resolve/main/fooocus_expansion.bin',
-        model_dir=config.path_fooocus_expansion,
+        model_dir=common.path_fooocus_expansion,
         file_name='pytorch_model.bin'
     )
 
@@ -280,9 +297,9 @@ def download_models(default_model, previous_default_models, checkpoint_downloads
         return default_model, checkpoint_downloads
 
     if not args.always_download_new_model:
-        if not os.path.isfile(get_file_from_folder_list(default_model, config.paths_checkpoints)):
+        if not os.path.isfile(get_file_from_folder_list(default_model, common.paths_checkpoints)):
             for alternative_model_name in previous_default_models:
-                if os.path.isfile(get_file_from_folder_list(alternative_model_name, config.paths_checkpoints)):
+                if os.path.isfile(get_file_from_folder_list(alternative_model_name, common.paths_checkpoints)):
                     interpret(f'You do not have [{default_model}] but you have', alternative_model_name)
                     interpret('To avoid downloading new models, FooocusPlus will use', alternative_model_name)
                     interpret('To avoid fallback and always get new models, use this command line argument in the startup batch file:', '--always-download-new-model')
@@ -291,18 +308,18 @@ def download_models(default_model, previous_default_models, checkpoint_downloads
                     break
 
     for file_name, url in checkpoint_downloads.items():
-        model_dir = os.path.dirname(get_file_from_folder_list(file_name, config.paths_checkpoints))
+        model_dir = os.path.dirname(get_file_from_folder_list(file_name, common.paths_checkpoints))
         load_file_from_url(url=url, model_dir=model_dir, file_name=file_name)
 
     for file_name, url in embeddings_downloads.items():
-        load_file_from_url(url=url, model_dir=config.path_embeddings, file_name=file_name)
+        load_file_from_url(url=url, model_dir=common.path_embeddings, file_name=file_name)
 
     for file_name, url in lora_downloads.items():
-        model_dir = os.path.dirname(get_file_from_folder_list(file_name, config.paths_loras))
+        model_dir = os.path.dirname(get_file_from_folder_list(file_name, common.paths_loras))
         load_file_from_url(url=url, model_dir=model_dir, file_name=file_name)
 
     for file_name, url in vae_downloads.items():
-        load_file_from_url(url=url, model_dir=config.path_vae, file_name=file_name)
+        load_file_from_url(url=url, model_dir=common.path_vae, file_name=file_name)
 
     return default_model, checkpoint_downloads
 
@@ -323,13 +340,12 @@ else:
 
 init_config_preset()
 
-config.default_base_model_name, config.checkpoint_downloads = download_models(
-    config.default_base_model_name, config.previous_default_models,
+loader.base_model_name, config.checkpoint_downloads = download_models(
+    loader.base_model_name, config.previous_default_models,
     config.checkpoint_downloads, config.embeddings_downloads,
     config.lora_downloads, config.vae_downloads)
 
-config.available_presets = PR.get_preset_list()
-config.update_files()
-init_cache(config.model_filenames, config.paths_checkpoints, config.lora_filenames, config.paths_loras)
+loader.update_files()
+init_cache(loader.model_filenames, common.paths_checkpoints, loader.lora_filenames, common.paths_loras)
 
 from webui import *

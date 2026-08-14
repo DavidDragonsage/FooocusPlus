@@ -9,7 +9,7 @@ from pathlib import Path
 
 import common
 import enhanced.gallery as gallery_util
-import enhanced.superprompter as superprompter
+import enhanced.superprompt as superprompt
 import enhanced.comfy_task as comfy_task
 import modules.aspect_ratios as AR
 import modules.config as config
@@ -29,7 +29,7 @@ from enhanced.translator import \
 from enhanced.version import announce_version
 from enhanced.welcome import get_welcome_image
 from modules.preset_support import parse_meta_from_preset
-from modules.model_loader import load_file_from_url
+from modules.loader import load_file_from_url
 
 
 config_ext = {}
@@ -354,7 +354,7 @@ def process_before_generation(state_params, backend_params, backfill_prompt, tra
     common.is_generating = True
     if "__nav_name_list" not in state_params.keys():
         state_params.update({"__nav_name_list": PR.get_all_presetnames()})
-    superprompter.remove_superprompt()
+    superprompt.remove_superprompt()
     remove_tokenizer()
     backend_params.update({
         'backfill_prompt': backfill_prompt,
@@ -527,24 +527,24 @@ def download_models(default_model, previous_default_models, checkpoint_downloads
         model_dir = os.path.dirname(common.MODELS_INFO.get_file_path_by_name('checkpoints', file_name))
         load_file_from_url(url=url, model_dir=model_dir, file_name=os.path.basename(file_name))
     for file_name, url in embeddings_downloads.items():
-        load_file_from_url(url=url, model_dir=config.path_embeddings, file_name=file_name)
+        load_file_from_url(url=url, model_dir=common.path_embeddings, file_name=file_name)
     for file_name, url in lora_downloads.items():
         model_dir = os.path.dirname(common.MODELS_INFO.get_file_path_by_name('loras', file_name))
         load_file_from_url(url=url, model_dir=model_dir, file_name=os.path.basename(file_name))
     for file_name, url in vae_downloads.items():
-        load_file_from_url(url=url, model_dir=config.path_vae, file_name=file_name)
+        load_file_from_url(url=url, model_dir=common.path_vae, file_name=file_name)
     # New: Auto-download text encoders into
     # UserDir/models/clip/
     if clip_downloads:
         for file_name, url in clip_downloads.items():
-            load_file_from_url(url=url, model_dir=config.path_clip, file_name=file_name)
+            load_file_from_url(url=url, model_dir=common.path_clip, file_name=file_name)
 
     return default_model, checkpoint_downloads
 
 
 from transformers import CLIPTokenizer
 
-config_clip_path = Path(config.path_clip_vision)
+config_clip_path = Path(common.path_clip_vision)
 cur_clip_path = Path(config_clip_path/'clip-vit-large-patch14').resolve()
 if cur_clip_path.exists():
     tokenizer = CLIPTokenizer.from_pretrained(cur_clip_path)

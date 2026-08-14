@@ -1,13 +1,13 @@
 import sys
-
-import modules.config
 import numpy as np
 import torch
-from extras.GroundingDINO.util.inference import default_groundingdino
-from extras.sam.predictor import SamPredictor
 from rembg import remove, new_session
 from segment_anything import sam_model_registry
 from segment_anything.utils.amg import remove_small_regions
+
+import modules.loader as loader
+from extras.GroundingDINO.util.inference import default_groundingdino
+from extras.sam.predictor import SamPredictor
 
 
 class SAMOptions:
@@ -82,7 +82,7 @@ def generate_mask_from_image(
     boxes[:, :2] = boxes[:, :2] - boxes[:, 2:] / 2
     boxes[:, 2:] = boxes[:, 2:] + boxes[:, :2]
 
-    sam_checkpoint = modules.config.download_sam_model(sam_options.model_type)
+    sam_checkpoint = loader.download_sam_model(sam_options.model_type)
     sam = sam_model_registry[sam_options.model_type](checkpoint=sam_checkpoint)
 
     sam_predictor = SamPredictor(sam)

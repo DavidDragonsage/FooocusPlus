@@ -36,6 +36,7 @@
     "default_sample_sharpness": 1,
     "default_sampler": "dpmpp_2m",
     "default_scheduler": "sgm_uniform",
+    "default_vae": "Default (model)",
     "default_clip_skip": 1,
     "default_performance": "",
     "default_styles": [

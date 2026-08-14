@@ -1,22 +1,28 @@
-import os
 import random
+import shutil
 import torch
+from pathlib import Path
 from transformers import T5Tokenizer, T5ForConditionalGeneration
-import modules.config as top_config
+
+import modules.loader as loader
 from common import ROOT
 from common import torch_device
-import shutil
-from enhanced.superprompter import *
+from enhanced.superprompt import *
+from enhanced.translator import interpret
+
 
 def load_models():
     global tokenizer, model, modelDir
 
     if tokenizer is None or model is None:
-        if not os.path.exists(modelDir):
-            org_modelDir = os.path.join(ROOT, "models/llms/superprompt-v1")
+        if not modelDir.exists():
+            org_modelDir = Path(ROOT) / 'models' / 'llms' / 'superprompt-v1'
             shutil.copytree(org_modelDir, modelDir)
-        if not os.path.exists(os.path.join(modelDir, "model.safetensors")):
-            top_config.downloading_superprompter_model()
-            print("[SuperPrompt] Downloaded the model file for superprompter. \n")
-        tokenizer = T5Tokenizer.from_pretrained(modelDir)
-        model = T5ForConditionalGeneration.from_pretrained(modelDir, torch_dtype=torch.float16).to(torch_device)
+
+        if not (modelDir / 'model.safetensors').exists():
+            interpret('[SuperPrompter] Downloading the model files for superprompter. \n')
+            loader.download_superprompter_model()
+
+        # Cast Path objects to string inside HuggingFace methods for robust compatibility
+        tokenizer = T5Tokenizer.from_pretrained(str(modelDir))
+        model = T5ForConditionalGeneration.from_pretrained(str(modelDir), torch_dtype=torch.float16).to(torch_device)

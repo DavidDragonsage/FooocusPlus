@@ -2,11 +2,11 @@ from pathlib import Path
 
 import common
 import ldm_patched
-import modules.config as config
+import modules.loader as loader
 
 from enhanced.backend import ComfyTaskParams
 from enhanced.translator import interpret_warn
-from modules.model_loader import load_file_from_url
+
 
 default_method_names = ['Blend the Foreground with IC-Light']
 default_method_list = {
@@ -38,14 +38,6 @@ def is_lowlevel_device():
 def is_highlevel_device():
     return ldm_patched.modules.model_management.get_vram()>VRAM16G
 
-default_base_SD15_name = 'SD1.5/realisticVisionV60B1_v51VAE.safetensors'
-default_base_SD3m_name_list = ['SD3x/sd3.5_medium_incl_clips_t5xxlfp8scaled.safetensors']
-default_base_SD3x_name_list = ['SD3x/sd3.5_medium_incl_clips_t5xxlfp8scaled.safetensors']
-
-default_base_Flux_name_list = ['FluxDev/flux1-dev-Q5_K_S.gguf']
-flux_model_urls = {
-    "FluxDev/flux1-dev-Q5_K_S.gguf": "https://huggingface.co/lllyasviel/FLUX.1-dev-gguf/resolve/main/flux1-dev-Q5_K_S.gguf?download=true"
-    }
 
 quick_prompts = [
     'blue hour',
@@ -77,6 +69,89 @@ quick_subjects = [
 quick_subjects = [[x] for x in quick_subjects]
 
 
+default_kolors_base_model_name = 'kolors_unet_fp16.safetensors'
+
+kolors_scheduler_list = [ "EulerDiscreteScheduler",
+                          "EulerAncestralDiscreteScheduler",
+                          "DPMSolverMultistepScheduler",
+                          "DPMSolverMultistepScheduler_SDE_karras",
+                          "UniPCMultistepScheduler",
+                          "DEISMultistepScheduler" ]
+default_kolors_scheduler = kolors_scheduler_list[0]
+
+
+def check_download_kolors_model() -> None:
+    """
+    Checks for the existence of the Kolors diffuser models in the active
+    user-configured models directory. Downloads and extracts them if missing.
+    """
+    import shutil
+    import zipfile
+    from tqdm import tqdm
+
+    # 1. Standardized paths using relative keys
+    check_model_file = [
+        'diffusers/Kolors/text_encoder/pytorch_model-00007-of-00007.bin',
+        'diffusers/Kolors/unet/diffusion_pytorch_model.fp16.safetensors',
+        'diffusers/Kolors/vae/diffusion_pytorch_model.fp16.safetensors',
+    ]
+
+    # 2. common.paths_diffusers[0] points to '.../models/diffusers'
+    diffusers_path = Path(common.path_diffusers)
+    path_root = diffusers_path.parent  # Resolves to the parent '.../models' root directory
+
+    path_temp = path_root / 'temp'
+    if not path_temp.exists():
+        path_temp.mkdir(parents=True, exist_ok=True)
+
+    # 3. Check for existence in the registered search paths
+    if not common.MODELS_INFO.exists_model_key(check_model_file[0]):
+        downfile = path_temp / 'KwaiKolors.zip'
+        loader.load_file_from_url(
+            url='https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/KwaiKolors.zip',
+            model_dir=str(path_temp),
+            file_name='KwaiKolors.zip'
+        )
+
+        with zipfile.ZipFile(downfile, 'r') as zipf:
+            file_list = zipf.infolist()
+            print(f'[ComfyTask] Extracting: {downfile} to {path_root}')
+
+            # Extract each file sequentially
+            # to drive the console progress bar
+            for member in tqdm(file_list, desc='Extracting Kolors Shards', unit='file'):
+                zipf.extract(member, path_root)
+
+        if downfile.exists():
+            downfile.unlink()
+        if path_temp.exists() and path_temp.is_dir():
+            shutil.rmtree(path_temp)
+
+    # 4. Copy unet and vae using pathlib
+    if not common.MODELS_INFO.exists_model_key(check_model_file[1]):
+        path_dst = diffusers_path / 'Kolors/unet/diffusion_pytorch_model.fp16.safetensors'
+        path_org = Path(common.path_unet) / 'kolors_unet_fp16.safetensors'
+
+        # Ensure destination subfolders exist
+        path_dst.parent.mkdir(parents=True, exist_ok=True)
+
+        print(f'[ComfyTask] Model file copy: {path_org} to {path_dst}')
+        shutil.copy(path_org, path_dst)
+
+    if not common.MODELS_INFO.exists_model_key(check_model_file[2]):
+        path_dst = diffusers_path / 'Kolors/vae/diffusion_pytorch_model.fp16.safetensors'
+        path_org = Path(common.path_vae) / 'sdxl_fp16.vae.safetensors'
+
+        # Ensure destination subfolders exist
+        path_dst.parent.mkdir(parents=True, exist_ok=True)
+
+        print(f'[ComfyTask] Model file copy: {path_org} to {path_dst}')
+        shutil.copy(path_org, path_dst)
+
+    common.MODELS_INFO.refresh_from_path()
+    return
+
+
 class ComfyTask:
     def __init__(self, name, params, images=None):
         self.name = name
@@ -98,9 +173,13 @@ def get_comfy_task(task_name, task_method, default_params, input_images, options
         # IC-Light is the only active feature
         # handled by the 'default' task name
         if 'iclight_enable' in options and options["iclight_enable"]:
-            if common.MODELS_INFO.exists_model(catalog="checkpoints", model_path=default_base_SD15_name):
-                config.downloading_base_sd15_model()
-            comfy_params.update_params({"base_model": default_base_SD15_name})
+            # Querying the loader global directly
+            if not common.MODELS_INFO.exists_model(catalog="checkpoints", model_path=loader.sd15_model_path):
+                loader.download_base_sd15_model()
+                # Refresh the cache
+                common.MODELS_INFO.refresh_from_path()
+
+            comfy_params.update_params({"base_model": loader.sd15_model_path})
             if options["iclight_source_radio"] == 'CenterLight':
                 comfy_params.update_params({"light_source_text_switch": False})
             else:
@@ -118,8 +197,6 @@ def get_comfy_task(task_name, task_method, default_params, input_images, options
             task_method = 'sd3x_base_gguf'
             comfy_params.delete_params(['base_model_dtype'])
         else:
-            if not common.MODELS_INFO.exists_model(catalog="checkpoints", model_path=default_params["base_model"]):
-                config.downloading_sd3_medium_model()
             if 'base_model_dtype' in default_params:
                 comfy_params.delete_params(['base_model_dtype'])
         return ComfyTask(task_method, comfy_params)
@@ -130,12 +207,11 @@ def get_comfy_task(task_name, task_method, default_params, input_images, options
             comfy_params.update_params({
                 "llms_model": 'quant4' if total_vram < VRAM8G else 'quant8' if total_vram < VRAM16G else 'fp16'
             })
-        check_download_kolors_model()
+        check_download_kolors_model()  # Preserved as a special dependency pipeline
         return ComfyTask(task_method, comfy_params)
 
     elif task_name in ['HyDiT+']:
-        if not common.MODELS_INFO.exists_model(catalog="checkpoints", model_path=default_params["base_model"]):
-            config.downloading_hydit_model()
+        # Block-level download checks removed to delegate to the async lazy downloader
         return ComfyTask(task_method, comfy_params)
 
     elif task_name == 'Flux':
@@ -235,8 +311,7 @@ def get_comfy_task(task_name, task_method, default_params, input_images, options
         else:
             task_method = 'flux_base'
 
-    # This is the fallback for SD1 (SD1.5)
-    # and all other custom presets
+    # Fallback for SD1.5 and custom presets
     return ComfyTask(task_method, comfy_params)
 
 
@@ -246,144 +321,3 @@ def fixed_width_height(width, height, factor):
     width = width if height % factor == 0 else fixed_width
     height = height if height % factor == 0 else int((height // factor + 1) * factor)
     return width, height
-
-default_kolors_base_model_name = 'kolors_unet_fp16.safetensors'
-
-kolors_scheduler_list = [ "EulerDiscreteScheduler",
-                          "EulerAncestralDiscreteScheduler",
-                          "DPMSolverMultistepScheduler",
-                          "DPMSolverMultistepScheduler_SDE_karras",
-                          "UniPCMultistepScheduler",
-                          "DEISMultistepScheduler" ]
-default_kolors_scheduler = kolors_scheduler_list[0]
-
-def check_task_model():
-    #check_model_files_from_download_of_preset_file
-    pass
-
-
-def check_download_kolors_model() -> None:
-    """
-    Checks for the existence of the Kolors diffuser models in the active
-    user-configured models directory. Downloads and extracts them if missing.
-    """
-    import shutil
-    import zipfile
-    from tqdm import tqdm
-
-    # 1. Standardized paths using relative keys
-    check_model_file = [
-        'diffusers/Kolors/text_encoder/pytorch_model-00007-of-00007.bin',
-        'diffusers/Kolors/unet/diffusion_pytorch_model.fp16.safetensors',
-        'diffusers/Kolors/vae/diffusion_pytorch_model.fp16.safetensors',
-    ]
-
-    # 2. Derive the correct user-configured models directory from paths_diffusers[0]
-    # config.paths_diffusers[0] points to '.../models/diffusers'
-    diffusers_path = Path(common.path_diffusers)
-    path_root = diffusers_path.parent  # Resolves to the parent '.../models' root directory
-
-    path_temp = path_root / 'temp'
-    if not path_temp.exists():
-        path_temp.mkdir(parents=True, exist_ok=True)
-
-    # 3. Check for existence in the registered search paths
-    if not common.MODELS_INFO.exists_model_key(check_model_file[0]):
-        downfile = path_temp / 'KwaiKolors.zip'
-        load_file_from_url(
-            url='https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/KwaiKolors.zip',
-            model_dir=str(path_temp),
-            file_name='KwaiKolors.zip'
-        )
-
-        with zipfile.ZipFile(downfile, 'r') as zipf:
-            file_list = zipf.infolist()
-            print(f'[ComfyTask] Extracting: {downfile} to {path_root}')
-
-            # Extract each file sequentially
-            # to drive the console progress bar
-            for member in tqdm(file_list, desc='Extracting Kolors Shards', unit='file'):
-                zipf.extract(member, path_root)
-
-        if downfile.exists():
-            downfile.unlink()
-        if path_temp.exists() and path_temp.is_dir():
-            shutil.rmtree(path_temp)
-
-    # 4. Copy unet and vae using pathlib
-    if not common.MODELS_INFO.exists_model_key(check_model_file[1]):
-        path_dst = diffusers_path / 'Kolors/unet/diffusion_pytorch_model.fp16.safetensors'
-        path_org = Path(config.path_unet) / 'kolors_unet_fp16.safetensors'
-
-        # Ensure destination subfolders exist
-        path_dst.parent.mkdir(parents=True, exist_ok=True)
-
-        print(f'[ComfyTask] Model file copy: {path_org} to {path_dst}')
-        shutil.copy(path_org, path_dst)
-
-    if not common.MODELS_INFO.exists_model_key(check_model_file[2]):
-        path_dst = diffusers_path / 'Kolors/vae/diffusion_pytorch_model.fp16.safetensors'
-        path_org = Path(config.path_vae) / 'sdxl_fp16.vae.safetensors'
-
-        # Ensure destination subfolders exist
-        path_dst.parent.mkdir(parents=True, exist_ok=True)
-
-        print(f'[ComfyTask] Model file copy: {path_org} to {path_dst}')
-        shutil.copy(path_org, path_dst)
-
-    common.MODELS_INFO.refresh_from_path()
-    return
-
-
-def check_download_flux_model(base_model, clip_model=None):
-    if not common.MODELS_INFO.exists_model(catalog="checkpoints", model_path=base_model):
-        if 'fp8' in base_model:
-            if 'schnell' in base_model:
-                load_file_from_url(
-                    url=f'https://huggingface.co/Comfy-Org/flux1-schnell/resolve/main/{base_model}',
-                    model_dir=config.paths_checkpoints[0],
-                    file_name=base_model
-                )
-            else:
-                load_file_from_url(
-                    url=f'https://huggingface.co/Comfy-Org/flux1-dev/resolve/main/{base_model}',
-                    model_dir=config.paths_checkpoints[0],
-                    file_name=base_model
-                )
-        elif 'hyp8' in base_model:
-            if '_K' in base_model:
-                load_file_from_url(
-                    url=f'https://huggingface.co/mhnakif/flux-hyp8-gguf-k/tree/main/{base_model}',
-                    model_dir=config.paths_checkpoints[0],
-                    file_name=base_model
-                )
-            else:
-                load_file_from_url(
-                    url=f'https://huggingface.co/mhnakif/flux-hyp8/tree/main/{base_model}',
-                    model_dir=config.paths_checkpoints[0],
-                    file_name=base_model
-                )
-        else:
-            interpret_warn('[ComfyTask] Could not automatically download', base_model)
-            interpret_warn('Please download this Flux file manually and place it in the correct Flux subdirectory')
-
-    if clip_model:
-        if not common.MODELS_INFO.exists_model(catalog="clip", model_path=clip_model):
-            load_file_from_url(
-                url=f'https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/{clip_model}',
-                model_dir=config.path_clip,
-                file_name=f'{clip_model}'
-            )
-        if not common.MODELS_INFO.exists_model(catalog="clip", model_path='clip_l.safetensors'):
-            load_file_from_url(
-                url=f'https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors',
-                model_dir=config.path_clip,
-                file_name=f'clip_l.safetensors'
-            )
-        if not common.MODELS_INFO.exists_model(catalog="vae", model_path='ae.safetensors'):
-            load_file_from_url(
-                url='https://huggingface.co/lovis93/testllm/resolve/ed9cf1af7465cebca4649157f118e331cf2a084f/ae.safetensors?download=true',
-                model_dir=config.path_vae,
-                file_name='ae.safetensors'
-            )
-

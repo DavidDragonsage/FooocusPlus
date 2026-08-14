@@ -2,6 +2,7 @@ import ast # used to convert a style string to a list
 import os
 import common
 import modules.config as config
+import modules.loader as loader
 import modules.user_structure as US
 from args_manager import args
 from enhanced.translator import interpret
@@ -106,6 +107,13 @@ def parse_meta_from_preset(preset_content):
                     lora[1] = str(lora[1]).replace('\\', os.sep).replace('/', os.sep)
 
                 preset_prepared[f'lora_combined_{index + 1}'] = ' : '.join(map(str, lora))
+
+        elif settings_key == 'default_vae':
+            val = items.get(settings_key)
+            if val is None or val == 'None' or val == '':
+                val = 'Default (model)'
+            config.default_vae = val
+            preset_prepared[meta_key] = val
 
         elif settings_key == "default_prompt":
             if items[settings_key]:
@@ -213,7 +221,7 @@ def init_config_preset():
     if common.preset_content != '' and args.preset != 'initial':
         preset_prepared = parse_meta_from_preset(common.preset_content)
         default_model = preset_prepared.get('base_model')
-        config.default_base_model_name = default_model
+        loader.base_model_name = default_model
         config.default_refiner = preset_prepared.get('refiner_model')
 
         new_loras = []

@@ -45,6 +45,7 @@
     "default_sample_sharpness": 1.8,
     "default_sampler": "euler_ancestral",
     "default_scheduler": "sgm_uniform",
+    "default_vae": "Default (model)",
     "default_clip_skip": 2,
     "default_performance": "",
     "default_styles": [

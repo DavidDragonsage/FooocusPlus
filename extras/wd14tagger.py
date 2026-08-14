@@ -9,15 +9,16 @@
 #     "wd-v1-4-vit-tagger-v2": "https://huggingface.co/SmilingWolf/wd-v1-4-vit-tagger-v2"
 # }
 
-import args_manager
+
 import numpy as np
 import csv
 import onnxruntime as ort
-
 from PIL import Image
 from onnxruntime import InferenceSession
-from modules.config import path_clip_vision
-from modules.model_loader import load_file_from_url
+
+import args_manager
+import common
+from modules.loader import load_file_from_url
 from modules.launch_util import is_win32_standalone_build
 
 
@@ -32,13 +33,13 @@ def default_interrogator(image, threshold=0.35, character_threshold=0.85, exclud
 
     model_onnx_filename = load_file_from_url(
         url=f'https://huggingface.co/lllyasviel/misc/resolve/main/{model_name}.onnx',
-        model_dir=path_clip_vision,
+        model_dir=common.path_clip_vision,
         file_name=f'{model_name}.onnx',
     )
 
     model_csv_filename = load_file_from_url(
         url=f'https://huggingface.co/lllyasviel/misc/resolve/main/{model_name}.csv',
-        model_dir=path_clip_vision,
+        model_dir=common.path_clip_vision,
         file_name=f'{model_name}.csv',
     )
 

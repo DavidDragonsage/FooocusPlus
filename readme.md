@@ -49,7 +49,7 @@ FooocusPlus supports NVIDIA graphics cards on Windows and Linux, macOS on Silico
 
 Torchruntime is integrated into FooocusPlus. Please check their [compatibility tables](https://github.com/easydiffusion/torchruntime/blob/main/README.md#compatibility-table) for more details on hardware and software support. But unlike Torchruntime, FooocusPlus does support NVIDIA Blackwell 50xx graphics cards in full native mode.
 
-The Comfy generative system is integrated into FooocusPlus to provide support for non-SDXL models. Comfy no longer supports legacy video cards that require PyTorch 2.4 or earlier software. Rather than completely disabling Comfy for older graphics cards we have left it up to the user if they wish to try using Comfy mode.
+The Comfy generative system is integrated into FooocusPlus to provide support for non-SDXL models. Comfy no longer supports legacy video cards that require PyTorch 2.4 or earlier software. Due to this incompatibility, Comfy mode will soon be disabled for these legacy hardware.
 
 ## Installing FooocusPlus
 

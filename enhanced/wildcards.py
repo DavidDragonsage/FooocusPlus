@@ -6,8 +6,8 @@ import gradio as gr
 import common
 import args_manager as args
 from enhanced.translator import interpret
+from modules.loader import path_wildcards
 from modules.util import get_files_from_folder
-from modules.config import path_wildcards
 
 wildcards_max_bfs_depth = 64
 wildcards = {}
