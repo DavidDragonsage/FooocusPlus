@@ -16,6 +16,7 @@
 * the correct models are now shown for SD3.5 & Z-Image
 * debugged the Image Editor save function
 * moved loading/downloading from config.py to loader.py
+* removed the "Global Trap" from launch.py
 * Release Date: August 13th, 2026<br/>
 * Hotfix0:
 <br/><br/>

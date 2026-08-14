@@ -17,19 +17,6 @@ common.version_update = cached_version_update
 
 fooocusplus_ver, hotfix, hotfix_title = version.get_fooocusplus_ver()
 
-# THE GLOBAL TRAP (The Gatekeeper Update Shield)
-# If we just updated and somehow the importlib
-# reload of common and version did not work,
-# this fallback forces the user to restart FooocusPlus
-if getattr(common, 'REQUIRED_VERSION', None) != fooocusplus_ver:
-    print("\n" + "="*60)
-    print(f" FOOOCUSPLUS UPDATE IN PROGRESS: {fooocusplus_ver}")
-    print(" " + "-"*58)
-    print(" To complete the upgrade")
-    print(" please close this window and restart FooocusPlus")
-    print("="*60 + "\n")
-    sys.exit()
-
 
 import os
 import ssl

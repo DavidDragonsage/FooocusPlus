@@ -13,10 +13,6 @@ ROOT = str(Path.cwd())
 # now that it is dynamic
 comfy_port = 8187
 
-# Version control for major updates
-# read by launch.py
-REQUIRED_VERSION = '1.1.4'
-
 # tracks update events
 # set by entry_with_update, checked by webui
 # and processed by enhanced.version.announce_version()
