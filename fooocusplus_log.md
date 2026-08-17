@@ -19,7 +19,7 @@
 * removed the "Global Trap" from launch.py
 * reverted Onnxruntime from 1.20.1 to 1.20.0
 * Release Date: August 13th, 2026<br/>
-* Hotfix0:
+* Hotfix1: Pinokio compatible library updates
 <br/><br/>
 
 
