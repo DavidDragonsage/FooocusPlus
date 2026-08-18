@@ -19,6 +19,7 @@
 * removed the "Global Trap" from launch.py
 * reverted Onnxruntime from 1.20.1 to 1.20.0
 * Release Date: August 13th, 2026<br/>
+* Hotfix3: Prevent PyGit version flipping
 * Hotfix2: A slight adjustment to Comfy libraries
 * Hotfix1: Pinokio compatible library updates
 <br/><br/>
