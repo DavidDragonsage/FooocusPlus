@@ -64,7 +64,8 @@ def apply_comfy_patch():
                     "_orig_logger_warning = logging.Logger.warning\n"
                     "def _safe_logger_warning(self, msg, *args, **kwargs):\n"
                     "    msg_str = str(msg)\n"
-                    "    if 'Unsupported Pytorch' in msg_str or 'cu130' in msg_str or 'VRAM estimates' in msg_str or 'IMPORT FAILED' in msg_str or 'comfy_extras' in msg_str:\n"
+                    "    # Added 'comfyui-workflow-templates' to silently swallow the version mismatch box\n"
+                    "    if 'Unsupported Pytorch' in msg_str or 'cu130' in msg_str or 'VRAM estimates' in msg_str or 'IMPORT FAILED' in msg_str or 'comfy_extras' in msg_str or 'comfyui-workflow-templates' in msg_str:\n"
                     "        return\n"
                     "    _orig_logger_warning(self, msg, *args, **kwargs)\n"
                     "logging.Logger.warning = _safe_logger_warning\n\n"
@@ -90,9 +91,6 @@ def apply_comfy_patch():
             rgthree_dir = comfy_dir / 'custom_nodes' / 'rgthree-comfy'
             rgthree_init = rgthree_dir / '__init__.py'
 
-            # [Debug Print] Check the physical path to rgthree's __init__.py
-            # print(f"[Debug] Checking rgthree_init: {rgthree_init}, exists: {rgthree_init.exists()}")
-
             if rgthree_init.exists():
                 rgthree_content = rgthree_init.read_text(encoding='utf-8')
                 rgthree_marker = '# FooocusPlus rgthree-comfy Nodes 2.0 warning mute'
@@ -110,6 +108,21 @@ def apply_comfy_patch():
                         print('[ComfyPatch] Successfully muted rgthree-comfy Nodes 2.0 warning!')
                     else:
                         print('[ComfyPatch] Warning: Failed to find Nodes 2.0 warning condition in rgthree-comfy __init__.py')
+
+            # 4. Self-Healing comfy/requirements.txt Patch: Force the requirements to match our stable PyPI version
+            comfy_reqs = comfy_dir / 'requirements.txt'
+            if comfy_reqs.exists():
+                try:
+                    reqs_content = comfy_reqs.read_text(encoding='utf-8')
+                    old_req = 'comfyui-workflow-templates==0.11.1'
+                    new_req = 'comfyui-workflow-templates==0.11.0'
+
+                    if old_req in reqs_content:
+                        reqs_content = reqs_content.replace(old_req, new_req)
+                        comfy_reqs.write_text(reqs_content, encoding='utf-8')
+                        print('[ComfyPatch] Adjusted comfy/requirements.txt for version 0.11.0')
+                except Exception as e:
+                    print(f"[ComfyPatch] Warning: Failed to patch comfy/requirements.txt: {e}")
 
     except Exception as e:
         print(f"[ComfyPatch] Warning: Failed to apply CUDA 13 / Comfy compatibility patch: {e}")
