@@ -41,6 +41,12 @@ comfy_ver = 'Not Available'
 # Read by ui_util
 force_compatibility = False
 
+# It is useful to know actual legacy GPU status
+# in spite of cli_args to the contrary.
+# Set by launch_support,
+# Read by launch
+is_legacy_gpu = False
+
 # Old NVIDIA GPU flag, PyTorch < 2.7
 # If <2.7 stores the Torch version string
 # If PyTorch => 2.7 stores "New"

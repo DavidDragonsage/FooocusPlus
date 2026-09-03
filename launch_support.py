@@ -263,6 +263,9 @@ def dependency_resolver():
     device_names = set(gpu.device_name for gpu in gpu_infos)
     arch_version = get_nvidia_arch(device_names)
 
+    # Save legacy GPU status for use by launch.py
+    common.is_legacy_gpu = arch_version > 0.0 and arch_version < 7.5
+
     # Initialize torch_platform_ver immediately to
     # guarantee it is available in all code paths
     torch_platform_ver = torchruntime_platform

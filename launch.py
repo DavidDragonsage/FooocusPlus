@@ -267,7 +267,11 @@ os.environ['GRADIO_TEMP_DIR'] = str(config.temp_path)
 
 # Blackwell sm_100 Specific Performance Tuning
 # Excludes Apple Silicon using the force_compatibility flag
-if torch_ver == '2.10.0' and not getattr(common, 'force_compatibility', False):
+if (torch_ver == '2.10.0'
+        and not getattr(common, 'is_legacy_gpu', False)
+        and not getattr(common, 'force_compatibility', False)
+        and sys.platform != 'darwin'):
+
     print()
     interpret('[Launch] Applying optimized Blackwell CUDA 13 and hardware tuning settings...')
     print()
@@ -278,21 +282,38 @@ if torch_ver == '2.10.0' and not getattr(common, 'force_compatibility', False):
     os.environ['TORCH_CUDA_GRAPH_MEM_POOL_COALESCE'] = '1'
     os.environ['PYTORCH_JIT_USE_NNC'] = '0'
 
-    # PyTorch C++ Level Optimizations
-    import torch
+    # PyTorch C++ Level Optimizations (Defensively wrapped to prevent launch crashes)
+    try:
+        import torch
 
-    # Enable TF32 math precision on Blackwell Tensor Cores
-    torch.backends.cuda.matmul.allow_tf32 = True
-    torch.backends.cudnn.allow_tf32 = True
+        # Enable TF32 math precision on Blackwell Tensor Cores
+        try:
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
+        except Exception as e:
+            interpret('[Launch] Warning: Failed to configure TF32 precision:', e)
 
-    # Force cuDNN autotuner to search for optimal sm_100 execution paths
-    torch.backends.cudnn.benchmark = True
+        # Force cuDNN autotuner to search for optimal sm_100 execution paths
+        try:
+            torch.backends.cudnn.benchmark = True
+        except Exception as e:
+            interpret('[Launch] Warning: Failed to configure cuDNN benchmark:', e)
 
-    # Ensure native attention dispatches directly
-    # to optimized FlashAttention-3 kernels
-    torch.backends.cuda.enable_flash_attention(True)
-    torch.backends.cuda.enable_mem_efficient_attention(True)
-    torch.backends.cuda.enable_math_check(False)
+        # Ensure native attention dispatches directly to optimized FlashAttention/SDP kernels
+        try:
+            # Correct PyTorch API names are enable_flash_sdp, enable_mem_efficient_sdp, enable_math_sdp
+            if hasattr(torch.backends.cuda, 'enable_flash_sdp'):
+                torch.backends.cuda.enable_flash_sdp(True)
+            if hasattr(torch.backends.cuda, 'enable_mem_efficient_sdp'):
+                torch.backends.cuda.enable_mem_efficient_sdp(True)
+            if hasattr(torch.backends.cuda, 'enable_math_sdp'):
+                torch.backends.cuda.enable_math_sdp(False)
+        except Exception as e:
+            interpret('[Launch] Warning: Failed to configure Scaled Dot-Product Attention:', e)
+
+    except Exception as e:
+        interpret('[Launch] Warning: Failed to apply Blackwell hardware tuning:', e)
+
 
 write_torch_base(torch_ver)
 
