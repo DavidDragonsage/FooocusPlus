@@ -32,7 +32,7 @@
   * Removed the unused & unsupported PuLID_ComfyUI
   * Use the ZHO-ZHO-ZHO fork if needed in the future
 * Release Date: September 2nd, 2026<br/>
-* Hotfix0:
+* Hotfix1: Debugged Legacy GPU startup
 <br/><br/>
 
 

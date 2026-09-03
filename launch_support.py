@@ -263,6 +263,10 @@ def dependency_resolver():
     device_names = set(gpu.device_name for gpu in gpu_infos)
     arch_version = get_nvidia_arch(device_names)
 
+    # Initialize torch_platform_ver immediately to
+    # guarantee it is available in all code paths
+    torch_platform_ver = torchruntime_platform
+
     # First, take care of special cases
     # Note, torchruntime.torchruntime.platform_detection.py
     # suggests "directml" should be used for Intel
@@ -300,9 +304,12 @@ def dependency_resolver():
         torch_ver = '2.3.1'
         torchruntime_platform = 'rocm5.7'
 
+    # Sync torch_platform_ver with any command-line overrides
+    torch_platform_ver = torchruntime_platform
+
     # Detection Logic: Windows (win32) defaults to
     # "2.7.1+cu128" for most modern NVidia GPUs
-    elif sys.platform == 'win32':
+    if sys.platform == 'win32':
         # New: Full support for Blackwell (50xx)
         if arch_version >= 12.0 and new_driver:
             torch_ver = '2.10.0'
@@ -330,10 +337,12 @@ def dependency_resolver():
             torch_platform_ver = 'cu130'
         elif arch_version >= 7.5:
             torch_ver = '2.7.1'
+            torch_platform_ver = 'cu128'
         # --- FORCED COMPATIBILITY MODE (Linux NVIDIA) ---
         elif arch_version >= 6.0 and total_vram_gb >= 11.0 and not args.disable_comfyd and args.gpu_type != 'cu124':
             common.force_compatibility = True
             torch_ver = '2.7.1'
+            torch_platform_ver = 'cu128'
         else:
             torch_ver = '2.4.1'
         if torchruntime_platform == 'rocm5.7':
@@ -360,24 +369,32 @@ def dependency_resolver():
             # stable legacy 2.5.1 (Comfy lockout)
             torch_ver = "2.5.1"
 
+    # Ensure the returned torchruntime_platform stays synchronized with platform overrides
+    torchruntime_platform = torch_platform_ver
 
-    # Begin the assignment of xformers:
+
+# Begin the assignment of xformers:
     is_nvidia_platform = torch_platform_ver.startswith('cu') if torch_platform_ver else False
     xformers_ver = 'None'
 
     if is_nvidia_platform and sys.platform != 'darwin':
-        # Blackwell & cu130: PyTorch 2.10.0 replaces
+        # 1. Blackwell & cu130: PyTorch 2.10.0 replaces
         # xformers entirely on all hardware
         if torch_ver == '2.10.0':
             xformers_ver = 'None'
 
         # 2. Turing / Ampere / Ada on cu128 (PyTorch 2.7.1)
         elif torch_ver == '2.7.1':
-            # Disable xformers (use native FlashAttention-2)
-            # for modern GPUs (>= 7.5),
-            # but keep it active ('0.0.30') for legacy
-            # Pascal users (< 7.5) who need it!
-            xformers_ver = 'None' if arch_version >= 7.5 else '0.0.30'
+            # Disable xformers (use native FlashAttention-2) for modern GPUs (>= 7.5),
+            # but keep it active ('0.0.30') for legacy Pascal/Maxwell/Kepler users (< 7.5)
+            # or if they bypassed the lockout using `--gpu-type cu128` / `--gpu-type cu130`.
+            is_legacy_gpu = arch_version > 0.0 and arch_version < 7.5
+            is_manual_bypass = args.gpu_type in ['cu128', 'cu130'] and arch_version < 7.5
+
+            if is_legacy_gpu or is_manual_bypass or getattr(common, 'force_compatibility', False):
+                xformers_ver = '0.0.30'
+            else:
+                xformers_ver = 'None'
 
         # 3. Legacy Pascal on cu124 (PyTorch 2.4.1)
         elif torch_ver == '2.4.1':
