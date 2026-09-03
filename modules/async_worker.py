@@ -1614,15 +1614,139 @@ def worker():
         preparation_start_time = time.perf_counter()
         async_task.processing = True
 
-        # For ZI-BaseFast, we force the backend to 'Free All' just like
-        # a manual preset swap would. This clears the stained session cache.
-        if "ZIB_fast" in str(async_task.task_method):
-            try:
-                # This triggers comfyd.free(all=True), clearing the model/GGUF cache
-                comfyd.stop()
-                interpret('[Worker] Reset session for the workflow:', async_task.task_method)
-            except Exception as e:
-                interpret('[Worker] Reset session failed:', e)
+        # Only run this check if the user is actively
+        # using Auto-Masking (text-based masking)
+        if getattr(common, 'is_auto_masking', False):
+
+            missing_automask_files = []
+
+            # Check for GroundingDINO Swin Transformer
+            if not common.MODELS_INFO.exists_model(catalog='inpaint', model_path='groundingdino_swint_ogc.pth'):
+                missing_automask_files.append('dino')
+
+            # Check for the BERT text encoder
+            llms_root = Path(getattr(common, 'path_llms', Path.cwd() / 'models' / 'llms'))
+            bert_file = llms_root / 'bert-base-uncased' / 'model.safetensors'
+            if not bert_file.is_file():
+                missing_automask_files.append('bert')
+
+            if missing_automask_files:
+                # Update the Gradio progress bar
+                down_msg = interpret('Downloading Auto-Masking language models...', silent=True)
+                async_task.yields.append(['preview', (1, down_msg, None)])
+
+                if 'dino' in missing_automask_files:
+                    loader.download_groundingdino_model()
+                if 'bert' in missing_automask_files:
+                    loader.download_bert_model()
+
+                # Refresh the model cache in memory
+                common.MODELS_INFO.refresh_from_path()
+
+
+        if common.comfy_active:
+
+            # Check if the UltraSharp
+            # upscaler is missing
+            if not common.MODELS_INFO.exists_model(catalog='upscale_models', model_path='4x-UltraSharp.pth'):
+                # Update the Gradio progress bar
+                down_msg = interpret('Downloading the UltraSharp upscaler...', silent=True)
+                async_task.yields.append(['preview', (1, down_msg, None)])
+
+                loader.download_ultrasharp_model()
+
+                # Refresh the model cache in memory so Comfy's upscale nodes can find it
+                common.MODELS_INFO.refresh_from_path()
+
+
+            # Scan active Image Prompt slots to see
+            # if the user is using InstantID or PuLID
+            face_analysis_active = False
+            for slot in config.ip_slots:
+                if slot['image'] is not None and slot['type'] in ['InstantID', 'PuLID']:
+                    face_analysis_active = True
+                    break
+
+            if face_analysis_active:
+                # Check if any of the core ONNX files
+                # are missing from the antelopev2 dir
+                insightface_root = Path(getattr(common, 'path_insightface', Path.cwd() / 'models' / 'insightface'))
+                antelope_dir = insightface_root / 'models' / 'antelopev2'
+
+                missing_antelope = False
+                for f in ['1k3d68.onnx', '2d106det.onnx', 'genderage.onnx', 'glintr100.onnx', 'scrfd_10g_bnkps.onnx']:
+                    if not (antelope_dir / f).exists():
+                        missing_antelope = True
+                        break
+
+                if missing_antelope:
+                    # Update the Gradio progress bar
+                    down_msg = interpret('Downloading Face Analysis models...', silent=True)
+                    async_task.yields.append(['preview', (1, down_msg, None)])
+
+                    loader.download_antelope_models()
+
+                    # Refresh the model cache in memory
+                    # so the backend can find them
+                    common.MODELS_INFO.refresh_from_path()
+
+            # Scan active Image Prompt slots
+            # to see if FaceID is being used
+            faceid_active = False
+            for slot in config.ip_slots:
+                # If a slot contains an image and
+                # its control type is set to FaceID
+                if slot['image'] is not None and slot['type'] == 'FaceID':
+                    faceid_active = True
+                    break
+
+            if faceid_active:
+                # Check if the companion LoRA is missing
+                if not common.MODELS_INFO.exists_model(catalog='loras', model_path='ip-adapter-faceid-plusv2_sdxl_lora.safetensors'):
+                    # Update the Gradio progress bar
+                    down_msg = interpret('Downloading FaceID LoRA...', silent=True)
+                    async_task.yields.append(['preview', (1, down_msg, None)])
+
+                    # Execute the clean, pathlib-safe download
+                    loader.download_faceid_lora()
+
+                    # Refresh the model cache in memory so the backend can find it
+                    common.MODELS_INFO.refresh_from_path()
+
+
+            # Scan active Image Prompt slots
+            # to see if the user is using PuLID
+            pulid_active = False
+            for slot in config.ip_slots:
+                if slot['image'] is not None and slot['type'] == 'PuLID':
+                    pulid_active = True
+                    break
+
+            if pulid_active:
+                # We need to ensure both PuLID files are on disk
+                missing_pulid_files = []
+
+                # Check 1: The heavy EVA-CLIP visual encoder (3.6 GB)
+                if not common.MODELS_INFO.exists_model(catalog='clip', model_path='EVA02_CLIP_L_336_psz14_s6B.pt'):
+                    missing_pulid_files.append('eva_clip')
+
+                # Check 2: The Flux PuLID weight file (1.14 GB)
+                if not common.MODELS_INFO.exists_model(catalog='pulid', model_path='pulid_flux_v0.9.1.safetensors'):
+                    missing_pulid_files.append('flux_weight')
+
+                if missing_pulid_files:
+                    # Update the Gradio progress bar
+                    down_msg = interpret('Downloading PuLID face-swap models...', silent=True)
+                    async_task.yields.append(['preview', (1, down_msg, None)])
+
+                    # Execute the respective downloads
+                    if 'eva_clip' in missing_pulid_files:
+                        loader.download_eva_clip_model()
+                    if 'flux_weight' in missing_pulid_files:
+                        loader.download_pulid_flux_model()
+
+                    # Refresh the model cache in memory so the backend can find them
+                    common.MODELS_INFO.refresh_from_path()
 
         # --- LAZY PRESET DOWNLOADER ---
         # Automatically downloads missing preset assets
@@ -1731,7 +1855,11 @@ def worker():
             set_lightning_defaults(async_task, current_progress, advance_progress=True)
         elif async_task.performance_selection == Performance.Hyper_SD:
             set_hyper_sd_defaults(async_task, current_progress, advance_progress=True)
-
+        print()
+        interpret('[Worker] Positive Prompt =', async_task.prompt)
+        if async_task.negative_prompt != '':
+            interpret('[Worker] Negative Prompt =', async_task.negative_prompt)
+        print()
         interpret('[Worker] Resolution =', async_task.aspect_ratios_selection)
         interpret('[Worker] Adaptive CFG =', async_task.adaptive_cfg)
         interpret('[Worker] VAE =', async_task.vae_name)

@@ -32,9 +32,10 @@ package_path = Path(python_embedded_path/"Lib/site-packages")
 target_path_install = f' -t {package_path}'\
     if sys.platform.startswith("win") else ''
 
-modules_path = os.path.dirname(os.path.realpath(__file__))
-script_path = os.path.dirname(modules_path)
-dir_repos = "repos"
+modules_path = Path(__file__).resolve().parent
+script_path = modules_path.parent
+dir_repos = 'repos'
+
 
 def git_clone(url, dir, name=None, hash=None):
     try:
@@ -80,13 +81,13 @@ def git_clone(url, dir, name=None, hash=None):
 
 
 def repo_dir(name):
-    return str(Path(script_path) / dir_repos / name)
+    return str(script_path / dir_repos / name)
 
 
 def is_installed(package):
     if is_win32_standalone_build:
-        library_path = os.path.abspath(f'../python_embedded/Lib/site-packages/{package}')
-        if not os.path.exists(library_path):
+        library_path = (Path('../python_embedded/Lib/site-packages') / package).resolve()
+        if not library_path.exists():
             return False
     try:
         spec = importlib.util.find_spec(package)
@@ -122,23 +123,51 @@ def requirements_met(requirements_file):
     global met_diff
     met_diff = {}
     result = True
-    with open(requirements_file, "r", encoding="utf8") as file:
+
+    # Check for command-line Comfy lockout
+    try:
+        from args_manager import args as cli_args
+        comfy_lockout = cli_args.disable_comfyd
+    except Exception:
+        comfy_lockout = False
+
+    # Check for legacy GPU Comfy lockout
+    if comfy_lockout == False:
+        try:
+            # Check if PyTorch is on the drive
+            installed_torch = importlib.metadata.version('torch')
+            torch_ver = [int(x) for x in installed_torch.split('+')[0].split('.')[:2]]
+            comfy_lockout = (torch_ver < [2, 7])
+        except Exception:
+            # Fallback: If torch is not installed yet
+            # or it is being swapped,
+            # resolve the target version via
+            # the dependency_resolver()
+            try:
+                from launch_support import dependency_resolver
+                torch_dict = dependency_resolver()
+                target_torch = torch_dict.get('torch_ver', '2.7.1')  # Default to new if unresolved
+                torch_ver = [int(x) for x in target_torch.split('+')[0].split('.')[:2]]
+                comfy_lockout = (torch_ver < [2, 7])
+            except Exception:
+                pass
+
+    with open(requirements_file, 'r', encoding='utf8') as file:
         for line in file:
             line = line.strip()
-            if line == "" or line.startswith("--") or line.startswith("#"):
+            if line == '' or line.startswith('--') or line.startswith('#'):
                 continue
 
-            if ">=" in line:
+            if '>=' in line:
                 at_least = True
-                # must replace ">=" with "==" for the rest of the logic to work
-                line = line.replace(">=","==",1)
+                line = line.replace('>=', '==', 1)
             else:
                 at_least = False
 
             m = re.match(re_requirement, line)
             if m:
                 package = m.group(1).strip()
-                version_required = (m.group(2) or "").strip()
+                version_required = (m.group(2) or '').strip()
             else:
                 m1 = re.match(re_req_local_file, line)
                 if m1 is None:
@@ -148,14 +177,15 @@ def requirements_met(requirements_file):
                     package = package.replace('_', '-')
                 version_required = f'{m1.group(2)}.{m1.group(3)}.{m1.group(4)}'
 
+            # If Comfy is locked out
+            # do not install Comfy packages
+            if comfy_lockout and (package.startswith('comfy') or package.startswith('comfyui')):
+                continue
+
             try:
                 version_installed = importlib.metadata.version(package)
             except Exception:
-                met_diff.update({package:'-'})
-                # Skip checking/installing insightface
-                # on non-Windows (Linux/Mac) platforms,
-                # letting requirements_patch.txt
-                # handle it cleanly.
+                met_diff.update({package: '-'})
                 if package == 'cmake' or package == 'https' or (package == 'insightface' and sys.platform != 'win32'):
                     continue
                 else:
@@ -164,7 +194,7 @@ def requirements_met(requirements_file):
                     result = False
 
             try:
-                if version_required=='' and version_installed:
+                if version_required == '' and version_installed:
                     continue
             except:
                 pass
@@ -182,6 +212,6 @@ def requirements_met(requirements_file):
             if result != False:
                 result = True
             version_installed = version_required
-            met_diff.update({package:version_installed})
+            met_diff.update({package: version_installed})
 
     return result

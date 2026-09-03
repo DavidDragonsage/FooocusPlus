@@ -1,18 +1,20 @@
-import modules.core as core
 import os
 import torch
+from pathlib import Path
+
 import common
+import extras.vae_interpose as vae_interpose
 import ldm_patched.modules.model_management
 import ldm_patched.modules.latent_formats
 import modules.config as config
+import modules.core as core
 import modules.flags
 import modules.inpaint_worker
 import modules.loader as loader
 import modules.patch
-import extras.vae_interpose as vae_interpose
-from extras.expansion import FooocusExpansion
 
 from enhanced.translator import interpret
+from extras.expansion import FooocusExpansion
 from ldm_patched.modules.model_base import SDXL, SDXLRefiner
 from modules.sample_hijack import clip_separate
 from modules.util import get_file_from_folder_list, get_enabled_loras
@@ -314,13 +316,18 @@ def free_everything():
     return
 
 if config.backend_engine == 'Fooocus':
-    refresh_everything(
-        refiner_model_name=config.default_refiner,
-        base_model_name=loader.base_model_name,
-        loras=get_enabled_loras(config.default_loras),
-        vae_name=config.default_vae,
-    )
+    # Resolve the physical path of the default model
+    default_base_path = common.MODELS_INFO.get_file_path_by_name('checkpoints', loader.base_model_name)
 
+    # Only execute the startup warm-up if
+    # the model is already present on disk
+    if default_base_path and Path(default_base_path).is_file():
+        refresh_everything(
+            refiner_model_name= modules.config.default_refiner,
+            base_model_name=loader.base_model_name,
+            loras=get_enabled_loras(modules.config.default_loras),
+            vae_name=modules.config.default_vae,
+        )
 
 @torch.no_grad()
 @torch.inference_mode()

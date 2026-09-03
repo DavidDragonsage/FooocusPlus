@@ -76,10 +76,25 @@ def is_installed_version(package, version_required):
         print()
         print(f'Installing the required version of {package}: {version_required}')
         return False
-    if packaging.version.parse(version_required) != packaging.version.parse(version_installed):
-        print()
-        print(f'The current version of {package} is: {version_installed}. Installing the required version: {version_required}')
+
+    # Convert any None or invalid inputs
+    # to standard strings
+    version_required_str = str(version_required) if version_required is not None else ''
+    version_installed_str = str(version_installed) if version_installed is not None else ''
+
+    try:
+        # Perform the version comparison safely
+        if packaging.version.parse(version_required_str) != packaging.version.parse(version_installed_str):
+            print()
+            print(f'The current version of {package} is: {version_installed_str}. Installing the required version: {version_required_str}')
+            return False
+    except Exception:
+        # If parsing still fails
+        # due to a typo or empty string,
+        # return False to trigger a reinstall
+        # instead of crashing the launcher
         return False
+
     return True
 
 

@@ -34,7 +34,11 @@ def add_to_favorites(preset_file, category_selection):
     preset_file = f'{preset_file}.json'
     master_presets_path = Path('masters/master_presets')
     source_file = Path(master_presets_path/category_selection/preset_file)
-    dest_dir = Path(US.user_path/f'user_presets/Favorite')
+
+    # Resolve the current favorite folder using common
+    active_fav_cat = 'Favorite' if common.comfy_active else 'SDXL_Favorite'
+    dest_dir = Path(US.user_path / 'user_presets' / active_fav_cat)
+
     success = US.mkdir_copy_file(source_file, dest_dir)
     if success:
         interpret('[Features] Added to favorites:', preset_file)
@@ -42,9 +46,13 @@ def add_to_favorites(preset_file, category_selection):
         interpret('[Features] Could not add to favorites:', preset_file)
     return
 
+
 def remove_from_favorites(preset_file):
-    source_file = Path(US.user_path/f'user_presets/Favorite/{preset_file}.json')
-    dest_dir = Path(US.user_path/f'user_presets/Old Favorites')
+    # Resolve the current favorite folder using common
+    active_fav_cat = 'Favorite' if common.comfy_active else 'SDXL_Favorite'
+    source_file = Path(US.user_path / 'user_presets' / active_fav_cat / f'{preset_file}.json')
+
+    dest_dir = Path(US.user_path / 'user_presets' / 'Old Favorites')
     success = US.move_file(source_file, dest_dir)
     if success:
         interpret('[Features] Removed from favorites:', preset_file)

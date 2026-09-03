@@ -1,4 +1,3 @@
-import os
 import copy
 import json
 import numbers
@@ -34,7 +33,7 @@ from modules.loader import load_file_from_url
 
 config_ext = {}
 nav_name_list = ''
-enhanced_config = os.path.abspath(f'./enhanced/config.json')
+enhanced_config = Path('./enhanced/config.json').resolve()
 # set by webui, but 22 is a typical value:
 gen_btn_offset = 22
 # set by webui, but 99 is a typical value:
@@ -42,8 +41,8 @@ len_layout_params = 99
 preset_down_note_info = 'Loading model files...'
 system_message = ''
 
-if os.path.exists(enhanced_config):
-    with open(enhanced_config, "r", encoding="utf-8") as json_file:
+if enhanced_config.is_file():
+    with open(enhanced_config, 'r', encoding='utf-8') as json_file:
         config_ext.update(json.load(json_file))
 else:
     config_ext.update({'fooocus_line': '# 2.1.852'})
@@ -118,35 +117,35 @@ function(system_params) {
 
 def get_system_message():
     global config_ext
-    fooocus_log = os.path.abspath(f'./fooocusplus_log.md')
+    fooocus_log = Path('./fooocusplus_log.md').resolve()
     update_msg_f = ''
     first_line_f = None
-    if os.path.exists(fooocus_log):
-        with open(fooocus_log, "r", encoding="utf-8") as log_file:
+    if fooocus_log.is_file():
+        with open(fooocus_log, 'r', encoding='utf-8') as log_file:
             line = log_file.readline()
             while line:
                 if line == '\n':
                     line = log_file.readline()
                     continue
-                if line.startswith("# ") and first_line_f is None:
+                if line.startswith('# ') and first_line_f is None:
                     first_line_f = line.strip()
                 if line.strip() == config_ext['fooocus_line']:
                     break
                 if first_line_f:
                     update_msg_f += line
                 line = log_file.readline()
-    update_msg_f = update_msg_f.replace("\n","  ")
+    update_msg_f = update_msg_f.replace('\n', '  ')
 
-    f_log_path = os.path.abspath("./fooocusplus_log.md")
-    if len(update_msg_f)>0:
+    f_log_path = str(Path('./fooocusplus_log.md').resolve())
+    if len(update_msg_f) > 0:
         body_f = f'<b id="update_f">[FooocusPlus]</b>: {update_msg_f}<a href="file={f_log_path}">>></a>   '
     else:
         body_f = '<b id="update_f"> </b>'
     import mistune
     body = mistune.html(body_f)
     if first_line_f and (first_line_f != config_ext['fooocus_line']):
-        config_ext['fooocus_line']=first_line_f
-        with open(enhanced_config, "w", encoding="utf-8") as config_file:
+        config_ext['fooocus_line'] = first_line_f
+        with open(enhanced_config, 'w', encoding='utf-8') as config_file:
             json.dump(config_ext, config_file)
     return body if body else ''
 
@@ -158,56 +157,61 @@ def preset_no_instruction():
     return head + body + foot
 
 def max_cat_values(state_params):
-    if "__max_per_page" not in state_params:
-        if state_params["__is_mobile"]:
-            state_params.update({"__max_per_page": (config.default_image_catalog_max_per_page)//2})
+    if '__max_per_page' not in state_params:
+        if state_params['__is_mobile']:
+            state_params.update({'__max_per_page': (config.default_image_catalog_max_per_page) // 2})
         else:
-            state_params.update({"__max_per_page": config.default_image_catalog_max_per_page})
-    if "__max_catalog" not in state_params:
-        state_params.update({"__max_catalog": config.default_image_catalog_max_number})
-    return state_params["__max_per_page"], state_params["__max_catalog"]
+            state_params.update({'__max_per_page': config.default_image_catalog_max_per_page})
+    if '__max_catalog' not in state_params:
+        state_params.update({'__max_catalog': config.default_image_catalog_max_number})
+    return state_params['__max_per_page'], state_params['__max_catalog']
 
 
 def init_nav_bars(state_params, request: gr.Request):
 #   print(f'request.headers:{request.headers}')
-    if "__lang" not in state_params.keys():
-        state_params.update({"__lang": args.language})
-    if "__theme" not in state_params.keys():
-        state_params.update({"__theme": args.mode})
-    if "__preset" not in state_params.keys():
-        state_params.update({"__preset": args.preset})
-    if "__session" not in state_params.keys() and "cookie" in request.headers.keys():
-        cookies = dict([(s.split('=')[0], s.split('=')[1]) for s in request.headers["cookie"].split('; ')])
-        if "SESSION" in cookies.keys():
-            state_params.update({"__session": cookies["SESSION"]})
-    user_agent = request.headers["user-agent"]
-    if "__is_mobile" not in state_params.keys():
-        state_params.update({"__is_mobile": True if user_agent.find("Mobile")>0 and user_agent.find("AppleWebKit")>0 else False})
-    if "__webpath" not in state_params.keys():
-        state_params.update({"__webpath": f'file={os.getcwd()}'})
+
+    # Synchronize the menu bar with
+    # the Comfy state at startup
+    config.default_bar_category = 'Favorite' if common.comfy_active else 'SDXL_Favorite'
+
+    if '__lang' not in state_params.keys():
+        state_params.update({'__lang': args.language})
+    if '__theme' not in state_params.keys():
+        state_params.update({'__theme': args.mode})
+    if '__preset' not in state_params.keys():
+        state_params.update({'__preset': args.preset})
+    if '__session' not in state_params.keys() and 'cookie' in request.headers.keys():
+        cookies = dict([(s.split('=')[0], s.split('=')[1]) for s in request.headers['cookie'].split('; ')])
+        if 'SESSION' in cookies.keys():
+            state_params.update({'__session': cookies['SESSION']})
+    user_agent = request.headers['user-agent']
+    if '__is_mobile' not in state_params.keys():
+        state_params.update({'__is_mobile': True if user_agent.find('Mobile') > 0 and user_agent.find('AppleWebKit') > 0 else False})
+    if '__webpath' not in state_params.keys():
+        state_params.update({'__webpath': f'file={Path.cwd()}'})
     max_per_page, max_catalog = max_cat_values(state_params)
     output_list, finished_nums, finished_pages = gallery_util.refresh_output_list(max_per_page, max_catalog)
-    state_params.update({"__output_list": output_list})
-    state_params.update({"__finished_nums_pages": f'{finished_nums},{finished_pages}'})
-    state_params.update({"infobox_state": 0})
-    state_params.update({"note_box_state": ['',0,0]})
-    state_params.update({"array_wildcards_mode": ''})
-    state_params.update({"wildcard_in_wildcards": 'root'})
-    state_params.update({"bar_button": args.preset})
-    state_params.update({"init_process": 'finished'})
+    state_params.update({'__output_list': output_list})
+    state_params.update({'__finished_nums_pages': f'{finished_nums},{finished_pages}'})
+    state_params.update({'infobox_state': 0})
+    state_params.update({'note_box_state': ['', 0, 0]})
+    state_params.update({'array_wildcards_mode': ''})
+    state_params.update({'wildcard_in_wildcards': 'root'})
+    state_params.update({'bar_button': args.preset})
+    state_params.update({'init_process': 'finished'})
     results = refresh_nav_bars(state_params)
 
     # calculate the Catalog Label immediately
     max_per_page, max_catalog = max_cat_values(state_params)
     # Use the counts already calculated earlier in your function
-    finished_nums = state_params.get("__finished_nums_pages", "0,0").split(',')[0]
-    finished_pages = state_params.get("__finished_nums_pages", "0,0").split(',')[1]
+    finished_nums = state_params.get('__finished_nums_pages', '0,0').split(',')[0]
+    finished_pages = state_params.get('__finished_nums_pages', '0,0').split(',')[1]
 
     viewable = int(finished_pages) if int(finished_pages) < max_catalog else max_catalog
 
     label_text = interpret(
         f"Generated Images Catalog: {finished_nums} images and {finished_pages} pages ({viewable} pages viewable)",
-        "", silent=True
+        '', silent=True
     )
 
     file_welcome = get_welcome_image()
@@ -220,12 +224,12 @@ def init_nav_bars(state_params, request: gr.Request):
         print(f' {abs_path}')
         results += [gr.update(value=abs_path)]
     print()
-    results += [gr.update(value=state_params["__theme"])]
-    results += [gr.update(choices=state_params["__output_list"], value=None), gr.update(visible=len(state_params["__output_list"])>0, open=False)]
-    results += [gr.update(value=False if state_params["__is_mobile"] else config.default_inpaint_advanced_masking_checkbox)]
+    results += [gr.update(value=state_params['__theme'])]
+    results += [gr.update(choices=state_params['__output_list'], value=None), gr.update(visible=len(state_params['__output_list']) > 0, open=False)]
+    results += [gr.update(value=False if state_params['__is_mobile'] else config.default_inpaint_advanced_masking_checkbox)]
     preset = args.preset
     preset_url = get_preset_inc_url(preset)
-    state_params.update({"__preset_url":preset_url})
+    state_params.update({'__preset_url': preset_url})
     results += [gr.update(visible=True if 'blank.inc.html' not in preset_url else False)]
     results += [gr.update(value=label_text)]
 
@@ -236,22 +240,22 @@ def init_nav_bars(state_params, request: gr.Request):
 
 def get_preset_inc_url(preset_name='blank'):
     preset_name = f'{preset_name}.inc'
-    preset_inc_path = os.path.abspath(f'./presets/html/{preset_name}.html')
-    blank_inc_path = os.path.abspath(f'./presets/html/blank.inc.html')
-    if os.path.exists(preset_inc_path):
+    preset_inc_path = Path(f'./presets/html/{preset_name}.html').resolve()
+    blank_inc_path = Path('./presets/html/blank.inc.html').resolve()
+    if preset_inc_path.is_file():
         return f'file={preset_inc_path}'
     else:
         return f'file={blank_inc_path}'
 
 def refresh_nav_bars(state_params):
-    state_params.update({"__nav_name_list": PR.get_presetnames_in_folder(config.default_bar_category)})
+    state_params.update({'__nav_name_list': PR.get_presetnames_in_folder(config.default_bar_category)})
     preset_name_list = PR.get_presetnames_in_folder(config.default_bar_category)
     results = []
-    if state_params["__is_mobile"]:
+    if state_params['__is_mobile'] or not config.enable_preset_bar:
         results += [gr.update(visible=False)]
     else:
         results += [gr.update(visible=True)]
-    preset_count = PR.preset_bar_count()
+    preset_count = len(preset_name_list)
     padded_list = PR.pad_list(preset_name_list, config.preset_bar_length, '')
     for i in range(config.preset_bar_length):
         name = padded_list[i]
@@ -267,7 +271,7 @@ def manage_ip_image_clear(index=None):
     # User activated buffer clearing is necessary for Image
     # Prompt slots because they can be used by other Input
     # Image options: the Inpainter and UOV.
-    # Individual Clear (index provided) wipes ONLY the image,       #  preserving the other parameters.
+    # Individual Clear (index provided) wipes ONLY the image, preserving the other parameters.
     # Clear All (index=None) wipes everything and resets
     # the parameters to the global defaults.
 
@@ -352,15 +356,15 @@ def manage_image_buffers(inpaint_img=None, inpaint_mask=None):
 
 def process_before_generation(state_params, backend_params, backfill_prompt, translation_methods, comfyd_active_checkbox):
     common.is_generating = True
-    if "__nav_name_list" not in state_params.keys():
-        state_params.update({"__nav_name_list": PR.get_all_presetnames()})
+    if '__nav_name_list' not in state_params.keys():
+        state_params.update({'__nav_name_list': PR.get_all_presetnames()})
     superprompt.remove_superprompt()
     remove_tokenizer()
     backend_params.update({
         'backfill_prompt': backfill_prompt,
         'translation_methods': translation_methods,
         'comfyd_active_checkbox': comfyd_active_checkbox,
-        'preset': state_params["__preset"],
+        'preset': state_params['__preset'],
         })
 
     results = [gr.update(value=common.resolution),  # resolution
@@ -377,17 +381,17 @@ def process_before_generation(state_params, backend_params, backfill_prompt, tra
     results += [gr.update(interactive=False)] * (preset_nums + 6)
     results += [gr.update()] * (preset_nums)
     results += [backend_params]
-    state_params["gallery_state"]='preview'
+    state_params['gallery_state']='preview'
     return results
 
 
 def process_after_generation(state_params):
 
-    max_per_page = state_params["__max_per_page"]
-    max_catalog = state_params["__max_catalog"]
+    max_per_page = state_params['__max_per_page']
+    max_catalog = state_params['__max_catalog']
     output_list, finished_nums, finished_pages = gallery_util.refresh_output_list(max_per_page, max_catalog)
-    state_params.update({"__output_list": output_list})
-    state_params.update({"__finished_nums_pages": f'{finished_nums},{finished_pages}'})
+    state_params.update({'__output_list': output_list})
+    state_params.update({'__finished_nums_pages': f'{finished_nums},{finished_pages}'})
 
     results = [
         gr.update(visible=False), # welcome_window
@@ -399,14 +403,14 @@ def process_after_generation(state_params):
     # generate_button, stop_button, skip_button, state_is_generating
     results += [gr.update(value='Generate', visible=True, interactive=True)] + [gr.update(visible=False, interactive=False), gr.update(visible=False, interactive=False), False]
     # gallery_index, catalogue_accordion
-    results += [gr.update(choices=state_params["__output_list"], value=None), gr.update(visible=len(state_params["__output_list"])>0, open=False)]
+    results += [gr.update(choices=state_params['__output_list'], value=None), gr.update(visible=len(state_params['__output_list']) > 0, open=False)]
     # prompt, random_button, translator_button, super_prompter, background_theme, image_tools_checkbox, bar0_button, bar1_button, bar2_button, bar3_button, bar4_button, bar5_button, bar6_button, bar7_button, bar8_button
     preset_nums = PR.preset_count()
     results += [gr.update(interactive=True)] * (preset_nums + 6)
     results += [gr.update()] * (preset_nums)
 
-    if len(state_params["__output_list"]) > 0:
-        output_index = state_params["__output_list"][0].split('/')[0]
+    if len(state_params['__output_list']) > 0:
+        output_index = state_params['__output_list'][0].split('/')[0]
         gallery_util.refresh_images_catalog(output_index, True)
         gallery_util.parse_html_log(output_index, True)
 
@@ -414,12 +418,12 @@ def process_after_generation(state_params):
 
 
 def sync_message(state_params):
-    state_params.update({"__message":system_message})
+    state_params.update({'__message':system_message})
     return state_params
 
 
 def down_absent_model(state_params):
-    state_params.update({'bar_button': state_params["bar_button"].replace('\u2B07', '')})
+    state_params.update({'bar_button': state_params['bar_button'].replace('\u2B07', '')})
     return gr.update(visible=False), state_params
 
 
@@ -428,10 +432,10 @@ def reset_layout_params(
 
     global system_message, preset_down_note_info, len_layout_params, gen_btn_offset
 
-    state_params.update({"__message": system_message})
+    state_params.update({'__message': system_message})
     system_message = 'system message was displayed!'
 
-    if '__preset' not in state_params.keys() or 'bar_button' not in state_params.keys() or state_params["__preset"]==state_params['bar_button']:
+    if '__preset' not in state_params.keys() or 'bar_button' not in state_params.keys() or state_params['__preset'] == state_params['bar_button']:
 
         # generate the base list of generic updates:
         results = [gr.update()] * len_layout_params
@@ -443,12 +447,12 @@ def reset_layout_params(
 
         return results
 
-    if '\u2B07' in state_params["bar_button"]:
+    if '\u2B07' in state_params['bar_button']:
         gr.Info(preset_down_note_info)
-    preset = state_params["bar_button"]
+    preset = state_params['bar_button']
     print()
-    interpret('[UI Support] Changed the preset from', state_params["__preset"] + ' → ' + preset)
-    state_params.update({"__preset": preset})
+    interpret('[UI Support] Changed the preset from', state_params['__preset'] + ' → ' + preset)
+    state_params.update({'__preset': preset})
 
     if common.metadata_loading:
         config_preset = common.log_metadata
@@ -457,10 +461,10 @@ def reset_layout_params(
     preset_prepared = parse_meta_from_preset(config_preset)
 
     engine = preset_prepared.get('engine', {}).get('backend_engine', 'Fooocus')
-    state_params.update({"engine": engine})
+    state_params.update({'engine': engine})
 
     task_method = preset_prepared.get('engine', {}).get('backend_params', flags.get_engine_default_backend_params(engine))
-    state_params.update({"task_method": task_method})
+    state_params.update({'task_method': task_method})
 
     if comfyd_active_checkbox:
         comfyd.stop()
@@ -475,8 +479,8 @@ def reset_layout_params(
     # New: Extract the text encoder downloads
     clip_downloads = preset_prepared.get('clip_downloads', {})
 
-    state_params.update({"__prompt": prompt})
-    state_params.update({"__negative_prompt": negative_prompt})
+    state_params.update({'__prompt': prompt})
+    state_params.update({'__negative_prompt': negative_prompt})
 
     model_dtype = preset_prepared.get('engine', {}).get('backend_params', {}).get('base_model_dtype', '')
 
@@ -484,11 +488,11 @@ def reset_layout_params(
     # download_models(default_model, previous_default_models, checkpoint_downloads, embeddings_downloads, lora_downloads, vae_downloads, clip_downloads)
 
     preset_url = preset_prepared.get('reference', get_preset_inc_url(preset))
-    state_params.update({"__preset_url":preset_url})
+    state_params.update({'__preset_url': preset_url})
 
     results = refresh_nav_bars(state_params)
     results += meta_parser.switch_layout_template(
-        preset_prepared, state_params, state_params.get("__preset_url"))
+        preset_prepared, state_params, state_params.get('__preset_url'))
     results += meta_parser.load_parameters(
         preset_prepared, is_generating, inpaint_mode)
 
@@ -513,9 +517,12 @@ def download_models(default_model, previous_default_models, checkpoint_downloads
         return default_model, checkpoint_downloads
 
     if not args.always_download_new_model:
-        if not os.path.isfile(common.MODELS_INFO.get_file_path_by_name('checkpoints', default_model)):
+        chk_path = common.MODELS_INFO.get_file_path_by_name('checkpoints', default_model)
+        # Using pathlib.Path instead of os.path.isfile
+        if not Path(chk_path).is_file():
             for alternative_model_name in previous_default_models:
-                if os.path.isfile(common.MODELS_INFO.get_file_path_by_name('checkpoints', alternative_model_name)):
+                alt_path = common.MODELS_INFO.get_file_path_by_name('checkpoints', alternative_model_name)
+                if Path(alt_path).is_file():
                     interpret(f'[UI Support] You do not have [{default_model}] but you have [{alternative_model_name}].')
                     interpret(f'FooocusPlus will use [{alternative_model_name}] to avoid downloading new models.')
                     interpret('Use --always-download-new-model to avoid fallback and always get new models.')
@@ -523,21 +530,44 @@ def download_models(default_model, previous_default_models, checkpoint_downloads
                     default_model = alternative_model_name
                     break
 
+    # Resolve paths via pathlib.Path for all downloads
     for file_name, url in checkpoint_downloads.items():
-        model_dir = os.path.dirname(common.MODELS_INFO.get_file_path_by_name('checkpoints', file_name))
-        load_file_from_url(url=url, model_dir=model_dir, file_name=os.path.basename(file_name))
+        resolved_path = Path(common.MODELS_INFO.get_file_path_by_name('checkpoints', file_name))
+        load_file_from_url(url=url, model_dir=str(resolved_path.parent), file_name=resolved_path.name)
+
     for file_name, url in embeddings_downloads.items():
-        load_file_from_url(url=url, model_dir=common.path_embeddings, file_name=file_name)
+        load_file_from_url(url=url, model_dir=str(Path(config.path_embeddings)), file_name=file_name)
+
     for file_name, url in lora_downloads.items():
-        model_dir = os.path.dirname(common.MODELS_INFO.get_file_path_by_name('loras', file_name))
-        load_file_from_url(url=url, model_dir=model_dir, file_name=os.path.basename(file_name))
+        resolved_path = Path(common.MODELS_INFO.get_file_path_by_name('loras', file_name))
+        load_file_from_url(url=url, model_dir=str(resolved_path.parent), file_name=resolved_path.name)
+
     for file_name, url in vae_downloads.items():
-        load_file_from_url(url=url, model_dir=common.path_vae, file_name=file_name)
-    # New: Auto-download text encoders into
-    # UserDir/models/clip/
+        load_file_from_url(url=url, model_dir=str(Path(config.path_vae)), file_name=file_name)
+
+    # Auto-download text encoders into UserDir/models/clip/
     if clip_downloads:
+        # Replicate comfy_task.py's decision logic:
+        target_clip = 't5xxl_fp16.safetensors' if common.total_vram_gb > 16.0 and common.total_sysram_gb > 32.0 else 't5xxl_fp8_e4m3fn.safetensors'
+
+        # Check if BOTH the FP8 and FP16 versions exist inside the preset's download list.
+        # This prevents us from skipping the only available T5 source in single-resolution presets.
+        has_both_t5 = ('t5xxl_fp16.safetensors' in clip_downloads) and ('t5xxl_fp8_e4m3fn.safetensors' in clip_downloads)
+
         for file_name, url in clip_downloads.items():
-            load_file_from_url(url=url, model_dir=common.path_clip, file_name=file_name)
+            # 'clip_l.safetensors' is always mandatory;
+            # never skip it
+            if file_name == 'clip_l.safetensors':
+                load_file_from_url(url=url, model_dir=str(Path(config.path_clip)), file_name=file_name)
+                continue
+
+            # If the preset provides both T5 encoders
+            # (for auto-selection), skip the
+            # incompatible one
+            if has_both_t5 and file_name != target_clip:
+                continue
+
+            load_file_from_url(url=url, model_dir=str(Path(config.path_clip)), file_name=file_name)
 
     return default_model, checkpoint_downloads
 
@@ -547,7 +577,7 @@ from transformers import CLIPTokenizer
 config_clip_path = Path(common.path_clip_vision)
 cur_clip_path = Path(config_clip_path/'clip-vit-large-patch14').resolve()
 if cur_clip_path.exists():
-    tokenizer = CLIPTokenizer.from_pretrained(cur_clip_path)
+    tokenizer = CLIPTokenizer.from_pretrained(str(cur_clip_path))
 else:
     interpret('[UI Support] Cannot load the tokenizer from', cur_clip_path)
     print()
@@ -565,7 +595,7 @@ def prompt_token_prediction(text, style_selections):
     if 'tokenizer' not in globals():
         globals()['tokenizer'] = None
     if tokenizer is None:
-        tokenizer = CLIPTokenizer.from_pretrained(cur_clip_path)
+        tokenizer = CLIPTokenizer.from_pretrained(str(cur_clip_path))
     return len(tokenizer.tokenize(text))
 
     from extras.expansion import safe_str
@@ -615,6 +645,75 @@ def prompt_token_prediction(text, style_selections):
     positive_basic_workloads = remove_empty_str(positive_basic_workloads, default=task_prompt)
     #print(f'positive_basic_workloads:{positive_basic_workloads}')
     return len(tokenizer.tokenize(positive_basic_workloads[0]))
+
+
+def handle_comfy_active_change(enabled: bool, current_preset: str, state_params: dict):
+    common.comfy_active = enabled
+    config.default_comfy_active_checkbox = enabled
+    # tell Comfy to start or stop:
+    comfyd.active(enabled)
+
+    # Resolve the active favourites category
+    # dynamically based on the target toggle state
+    active_fav_cat = 'Favorite' if enabled else 'SDXL_Favorite'
+
+    # Sync the default bar category configuration so that
+    # refresh_nav_bars() queries the correct folder on disk
+    config.default_bar_category = active_fav_cat
+
+    # Resolve target category selection transition:
+    if PR.category_selection == 'Favorite' and not enabled:
+        target_category = 'SDXL_Favorite'
+    elif PR.category_selection == 'SDXL_Favorite' and enabled:
+        target_category = 'Favorite'
+    else:
+        target_category = PR.category_selection
+
+    PR.category_selection = target_category
+    target_preset = current_preset
+
+    if not enabled:
+        try:
+            config_preset = PR.get_preset_content(current_preset, quiet=True)
+            preset_prepared = parse_meta_from_preset(config_preset)
+            engine = preset_prepared.get('engine', {}).get('backend_engine', 'Fooocus')
+
+            # If Comfy is disabled, but a Comfy-based
+            # preset was running, fallback to 'Default'
+            # inside the favourite directory.
+            if engine != 'Fooocus':
+                target_preset = 'Default'
+                target_category = active_fav_cat
+                PR.category_selection = target_category
+                interpret('[UI Support] Comfy disabled. Swapped active preset to Default.')
+        except Exception as e:
+            print(f'[UI Support] Warning: Preset fallback failed: {e}')
+
+    category_choices = PR.get_preset_categories()
+
+    preset_choices = PR.get_presetnames_in_folder(target_category)
+
+    # 4. Construct the basic UI updates list
+    basic_updates = [
+        gr.update(value=enabled),   # comfyd_active_checkbox
+        gr.update(visible=enabled), # iclight_row_controls
+        gr.update(visible=enabled), # iclight_row_subjects
+        gr.update(visible=enabled), # iclight_row_prompts
+        gr.update(visible=enabled), # iclight_row_links
+        gr.update(visible=not enabled), # iclight_row_shield
+        gr.update(visible=enabled), # gateway_info_markdown
+        gr.update(visible=enabled), # btn_gateway
+        gr.update(choices=category_choices, value=target_category), # category_selection
+        gr.update(choices=preset_choices, value=target_preset),   # preset_selection
+        gr.update(interactive=len(preset_choices) > 1)
+    ]
+
+    # 5. Dynamically fetch the topbar Favorites bar updates
+    # (This returns [preset_row_update] +
+    # bar_buttons_updates)
+    topbar_updates = refresh_nav_bars(state_params)
+
+    return basic_updates + topbar_updates
 
 
 nav_name_list = PR.get_all_presetnames()

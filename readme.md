@@ -3,7 +3,7 @@
 
 # FooocusPlus – AI Art Made Simple
 
-FooocusPlus is a community-developed AI image generation application that makes creating stunning works of art easier than ever. FooocusPlus runs offline on your computer and is completely free! Now you can have your very own Stable Diffusion or Midjourney that helps turn your creative ideas into beautiful images without any technical skills.
+FooocusPlus is a community-developed AI image generation program that makes creating stunning works of art easier than ever. FooocusPlus runs offline on your computer and is completely free! Now you can have your very own Stable Diffusion or Midjourney that helps turn your creative ideas into beautiful images without any technical skills.
 
 ## Features
 
@@ -11,6 +11,8 @@ FooocusPlus is a community-developed AI image generation application that makes 
 - Get inspiration for your art – choose from an extensive list of styles, or use our integrated AI assistant to help you write the perfect prompt
 - Enhance existing images using AI – banish Photoshop editing with advanced image modification tools, or even use an existing picture as inspiration for a new creation!
 - Bring the power of community home – use LoRA models from websites like Civitai to add new concepts to your images
+- all required models are auto-downloaded but only if you actually use them, preventing local drive clutter
+- to provide worldwide access, Civitai is not used as a download source
 - Full control at your fingertips – simple one-click access to advanced generation options, letting you use custom settings like a pro without ever leaving our friendly user interface
 - Simple image adjustments and background transparency functions using the built-in Image Editor
 - Multilingual – full support for English, French, Portuguese and Spanish out of the box, partial support for Simplified Chinese and limited support for over 40 other languages
@@ -26,7 +28,7 @@ FooocusPlus gives you access to a diversity of AI image generation base models, 
 - Hunyuan-DiT
 - Kwai Kolors
 - Playground 2.5
-- Segmind-Vega
+- Segmind-Vega (coming soon)
 - Stable Diffusion 1.5 (SD1.5)
 - Stable Diffusion 3.5 Large & Medium
 - Z-Image Base & Turbo
@@ -45,11 +47,11 @@ While some graphics cards with 4GB of video RAM (VRAM) will work - some of them 
 
 For those systems that are capable of generating FooocusPlus images with only 4GB of VRAM, we include a unique default base model that is small and fast. In addition, FooocusPlus supports Stable Diffusion 1.5 (SD1.5), which should run in most 4GB VRAM cards.
 
-FooocusPlus supports NVIDIA graphics cards on Windows and Linux, macOS on Silicon, and many AMD graphics cards on Linux. We also support using AMD graphics cards on Windows at a reduced speed, and provide limited support for macOS on Intel.
+FooocusPlus supports NVIDIA graphics cards on Windows and Linux, macOS on Silicon, and many AMD graphics cards on Linux. We also provide limited support for macOS on Intel. AMD support under Windows is coming soon.
 
-Torchruntime is integrated into FooocusPlus. Please check their [compatibility tables](https://github.com/easydiffusion/torchruntime/blob/main/README.md#compatibility-table) for more details on hardware and software support. But unlike Torchruntime, FooocusPlus does support NVIDIA Blackwell 50xx graphics cards in full native mode.
+Torchruntime is integrated into FooocusPlus. Please check their [compatibility tables](https://github.com/easydiffusion/torchruntime/blob/main/README.md#compatibility-table) for more details on hardware and software support. But unlike Torchruntime, FooocusPlus does support NVIDIA Blackwell 50xx graphics cards in full native mode with fine tuning parameters and local PyTorch attention.
 
-The Comfy generative system is integrated into FooocusPlus to provide support for non-SDXL models. Comfy no longer supports legacy video cards that require PyTorch 2.4 or earlier software. Due to this incompatibility, Comfy mode will soon be disabled for these legacy hardware.
+The Comfy generative system is integrated into FooocusPlus to provide support for non-SDXL models. Comfy no longer supports legacy video cards that require PyTorch 2.4 or earlier software. Due to this incompatibility, Comfy mode is disabled for this legacy hardware. However legacy video cards with at least 11 GB of video RAM (VRAM) do support Comfy using Forced Compatibility Mode.
 
 ## Installing FooocusPlus
 

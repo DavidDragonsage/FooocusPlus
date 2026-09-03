@@ -54,6 +54,10 @@
     "checkpoint_downloads": {
         "FluxSchnell/hyperfluxSchnell_q5KS.gguf": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/hyperfluxSchnell_q5KS.gguf"
     },
+    "clip_downloads": {
+        "clip_l.safetensors": "https://huggingface.co/lllyasviel/flux_text_encoders/resolve/main/clip_l.safetensors",
+        "t5xxl_fp8_e4m3fn.safetensors": "https://huggingface.co/lllyasviel/flux_text_encoders/resolve/main/t5xxl_fp8_e4m3fn.safetensors"
+    },
     "embeddings_downloads": {},
     "lora_downloads": {
         "Flux/FluxDFaeTasticDetails.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/LoRAs/FluxDFaeTasticDetails.safetensors",

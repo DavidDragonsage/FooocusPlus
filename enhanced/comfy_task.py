@@ -25,19 +25,12 @@ iclight_source_text = {
     iclight_source_names[8]: "Bottom Right Light",
     }
 
-RAM32G = 32500
-RAM32G1 = 32768
-RAM16G = 16300
-VRAM8G = 8180
-VRAM8G1 = 8192  # include 8G
-VRAM16G = 16300
 
 def is_lowlevel_device():
-    return ldm_patched.modules.model_management.get_vram()<VRAM8G
+    return common.total_vram_gb < 8.0
 
 def is_highlevel_device():
-    return ldm_patched.modules.model_management.get_vram()>VRAM16G
-
+    return common.total_vram_gb > 16.0
 
 quick_prompts = [
     'blue hour',
@@ -202,10 +195,9 @@ def get_comfy_task(task_name, task_method, default_params, input_images, options
         return ComfyTask(task_method, comfy_params)
 
     elif task_name == 'Kolors+':
-        total_vram = ldm_patched.modules.model_management.get_vram()
         if 'llms_model' not in default_params or default_params['llms_model'] == 'auto':
             comfy_params.update_params({
-                "llms_model": 'quant4' if total_vram < VRAM8G else 'quant8' if total_vram < VRAM16G else 'fp16'
+                'llms_model': 'quant4' if common.total_vram_gb < 8.0 else 'quant8' if common.total_vram_gb < 16.0 else 'fp16'
             })
         check_download_kolors_model()  # Preserved as a special dependency pipeline
         return ComfyTask(task_method, comfy_params)
@@ -244,8 +236,6 @@ def get_comfy_task(task_name, task_method, default_params, input_images, options
         # -------------------------------------------
         # FLUX DEV/SCHENLL/KREA/ALL-IN-ONE FP8
         # -------------------------------------------
-        total_ram = ldm_patched.modules.model_management.get_sysram()
-        total_vram = ldm_patched.modules.model_management.get_vram()
 
         # SAFETY CHECK: If a Z-Image workflow is
         # lingering but the model is standard,
@@ -256,7 +246,7 @@ def get_comfy_task(task_name, task_method, default_params, input_images, options
 
         # Handle 'auto' model selection
         if base_model == 'auto':
-            model_dev = 'FluxDev\\FluxDev/flux1-dev-Q5_K_S.gguf'
+            model_dev = 'FluxDev\\flux1-dev-Q5_K_S.gguf'
             model_hyp8 = 'FluxDev\\hyperfluxDiversity_q5KS.gguf'
             if not common.MODELS_INFO.exists_model(catalog='checkpoints', model_path=base_model) and common.MODELS_INFO.exists_model(catalog='checkpoints', model_path=model_hyp8):
                 base_model = model_hyp8
@@ -277,7 +267,7 @@ def get_comfy_task(task_name, task_method, default_params, input_images, options
         # -------------------------------------------
         # Determine clip_model based on safe, conservative VRAM threshold (VRAM16G)
         if 'clip_model' not in default_params or default_params['clip_model'] == 'auto':
-            clip_model = 't5xxl_fp16.safetensors' if total_vram > VRAM16G and total_ram > RAM32G1 else 't5xxl_fp8_e4m3fn.safetensors'
+            clip_model = 't5xxl_fp16.safetensors' if common.total_vram_gb > 16.0 and common.total_sysram_gb > 32.0 else 't5xxl_fp8_e4m3fn.safetensors'
 
             # Check for file existence, falling back to FP8 if FP16 is missing
             if not common.MODELS_INFO.exists_model('clip', clip_model):
@@ -288,7 +278,7 @@ def get_comfy_task(task_name, task_method, default_params, input_images, options
         # Force FP8 model-weights on GPUs with less than 16GB VRAM
         if 'base_model_dtype' not in default_params or default_params['base_model_dtype'] == 'auto':
             comfy_params.update_params({
-                'base_model_dtype': 'fp8_e4m3fn' if total_vram < VRAM16G or total_ram <= RAM32G1 or 'fp8' in base_model.lower() or 'lora_1' in default_params else 'default'
+                'base_model_dtype': 'fp8_e4m3fn' if common.total_vram_gb < 16.0 or common.total_sysram_gb <= 32.0 or 'fp8' in base_model.lower() or 'lora_1' in default_params else 'default'
             })
         else:
             base_model_dtype = default_params['base_model_dtype']

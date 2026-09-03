@@ -1,5 +1,7 @@
 import ast # used to convert a style string to a list
+import copy
 import os
+
 import common
 import modules.config as config
 import modules.loader as loader
@@ -63,11 +65,14 @@ def parse_meta_from_preset(preset_content):
             print()
         else:
             interpret('[Preset Support] Could not find', 'metadata!')
-            return ''
+            return {}
 
     if common.metadata_loading:
         preset_content = common.log_metadata
-    items = US.verify_dictionary(preset_content)
+
+    # prevent cache pollution which causes
+    # obsolete prompts to resurface
+    items = copy.deepcopy(US.verify_dictionary(preset_content))
 
     for settings_key, meta_key in config.possible_preset_keys.items():
         # for presets that do not have a default prompt or negative prompt

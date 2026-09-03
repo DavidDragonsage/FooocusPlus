@@ -55,6 +55,10 @@
     "checkpoint_downloads": {
         "FluxKrea/flux1-krea-dev-Q8_0.gguf": "https://huggingface.co/QuantStack/FLUX.1-Krea-dev-GGUF/resolve/main/flux1-krea-dev-Q8_0.gguf"
     },
+    "clip_downloads": {
+        "clip_l.safetensors": "https://huggingface.co/lllyasviel/flux_text_encoders/resolve/main/clip_l.safetensors",
+        "t5xxl_fp16.safetensors": "https://huggingface.co/lllyasviel/flux_text_encoders/resolve/main/t5xxl_fp16.safetensors"
+    },
     "embeddings_downloads": {},
     "lora_downloads": {
         "Flux/Hyper-FLUX.1-dev-8steps-lora.safetensors": "https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-FLUX.1-dev-8steps-lora.safetensors",

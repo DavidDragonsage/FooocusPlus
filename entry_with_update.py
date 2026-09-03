@@ -19,7 +19,7 @@ except:
 
 # ensure that pygit2 is available
 # pygit2 is needed until dulwich:
-verify_installed_version('pygit2', '1.18.0', False)
+verify_installed_version('pygit2', '1.18.2', False)
 
 try:
     import pygit2

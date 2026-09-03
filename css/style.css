@@ -107,10 +107,10 @@
 .perf_modal_box {
     height: auto;
     position: absolute;
-    top: 85px;
+    top: 80px;
     left: 50%;
-    min-width: 360px !important;
-    width: 360px !important;
+    min-width: 400px !important;
+    width: 400px !important;
     transform: translateX(-50%);
     text-align: left;
     opacity: 1;

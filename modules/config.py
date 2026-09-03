@@ -80,7 +80,7 @@ def get_dir_or_set_default(key, default_value, as_array=False, make_directory=Fa
     config_dict[key] = dp
     return dp
 
-US.create_user_structure(user_dir)
+US.create_user_structure(user_dir, common.comfy_active)
 
 def get_path_output() -> str:
     global config_dict, user_dir
@@ -1161,13 +1161,8 @@ config_comfy_text = config_comfy_formatted_text.format(
 with open(config_comfy_path, "w", encoding="utf-8") as comfy_file:
     comfy_file.write(config_comfy_text)
 
-
 # initialize notification file status
 control_notification(audio_notification)
-
-# adjust for the args override that prevents use of Comfy
-if args.disable_comfyd:
-    default_comfy_active_checkbox = False
 
 default_aspect_ratio_values = []
 # Resolution support

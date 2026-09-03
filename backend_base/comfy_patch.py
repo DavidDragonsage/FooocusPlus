@@ -25,54 +25,77 @@ def apply_comfy_patch():
         comfy_dir = (Path(ROOT) / 'comfy').resolve()
         comfy_main = comfy_dir / 'main.py'
 
-        # [Debug Print] Confirm the launcher is calling the patcher and checking main.py
-        # print(f"[Debug] Patcher loaded. Checking comfy_main: {comfy_main}, exists: {comfy_main.exists()}")
-
         if comfy_main.exists():
-            # 1. Self-Healing Disk Patch: Prepend the version override directly into main.py
             content = comfy_main.read_text(encoding='utf-8')
             patch_marker = '# FooocusPlus ComfyUI path injection'
+            end_marker = '# FooocusPlus ComfyUI path injection end'
 
-            # Revert to our standard surgical filter marker to trigger the automatic silent overwrite on disk
-            logging_marker = '# FooocusPlus ComfyUI surgical logging filter'
-            if patch_marker not in content or logging_marker not in content:
-                # Strip out any legacy debug patches first to prevent duplication
-                clean_content = content.replace(patch_marker, '').replace('# FooocusPlus ComfyUI method-level logging mute - DEBUGRUN', '').replace('# FooocusPlus ComfyUI verbose logging active', '') if patch_marker in content else content
+            # 1. Surgical Self-Healing Recovery Block
+            # If the file contains a legacy patch, slice out the entire polluted block
+            if patch_marker in content:
+                start_idx = content.find(patch_marker)
+                
+                # Check for our clean end marker first
+                if end_marker in content:
+                    end_idx = content.rfind(end_marker)
+                    clean_content = content[:start_idx] + content[end_idx + len(end_marker):]
+                else:
+                    # Legacy Recovery: Search from the end to find the absolute end of any old hooks
+                    hook_end = 'logging.Logger.warning = _safe_logger_warning'
+                    end_idx = content.rfind(hook_end)
+                    if end_idx != -1:
+                        clean_content = content[:start_idx] + content[end_idx + len(hook_end):]
+                    else:
+                        clean_content = content.replace(patch_marker, '')
+                
+                # Strip out leading whitespace/newlines
+                clean_content = clean_content.lstrip()
+            else:
+                clean_content = content
 
-                patch_code = (
-                    f"{patch_marker}\n"
-                    f"{logging_marker}\n"
-                    "import sys\n"
-                    "from pathlib import Path\n"
-                    "import logging\n"
-                    "comfy_dir = Path(__file__).parent.resolve()\n"
-                    "if str(comfy_dir) not in sys.path:\n"
-                    "    sys.path.insert(0, str(comfy_dir))\n"
-                    "\n"
-                    "# 1. Surgical Logging Filter: Mute comfy_kitchen while preserving standard [INFO] logs\n"
-                    "# We ONLY patch logging.Logger class methods to prevent circular recursion deadlocks!\n"
-                    "_orig_logger_info = logging.Logger.info\n"
-                    "def _safe_logger_info(self, msg, *args, **kwargs):\n"
-                    "    msg_str = str(msg)\n"
-                    "    # Filter out noisy comfy_kitchen and asset seeder logs\n"
-                    "    if 'comfy_kitchen' in msg_str or 'comfy-kitchen' in msg_str or 'Asset seeder' in msg_str:\n"
-                    "        return\n"
-                    "    _orig_logger_info(self, msg, *args, **kwargs)\n"
-                    "logging.Logger.info = _safe_logger_info\n"
-                    "\n"
-                    "# 2. Filter out noisy, non-fatal CUDA/PyTorch warnings while preserving other system warnings\n"
-                    "_orig_logger_warning = logging.Logger.warning\n"
-                    "def _safe_logger_warning(self, msg, *args, **kwargs):\n"
-                    "    msg_str = str(msg)\n"
-                    "    if 'Unsupported Pytorch' in msg_str or 'cu130' in msg_str or 'VRAM estimates' in msg_str or 'IMPORT FAILED' in msg_str or 'comfy_extras' in msg_str:\n"
-                    "        return\n"
-                    "    _orig_logger_warning(self, msg, *args, **kwargs)\n"
-                    "logging.Logger.warning = _safe_logger_warning\n\n"
-                )
-                comfy_main.write_text(patch_code + clean_content, encoding='utf-8')
+            # 2. Re-apply the clean, non-recursive patch block
+            patch_code = (
+                f"{patch_marker}\n"
+                "import sys\n"
+                "from pathlib import Path\n"
+                "import logging\n"
+                "comfy_dir = Path(__file__).parent.resolve()\n"
+                "if str(comfy_dir) not in sys.path:\n"
+                "    sys.path.insert(0, str(comfy_dir))\n"
+                "\n"
+                "# 1. Surgical Logging Filter: Mute comfy_kitchen while preserving standard [INFO] logs\n"
+                "_orig_logger_info = logging.Logger.info\n"
+                "def _safe_logger_info(self, msg, *args, **kwargs):\n"
+                "    msg_str = str(msg)\n"
+                "    # Filter out noisy comfy_kitchen, asset seeder, and partial torch compile logs\n"
+                "    if 'comfy_kitchen' in msg_str or 'comfy-kitchen' in msg_str or 'Asset seeder' in msg_str or 'Partial torch compile' in msg_str:\n"
+                "        return\n"
+                "    # Intercept and rewrite the raw Comfy GUI URL with a clean status message\n"
+                "    if 'To see the GUI go to' in msg_str:\n"
+                "        _orig_logger_info(self, 'Comfy loading complete!', *args, **kwargs)\n"
+                "        return\n"
+                "    _orig_logger_info(self, msg, *args, **kwargs)\n"
+                "logging.Logger.info = _safe_logger_info\n"
+                "\n"
+                "# 2. Filter out noisy, non-fatal CUDA/PyTorch warnings while preserving other system warnings\n"
+                "_orig_logger_warning = logging.Logger.warning\n"
+                "def _safe_logger_warning(self, msg, *args, **kwargs):\n"
+                "    msg_str = str(msg)\n"
+                "    # Added 'comfyui-workflow-templates' to silently swallow the version mismatch box\n"
+                "    if 'Unsupported Pytorch' in msg_str or 'cu130' in msg_str or 'VRAM estimates' in msg_str or 'IMPORT FAILED' in msg_str or 'comfy_extras' in msg_str or 'comfyui-workflow-templates' in msg_str:\n"
+                "        return\n"
+                "    _orig_logger_warning(self, msg, *args, **kwargs)\n"
+                "logging.Logger.warning = _safe_logger_warning\n"
+                f"{end_marker}\n\n"
+            )
+
+            new_content = patch_code + clean_content
+            # Only write to disk if the file differs (prevents unnecessary SSD wear-and-tear)
+            if content != new_content:
+                comfy_main.write_text(new_content, encoding='utf-8')
                 print('[ComfyPatch] Successfully applied ComfyUI path and silent logging patch!')
 
-            # 2. Self-Healing Placeholder: Write a valid, empty node mapping to satisfy Comfy's loader and silence GLSL/OpenGL errors
+            # 3. Self-Healing Placeholder: Write a valid, empty node mapping to satisfy Comfy's loader and silence GLSL/OpenGL errors
             glsl_nodes = comfy_dir / 'comfy_extras' / 'nodes_glsl.py'
             placeholder_text = (
                 "# FooocusPlus placeholder to silence unused OpenGL nodes\n"
@@ -86,12 +109,9 @@ def apply_comfy_patch():
                 except Exception as e:
                     print(f"[ComfyPatch] Warning: Failed to create placeholder for OpenGL nodes: {e}")
 
-            # 3. Self-Healing rgthree-comfy Patch: Mute the tedious "Nodes 2.0" warning inside __init__.py
+            # 4. Self-Healing rgthree-comfy Patch: Mute the tedious "Nodes 2.0" warning inside __init__.py
             rgthree_dir = comfy_dir / 'custom_nodes' / 'rgthree-comfy'
             rgthree_init = rgthree_dir / '__init__.py'
-
-            # [Debug Print] Check the physical path to rgthree's __init__.py
-            # print(f"[Debug] Checking rgthree_init: {rgthree_init}, exists: {rgthree_init.exists()}")
 
             if rgthree_init.exists():
                 rgthree_content = rgthree_init.read_text(encoding='utf-8')
@@ -113,5 +133,25 @@ def apply_comfy_patch():
 
     except Exception as e:
         print(f"[ComfyPatch] Warning: Failed to apply CUDA 13 / Comfy compatibility patch: {e}")
+
+    # 5. Programmatic System Patch:
+    # Automatically remove the obsolete NVIDIA NGC
+    # extra-index-url from the untracked local
+    # pip.ini file to solve DNS warnings for
+    # existing users.
+    python_embedded_dir = Path(ROOT).parent / 'python_embedded'
+    if python_embedded_dir.is_dir():
+        try:
+            pip_ini = python_embedded_dir / 'pip.ini'
+            if pip_ini.is_file():
+                content = pip_ini.read_text(encoding='utf-8')
+                if 'pypi.ngc.nvidia.com' in content:
+                    lines = content.splitlines()
+                    # Strip out any line containing the obsolete NVIDIA package index
+                    cleaned_lines = [l for l in lines if 'pypi.ngc.nvidia.com' not in l]
+                    pip_ini.write_text('\n'.join(cleaned_lines), encoding='utf-8')
+                    print('[ComfyPatch] Successfully removed obsolete NVIDIA package index from python_embedded pip.ini!')
+        except Exception as e:
+            print(f"[ComfyPatch] Warning: Failed to sanitize python_embedded pip.ini: {e}")
 
     return

@@ -16,11 +16,35 @@ user_path = Path(current_dir.parent/'UserDir').resolve()
 
 # these are platform independent functions, for universal use:
 
-def copy_dirs(arg_source, arg_dest): # dirs including files
+
+def copy_dirs(arg_source, arg_dest):
+    # dirs including files & empty dirs
     source_path = Path(arg_source)
     dest_path = Path(arg_dest)
-    shutil.copytree(source_path, dest_path, dirs_exist_ok = True)
+
+    if not source_path.is_dir():
+        return
+
+    # Recursively scan the source directory
+    for path in source_path.rglob('*'):
+        # Calculate the relative path from the source
+        rel_path = path.relative_to(source_path)
+        target_path = dest_path / rel_path
+
+        # 1. If it is a directory, recreate the
+        # folder structure, including empty folders
+        if path.is_dir():
+            target_path.mkdir(parents=True, exist_ok=True)
+
+        # 2. If it is a file, only copy it
+        # if it is missing
+        elif path.is_file():
+            if not target_path.exists():
+                # Ensure parent directories exists
+                target_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(path, target_path)
     return
+
 
 def copy_dir_structure(arg_source, arg_dest): # dirs without files
     source_path = Path(arg_source)
@@ -582,28 +606,89 @@ def replace_obsolete_categories(user_presets_path):
     return
 
 
-def init_starter_presets(user_presets_path, restore=False):
-    # from 1.0.9
-    starter_presets_path = Path('masters/starter_presets')
-    user_favorites_path = Path(user_presets_path/'Favorite')
-    # add starter presets to user favorites
+def init_starter_presets(
+        user_presets_path,
+        restore=False,
+        arg_comfy=True):
+    # from 1.0.9 & 1.1.5
+    if arg_comfy:
+        starter_presets_path = Path('masters/starter_presets')
+        user_favorites_path = Path(user_presets_path/'Favorite')
+    else:
+        starter_presets_path = Path('masters/sdxl_presets')
+        user_favorites_path = Path(user_presets_path/'SDXL_Favorite')
+    # add starter or SDXL presets to user favorites
     # but only for a new installation
     # or the "Restore Favorites" button was selected
     if not user_favorites_path.is_dir() or restore==True:
+        if not user_favorites_path.is_dir():
+            print()
+            interpret('Initializing the Favorite directory with five starter presets.')
+            interpret('When FooocusPlus is running, they can be added to or removed using the button under the Extras tab.')
+            print()
         copy_dirs(starter_presets_path, user_favorites_path)
-        print()
-        interpret('The Favorite directory has been initialized with five starter presets. When FooocusPlus is running, they can be added to or removed using the button under the Extras tab.')
-        print()
     return
 
-def clear_user_favorites(user_presets_path):
-    source_dir = Path(user_path/f'user_presets/Favorite/')
+
+def update_favorite_presets(user_presets_path, comfy_active=True):
+    """
+    Scans UserDir/user_presets/Favorite or SDXL_Favorite
+    for standard presets. If a preset with a matching filename is found in  masters/master_presets,
+    it updates the user's favorite copy with
+    the master version to keep it current.
+    """
+    active_fav_cat = 'Favorite' if comfy_active else 'SDXL_Favorite'
+    fav_dir = Path(user_presets_path / active_fav_cat)
+    if not fav_dir.is_dir():
+        return
+
+    master_presets_dir = Path('masters/master_presets')
+    if not master_presets_dir.is_dir():
+        return
+
+    # Build a dictionary of master presets,
+    # excluding the Favorite / SDXL_Favorite subfolders
+    master_presets = {}
+    for file_path in master_presets_dir.rglob('*'):
+        if file_path.is_file():
+            if 'Favorite' in file_path.parts or 'SDXL_Favorite' in file_path.parts:
+                continue
+            master_presets[file_path.name] = file_path
+
+    updated_count = 0
+    for user_fav_file in fav_dir.iterdir():
+        if user_fav_file.is_file():
+            filename = user_fav_file.name
+            if filename in master_presets:
+                master_file = master_presets[filename]
+                # Overwrite the outdated favourite
+                # with the master file
+                success, existed = copy_file(master_file, user_fav_file, overwrite=True)
+                if success:
+                    updated_count += 1
+
+    if updated_count > 0:
+        interpret('Synchronized the favorite presets with the masters')
+    return
+
+
+def clear_user_favorites(
+        user_presets_path,
+        comfy_active):
+    if comfy_active:
+        source_dir = Path(user_path/f'user_presets/Favorite/')
+    else:
+        source_dir = Path(user_path/f'user_presets/SDXL_Favorite/')
     dest_dir = Path(user_path/f'user_presets/Old Favorites')
     success = move_files_excluding(source_dir, dest_dir, '')
     return success
 
-def init_preset_structure(init=False, restore_favorites=False,
-        clear_favorites=False):
+
+def init_preset_structure(
+        init=False,
+        restore_favorites=False,
+        clear_favorites=False,
+        comfy_active=True):
     master_presets_path = Path('masters/master_presets')
     old_presets_path = Path(user_path/'master_presets')
     remove_dirs(old_presets_path)
@@ -619,12 +704,21 @@ def init_preset_structure(init=False, restore_favorites=False,
     make_dir(user_presets_path)
     if init:
         replace_obsolete_categories(user_presets_path)
-        init_starter_presets(user_presets_path, restore=restore_favorites)
+        init_starter_presets(
+            user_presets_path,
+            restore=restore_favorites,
+            arg_comfy = comfy_active)
+        update_favorite_presets(user_presets_path, comfy_active=comfy_active)
     elif clear_favorites:
-        clear_user_favorites(user_presets_path)
+        clear_user_favorites(
+            user_presets_path,
+            comfy_active)
 
     # if count>0 then clear_favorites_button is Interactive:
-    count=count_files(Path(user_path/f'user_presets/Favorite/'))
+    if comfy_active:
+        count=count_files(Path(user_path/f'user_presets/Favorite/'))
+    else:
+        count=count_files(Path(user_path/f'user_presets/SDXL_Favorite/'))
 
     copy_dir_structure(master_presets_path, user_presets_path)
     copy_dirs(user_presets_path, working_presets_path)
@@ -636,7 +730,8 @@ def init_preset_structure(init=False, restore_favorites=False,
     return count
 
 
-def create_user_structure(config_user_dir):
+def create_user_structure(
+    config_user_dir, arg_comfy_active):
     global masters_dir, user_path
     # initialize the user directory, user_path
     interpret('[Structure] Verifying the file structure...')
@@ -694,8 +789,16 @@ def create_user_structure(config_user_dir):
     interpret('Verified the working language directory:', working_language_path)
 
 
+    # initialize the UserDir/models structure
+    # includes files that are not downloaded
+    master_models_path = Path('masters/models')
+    user_models_path = Path(user_path/'models')
+    copy_dirs(master_models_path, user_models_path)
+    interpret('Verified the models directory:', user_models_path)
+
+
     # also initialize the Presets structure
-    init_preset_structure(init=True)
+    init_preset_structure(init=True, comfy_active=arg_comfy_active)
 
 
     # initialize the Styles structure

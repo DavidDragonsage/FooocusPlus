@@ -12,14 +12,14 @@ import common
 import args_manager as args
 import enhanced.gallery as gallery
 import enhanced.version
-import modules.config as config
 import modules.aspect_ratios as AR
+import modules.config as config
 import modules.loader as loader
 import modules.preset_resource as PR
 import modules.sdxl_styles
 import modules.user_structure as US
 
-from enhanced.translator import interpret
+from enhanced.translator import interpret, interpret_warn
 from modules.flags import MetadataScheme, Performance, Steps, task_class_mapping, get_taskclass_by_fullname
 from modules.flags import default_class_params, scheduler_list, sampler_list, SAMPLERS, CIVITAI_NO_KARRAS
 from modules.preset_support import normalize_AR, parse_meta_from_preset, verify_sampler, verify_scheduler
@@ -1136,6 +1136,32 @@ def read_meta_from_image(file) -> tuple[str | None, MetadataScheme | None]:
         if isinstance(parameters, str):
             metadata_scheme = MetadataScheme.A1111
     return parameters, metadata_scheme
+
+
+def trigger_metadata_preview(file):
+
+    parameters, metadata_scheme = read_meta_from_image(file)
+    results = {}
+    if parameters is not None:
+        results['parameters'] = parameters
+
+    if isinstance(metadata_scheme, MetadataScheme):
+        results['metadata_scheme'] = metadata_scheme.value
+        if metadata_scheme.value.lower() == 'simple':
+            results['metadata_scheme'] = 'Fooocus'
+        if metadata_scheme.value.lower() == 'a1111':
+            results['metadata_scheme'] = 'A1111'
+            parameters = None
+
+    # Resolve validation using the newly routed gallery helper
+    is_comfy_required = gallery.is_comfy_metadata(parameters, metadata_scheme)
+    if is_comfy_required and not common.comfy_active:
+        button_interactive = False
+        interpret_warn('This image requires Comfy to be available for regeneration.')
+    else:
+        button_interactive = (parameters is not None)
+
+    return [results, gr.update(interactive=button_interactive)]
 
 
 def extract_preset_name_from_image(image_file):

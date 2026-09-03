@@ -6,6 +6,7 @@ from typing import Optional
 import common
 import modules.flags as flags
 import modules.user_structure as US
+from args_manager import args
 from enhanced.translator import interpret, \
     interpret_info, interpret_warn
 
@@ -18,6 +19,24 @@ path_wildcards = Path(current_dir / 'wildcards')
 sd15_model_path = 'SD1.5/realisticVisionV60B1_v51VAE.safetensors'
 vae_filenames = []
 wildcard_filenames = []
+
+
+def is_comfy_checkpoint(file_path_str: str) -> bool:
+    """Helper to check if a checkpoint resides inside a Comfy-only folder."""
+    parts = Path(file_path_str).parts
+    if parts:
+        first_part = parts[0].lower()
+
+        # --- MIXED ALTERNATIVE FOLDER GATEWAY ---
+        # If the file is inside 'Alternative/', only allow it through if it is the
+        # Playground model. Exclude all other Comfy-specific contents from standard view.
+        if first_part == 'alternative':
+            return 'playground' not in file_path_str.lower()
+
+        # Exact folder name matches from your checkpoints directory
+        comfy_checkpoint_folders = {'fluxdev', 'fluxkrea', 'fluxschnell', 'sd3x', 'sd1.5', 'z-image'}
+        return first_part in comfy_checkpoint_folders
+    return False
 
 
 def get_base_model_list(engine='Fooocus', task_method=None, for_import=False):
@@ -47,7 +66,7 @@ def get_base_model_list(engine='Fooocus', task_method=None, for_import=False):
     if engine in ['Fooocus', 'Comfy']:
         base_model_list = common.MODELS_INFO.get_model_names('checkpoints', flags.model_file_filter['Fooocus'], reverse=True)
         # Keep only the flat/root models (filter out anything containing path separators)
-        return [f for f in base_model_list if '/' not in f and '\\' not in f]
+        return [f for f in base_model_list if not is_comfy_checkpoint(f)]
 
     # 4. For Flux engine modes:
     elif engine == 'Flux':
@@ -110,15 +129,29 @@ def get_base_model_list(engine='Fooocus', task_method=None, for_import=False):
     return base_model_list
 
 
+def is_comfy_lora(file_path_str: str) -> bool:
+    """Helper to check if a LoRA resides inside a Comfy-only folder."""
+    parts = Path(file_path_str).parts
+    if parts:
+        first_part = parts[0].lower()
+        # Exact folder name matches from the LoRAs directory
+        # These folder names must be listed in lower case
+        comfy_lora_folders = {'flux', 'sd1.5', 'sd3x', 'z-image'}
+        return first_part in comfy_lora_folders
+    return False
+
+
 def get_lora_model_list(engine='Fooocus', task_method=None, for_import=False) -> list:
     """
-    Dynamically and recursively filters your LoRA files based on the active model family.
-    - Flux: Shows only 'Flux/' folder LoRAs
+    Recursively filters LoRA files based on the active preset
+    - Alternative (Kolors, HyDiT, Playground): Shows flat root LoRAs + 'Alternative/' subfolder
+      (except the HyDiT preset only shows the 'Alternative/' subfolder)
+    - Flux: Shows only 'Flux/' folder LoRAs (excluding Z-Image)
     - SD3.5: Shows only 'SD3x/' folder LoRAs
     - SD1.5: Shows only 'SD1.5/' folder LoRAs
     - Pony: Shows only 'Pony/' folder LoRAs
-    - Z-Image: Shows only 'Z-Image/' folder LoRAs
-    - SDXL (Standard): Shows only flat, root-level LoRAs, hiding all subfolders
+    - Z-Image: Shows only 'Z-Image' folder LoRAs
+    - SDXL (Standard): Shows flat root LoRAs + any custom user subdirectories, hiding Comfy-only folders
     """
     global base_model_name
 
@@ -133,37 +166,48 @@ def get_lora_model_list(engine='Fooocus', task_method=None, for_import=False) ->
     model_lower = base_model_name.lower() if base_model_name else ''
     method_lower = str(task_method).lower() if task_method else ''
 
-    # Identify Z-Image specific state
+    # 1. Z-Image Engine check
     is_z_image = any(x in model_lower for x in ['z-image', 'z_image']) or \
                  any(x in method_lower for x in ['zit', 'zib'])
-
-    # Z-Image checked before the general Flux check
     if is_z_image:
         return [f for f in raw_loras if 'z-image' in f.lower() or 'z_image' in f.lower()]
 
-    # Flux Engine check
+    # 2. Flux Engine check
     if engine == 'Flux':
-        # Show only Flux/ folder, and explicitly EXCLUDE Z-Image to keep lists clean
         return [f for f in raw_loras if 'flux' in f.lower() and 'z-image' not in f.lower() and 'z_image' not in f.lower()]
 
-    # SD3x Engine check
+    # 3. SD3x Engine check
     if engine == 'SD3x':
         return [f for f in raw_loras if 'sd3x' in f.lower()]
 
-    # SD1 (SD1.5) Engine check
+    # 4. SD1 (SD1.5) Engine check
     if engine == 'SD1' or 'sd15' in method_lower:
-        # Normalize separators for consistent folder detection
         return [f for f in raw_loras if 'sd1.5' in f.replace('\\', '/').lower()]
 
-    # Pony Sub-Family (SDXL Checkpoints)
+    # 5. Pony Sub-Family (SDXL Checkpoints)
     if 'pony' in model_lower:
         return [f for f in raw_loras if 'pony' in f.lower()]
 
-    # Standard SDXL (Fooocus / Comfy)
-    # If using SDXL, show ONLY the root level LoRAs.
-    # Hide the sub-family folders (Flux, SD3, Z-Image, etc.)
+    # 6. Alternative Engines Filter
+    # (Kolors and Playground Only)
+    # Restricts the choices to flat root-level LoRAs plus those stored in the 'Alternative' subfolder
+    if engine == 'Kolors+' or (model_lower and 'playground' in model_lower):
+        return [
+            f for f in raw_loras
+            if '/' not in f and '\\' not in f or 'alternative' in f.lower()
+        ]
+
+    # 7. HyDiT+ Engine Filter (Strict Lockout)
+    # Strictly protects HyDiT from standard SDXL
+    # LoRAs by showing ONLY specialized LoRAs
+    # stored inside the 'Alternative/' directory
+    if engine == 'HyDiT+':
+        return [f for f in raw_loras if 'alternative' in f.lower()]
+
+    # 8. Standard SDXL (Fooocus / Comfy)
+    # Include all subfolders except for the Comfy ones
     if engine in ['Fooocus', 'Comfy']:
-        return [f for f in raw_loras if '/' not in f and '\\' not in f]
+        return [f for f in raw_loras if not is_comfy_lora(f)]
 
     # Fallback: return everything
     return raw_loras
@@ -245,8 +289,9 @@ def load_file_from_url(
                         print()
                         hf_download_success = True
             except Exception as e:
-                # If hf_hub_download fails (or is missing), print warning to console and fallback
-                print(f'[Loader] Warning: hf_hub_download failed. Falling back to standard downloader: {e}')
+                # If hf_hub_download fails
+                # or is missing, fallback
+                interpret_info(f'[Loader] Using the standard downloader...')
 
         # --- ORIGINAL FALLBACK DOWNLOADER (Using torch.hub) ---
         # Runs only if the hf_hub download was skipped or failed
@@ -271,6 +316,31 @@ def get_write_directory(paths) -> Path:
     return Path.cwd()
 
 
+def download_antelope_models():
+    # load the Comfy  insightface directory,
+    # used by the Flux PuLID and InstantID custom nodes
+    # not currently used in FooocusPlus
+    insightface_root = Path(getattr(common, 'path_insightface', Path.cwd() / 'models' / 'insightface'))
+    model_dir = insightface_root / 'models' / 'antelopev2'
+
+    antelope_files = [
+        '1k3d68.onnx',
+        '2d106det.onnx',
+        'genderage.onnx',
+        'glintr100.onnx',
+        'scrfd_10g_bnkps.onnx'
+    ]
+
+    # Download all 5 files sequentially
+    for file_name in antelope_files:
+        load_file_from_url(
+            url=f'https://huggingface.co/monas/InstantID/resolve/main/models/antelopev2/{file_name}',
+            model_dir=str(model_dir),
+            file_name=file_name
+        )
+    return str(model_dir)
+
+
 def download_base_sd15_model():
     # Resolve the relative path dynamically from the global string
     global sd15_model_path
@@ -281,12 +351,41 @@ def download_base_sd15_model():
     model_path = get_write_directory(common.paths_checkpoints) / rel_path.parent
     model_file_name = rel_path.name
 
+    # Download the base SD1.5 checkpoint
+    # Required for both Fooocus and
+    # Comfy IC-Light modes
     load_file_from_url(
         url='https://huggingface.co/moiu2998/mymo/resolve/3c3093fa083909be34a10714c93874ce5c9dabc4/realisticVisionV60B1_v51VAE.safetensors?download=true',
         model_dir=str(model_path),
         file_name=model_file_name
     )
+
+    # Conditionally download the IC-Light
+    # LDM UNet weights if Comfy is active
+    if common.comfy_active:
+        unet_dir = Path(common.path_unet)
+        ic_light_unet_name = 'iclight_sd15_fc_unet_ldm.safetensors'
+
+        load_file_from_url(
+            url='https://huggingface.co/huchenlei/IC-Light-ldm/resolve/main/iclight_sd15_fc_unet_ldm.safetensors',
+            model_dir=str(unet_dir),
+            file_name=ic_light_unet_name
+        )
+
     return str(model_path / model_file_name)
+
+
+def download_bert_model():
+    llms_root = Path(getattr(common, 'path_llms', Path.cwd() / 'models' / 'llms'))
+    model_dir = llms_root / 'bert-base-uncased'
+    file_name = 'model.safetensors'
+
+    load_file_from_url(
+        url='https://huggingface.co/google-bert/bert-base-uncased/resolve/main/model.safetensors',
+        model_dir=str(model_dir),
+        file_name=file_name
+    )
+    return str(model_dir / file_name)
 
 
 def download_controlnet_canny():
@@ -305,6 +404,42 @@ def download_controlnet_cpds():
     file_name = 'fooocus_xl_cpds_128.safetensors'
     load_file_from_url(
         url='https://huggingface.co/lllyasviel/misc/resolve/main/fooocus_xl_cpds_128.safetensors',
+        model_dir=str(model_dir),
+        file_name=file_name
+    )
+    return str(model_dir / file_name)
+
+
+def download_eva_clip_model():
+    model_dir = get_write_directory(common.path_clip)
+    file_name = 'EVA02_CLIP_L_336_psz14_s6B.pt'
+    load_file_from_url(
+        url='https://huggingface.co/QuanSun/EVA-CLIP/resolve/main/EVA02_CLIP_L_336_psz14_s6B.pt',
+        model_dir=str(model_dir),
+        file_name=file_name
+    )
+    return str(model_dir / file_name)
+
+
+def download_faceid_lora():
+    model_dir = get_write_directory(common.paths_loras)
+    file_name = 'ip-adapter-faceid-plusv2_sdxl_lora.safetensors'
+
+    load_file_from_url(
+        url='https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid-plusv2_sdxl_lora.safetensors',
+        model_dir=str(model_dir),
+        file_name=file_name
+    )
+    return str(model_dir / file_name)
+
+
+def download_groundingdino_model():
+    # Resolve the physical destination directory
+    model_dir = get_write_directory(common.paths_inpaint)
+    file_name = 'groundingdino_swint_ogc.pth'
+
+    load_file_from_url(
+        url='https://huggingface.co/ShilongLiu/GroundingDINO/resolve/main/groundingdino_swint_ogc.pth',
         model_dir=str(model_dir),
         file_name=file_name
     )
@@ -385,6 +520,19 @@ def download_ip_adapters(v):
         results.append(str(control_dir / file_name))
 
     return results
+
+
+def download_pulid_flux_model():
+    # Resolve the physical destination directory
+    model_dir = get_write_directory(common.paths_pulid)
+    file_name = 'pulid_flux_v0.9.1.safetensors'
+
+    load_file_from_url(
+        url='https://huggingface.co/guozinan/PuLID/resolve/main/pulid_flux_v0.9.1.safetensors',
+        model_dir=str(model_dir),
+        file_name=file_name
+    )
+    return str(model_dir / file_name)
 
 
 def download_safety_checker_model():
@@ -473,6 +621,21 @@ def download_sdxl_hyper_sd_lora():
     return flags.PerformanceLoRA.Hyper_SD.value
 
 
+def download_siglip_vision_model():
+    # Resolve the local clip_vision path
+    # This file is currently not used but
+    # is for Flux/SD3.5 Image Prompt
+    model_dir = get_write_directory(common.path_clip_vision)
+    file_name = 'sigclip_vision_patch14_384.safetensors'
+
+    load_file_from_url(
+        url='https://huggingface.co/Comfy-Org/siglip_vision_patch14_384/resolve/main/sigclip_vision_patch14_384.safetensors',
+        model_dir=str(model_dir),
+        file_name=file_name
+    )
+    return str(model_dir / file_name)
+
+
 def download_superprompter_model():
     path_superprompter = get_write_directory(common.paths_llms) / 'superprompt-v1'
     load_file_from_url(
@@ -511,6 +674,18 @@ def download_superprompter_model():
         file_name='tokenizer_config.json'
     )
     return str(path_superprompter / 'model.safetensors')
+
+
+def download_ultrasharp_model():
+    model_dir = get_write_directory(common.path_upscale_models)
+    file_name = '4x-UltraSharp.pth'
+
+    load_file_from_url(
+        url='https://huggingface.co/lokcx/4x-Ultrasharp/resolve/main/4x-UltraSharp.pth',
+        model_dir=str(model_dir),
+        file_name=file_name
+    )
+    return str(model_dir / file_name)
 
 
 def download_upscale_model():

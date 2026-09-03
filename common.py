@@ -9,20 +9,57 @@ MODELS_INFO = None
 # is referenced by several modules
 ROOT = str(Path.cwd())
 
-# use for Comfy port tracking
-# now that it is dynamic
-comfy_port = 8187
-
-# tracks update events
+# Tracks update events
 # set by entry_with_update, checked by webui
 # and processed by enhanced.version.announce_version()
 # 0 = no change, 1 = hotfix, 2 = new version
 version_update = 0
 
-# old NVIDIA GPU flag, PyTorch <= 2.4
-# set by launch_support
-# read by launch
+# Set by launch_support.define_comfy_lockout()
+# and once set it is immutable.
+# Read by launch & webui
+comfy_capable = False
+
+# Set by launch, it can only be True
+# if comfy_capable is True.
+# It is the working reference
+# throughout the program
+comfy_active = False
+
+# use for Comfy port tracking
+# now that it is dynamic
+comfy_port = 8187
+
+# ComfyUI version, set by launch
+# read by System Information in webui
+comfy_ver = 'Not Available'
+
+# Forced Compatibility Mode
+# Legacy GPU forced to PyTorch == 2.7
+# to support Comfy operations.
+# Set by launch_support.dependency_resolver()
+# Read by ui_util
+force_compatibility = False
+
+# Old NVIDIA GPU flag, PyTorch < 2.7
+# If <2.7 stores the Torch version string
+# If PyTorch => 2.7 stores "New"
+# Set by launch_support, if not "New":
+# forces comfy_capable = False,
+# comfy_active = False, and
+# config.default_comfy_active_checkbox = False
+# Read by launch, webui & ui_util
 torch_status = "New"
+
+# Total system RAM
+# Set by ldm_patched/modules/model_management
+# Read by comfy_task, ui_support & webui
+total_sysram_gb = 0.0
+
+# Total physical VRAM (or Unified Memory)
+# Set by launch_support.dependency_resolver()
+# Read by launch, webui & ui_util
+total_vram_gb = 0.0
 
 # Set in UIS.process_before_generation() and
 # cleared by gallery images_list_update()

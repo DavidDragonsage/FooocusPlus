@@ -1,5 +1,4 @@
 # FooocusPlus ComfyUI path injection
-# FooocusPlus ComfyUI surgical logging filter
 import sys
 from pathlib import Path
 import logging
@@ -8,12 +7,15 @@ if str(comfy_dir) not in sys.path:
     sys.path.insert(0, str(comfy_dir))
 
 # 1. Surgical Logging Filter: Mute comfy_kitchen while preserving standard [INFO] logs
-# We ONLY patch logging.Logger class methods to prevent circular recursion deadlocks!
 _orig_logger_info = logging.Logger.info
 def _safe_logger_info(self, msg, *args, **kwargs):
     msg_str = str(msg)
-    # Filter out noisy comfy_kitchen and asset seeder logs
-    if 'comfy_kitchen' in msg_str or 'comfy-kitchen' in msg_str or 'Asset seeder' in msg_str:
+    # Filter out noisy comfy_kitchen, asset seeder, and partial torch compile logs
+    if 'comfy_kitchen' in msg_str or 'comfy-kitchen' in msg_str or 'Asset seeder' in msg_str or 'Partial torch compile' in msg_str:
+        return
+    # Intercept and rewrite the raw Comfy GUI URL with a clean status message
+    if 'To see the GUI go to' in msg_str:
+        _orig_logger_info(self, 'Comfy loading complete!', *args, **kwargs)
         return
     _orig_logger_info(self, msg, *args, **kwargs)
 logging.Logger.info = _safe_logger_info
@@ -22,10 +24,12 @@ logging.Logger.info = _safe_logger_info
 _orig_logger_warning = logging.Logger.warning
 def _safe_logger_warning(self, msg, *args, **kwargs):
     msg_str = str(msg)
-    if 'Unsupported Pytorch' in msg_str or 'cu130' in msg_str or 'VRAM estimates' in msg_str or 'IMPORT FAILED' in msg_str or 'comfy_extras' in msg_str:
+    # Added 'comfyui-workflow-templates' to silently swallow the version mismatch box
+    if 'Unsupported Pytorch' in msg_str or 'cu130' in msg_str or 'VRAM estimates' in msg_str or 'IMPORT FAILED' in msg_str or 'comfy_extras' in msg_str or 'comfyui-workflow-templates' in msg_str:
         return
     _orig_logger_warning(self, msg, *args, **kwargs)
 logging.Logger.warning = _safe_logger_warning
+# FooocusPlus ComfyUI path injection end
 
 import comfy.options
 comfy.options.enable_args_parsing()

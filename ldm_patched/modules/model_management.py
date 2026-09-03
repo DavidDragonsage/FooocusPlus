@@ -1,11 +1,16 @@
-import psutil
-from enhanced.translator import interpret
-from enum import Enum
-from args_manager import args
-import ldm_patched.modules.utils
-import torch
-import sys
 import gc
+import psutil
+import sys
+import torch
+from enum import Enum
+
+import common
+import ldm_patched.modules.utils
+from args_manager import args
+from enhanced.translator import interpret
+
+
+common.total_sysram_gb = round(psutil.virtual_memory().total / (1024 * 1024 * 1024))
 
 class VRAMState(Enum):
     DISABLED = 0    #No vram present: no need to move models to vram
@@ -13,7 +18,7 @@ class VRAMState(Enum):
     LOW_VRAM = 2
     NORMAL_VRAM = 3
     HIGH_VRAM = 4
-    SHARED = 5      #No dedicated vram: memory shared between CPU and GPU but models still need to be moved between both.
+    SHARED = 5      # No dedicated vram: memory shared between CPU and GPU but models still need to be moved between both.
 
 class CPUState(Enum):
     GPU = 0
@@ -24,8 +29,6 @@ class CPUState(Enum):
 vram_state = VRAMState.NORMAL_VRAM
 set_vram_to = VRAMState.NORMAL_VRAM
 cpu_state = CPUState.GPU
-
-total_vram = 0
 
 lowvram_available = True
 xpu_available = False
@@ -96,6 +99,9 @@ def get_total_memory(dev=None, torch_total_too=False):
     if dev is None:
         dev = get_torch_device()
 
+    mem_total = 0
+    mem_total_torch = 0
+
     if hasattr(dev, 'type') and (dev.type == 'cpu' or dev.type == 'mps'):
         mem_total = psutil.virtual_memory().total
         mem_total_torch = mem_total
@@ -104,27 +110,29 @@ def get_total_memory(dev=None, torch_total_too=False):
             mem_total = 1024 * 1024 * 1024 #TODO
             mem_total_torch = mem_total
         elif is_intel_xpu():
-            stats = torch.xpu.memory_stats(dev)
-            mem_reserved = stats['reserved_bytes.all.current']
-            mem_total = torch.xpu.get_device_properties(dev).total_memory
-            mem_total_torch = mem_reserved
+            try:
+                stats = torch.xpu.memory_stats(dev)
+                mem_reserved = stats.get('reserved_bytes.all.current', 0)
+                mem_total = torch.xpu.get_device_properties(dev).total_memory
+                mem_total_torch = mem_reserved
+            except Exception:
+                pass
         else:
-            stats = torch.cuda.memory_stats(dev)
-            mem_reserved = stats['reserved_bytes.all.current']
-            _, mem_total_cuda = torch.cuda.mem_get_info(dev)
-            mem_total_torch = mem_reserved
-            mem_total = mem_total_cuda
+            try:
+                stats = torch.cuda.memory_stats(dev)
+                # .get() safely handles empty dictionary states on boot
+                mem_reserved = stats.get('reserved_bytes.all.current', 0)
+                _, mem_total_cuda = torch.cuda.mem_get_info(dev)
+                mem_total_torch = mem_reserved
+                mem_total = mem_total_cuda
+            except Exception:
+                mem_total = 0
+                mem_total_torch = 0
 
     if torch_total_too:
         return (mem_total, mem_total_torch)
     else:
         return mem_total
-
-def get_vram():   # returns VRAM in MB
-    return get_total_memory(get_torch_device()) / (1024 * 1024)
-
-def get_sysram(): # returns RAM in MB
-    return psutil.virtual_memory().total / (1024 * 1024)
 
 XFORMERS_VERSION = ""
 XFORMERS_ENABLED_VAE = True
@@ -152,12 +160,12 @@ else:
     except:
         XFORMERS_IS_AVAILABLE = False
 
-total_vram = get_vram()
-total_ram = get_sysram()
-print("Total VRAM {:0.0f} MB, total RAM {:0.0f} MB".format(total_vram, total_ram))
+# --- DYNAMIC HARDWARE SYNCHRONIZATION ---
+interpret(f'Total System RAM {common.total_sysram_gb} GB, Total VRAM {common.total_vram_gb} GB, ')
+
 if not args.always_normal_vram and not args.always_cpu:
-    if lowvram_available and total_vram <= 4096:
-        interpret("Trying to enable low VRAM mode because your GPU seems to have 4GB or less")
+    if lowvram_available and common.total_vram_gb <= 4.0:
+        interpret("Trying to enable low VRAM mode because your GPU seems to have 4 GB or less")
         interpret("If you don't want this use:', --always-normal-vram")
         set_vram_to = VRAMState.LOW_VRAM
 
@@ -228,7 +236,7 @@ if args.all_in_fp32:
     FORCE_FP32 = True
 
 if args.all_in_fp16:
-    print("Forcing FP16.")
+    interpret("Forcing FP16.")
     FORCE_FP16 = True
 
 if lowvram_available:
@@ -247,14 +255,14 @@ interpret('Set VRAM state to:', vram_state.name)
 ALWAYS_VRAM_OFFLOAD = False
 if args.disable_offload_from_vram:
     args.always_offload_from_vram = False
-elif args.always_offload_from_vram or (get_vram() < 12000):
+# Replaces: get_vram() < 12000
+elif args.always_offload_from_vram or (common.total_vram_gb < 12.0):
     ALWAYS_VRAM_OFFLOAD = True
     if args.always_offload_from_vram:
         interpret("Always offload VRAM")
     else:
         args.always_offload_from_vram = True
         interpret('Unloading VRAM because the system has less than 12GB')
-        interpret('To prevent this, use this batch file argument', '--disable-offload-from-vram')
         # args.always_offload_from_vram sets Comfy --disable-smart-memory
         # in simpleai_base.comfyd.py at Line 144
 if not args.always_offload_from_vram:
@@ -315,12 +323,11 @@ def get_GPU_name():
 
 try:
     interpret("Device:", get_torch_device_name(get_torch_device()))
-    import common
     common.torch_device = "{}".format(get_torch_device())
 except:
     interpret("Could not determine the default device.")
 
-print("VAE dtype:", VAE_DTYPE)
+interpret("VAE dtype:", VAE_DTYPE)
 print()
 
 current_loaded_models = []
@@ -453,7 +460,7 @@ def load_models_gpu(models, memory_required=0):
             models_already_loaded.append(loaded_model)
         else:
             if hasattr(x, "model"):
-                print(f"Requested to load {x.model.__class__.__name__}")
+                interpret(f"Requested to load {x.model.__class__.__name__}")
             models_to_load.append(loaded_model)
 
     if len(models_to_load) == 0:
@@ -463,7 +470,7 @@ def load_models_gpu(models, memory_required=0):
                 free_memory(extra_mem, d, models_already_loaded)
         return
 
-    print(f"Loading {len(models_to_load)} new model{'s' if len(models_to_load) > 1 else ''}")
+    interpret(f"Loading {len(models_to_load)} new model{'s' if len(models_to_load) > 1 else ''}")
 
     total_memory_required = {}
     for loaded_model in models_to_load:
@@ -888,7 +895,7 @@ def print_memory_info():
         free_cuda = f'{free_cuda/1024/1024/1024:.3f}GB'
         cuda_total = f'{cuda_total/1024/1024/1024:.3f}GB'
 
-        print(f'[Management] GPU memory: max_reserved={max_reserved}, max_allocated={max_allocated}')
-        print(f' GPU reserved={reserved}, free={free_cuda}, free_torch={free_torch}, free_total={free_total}')
-        print(f' GPU Total={gpu_total}, Torch Total={torch_total}')
+        interpret(f'[Management] GPU memory: max_reserved={max_reserved}, max_allocated={max_allocated}')
+        interpret(f' GPU reserved={reserved}, free={free_cuda}, free_torch={free_torch}, free_total={free_total}')
+        interpret(f' GPU Total={gpu_total}, Torch Total={torch_total}')
         torch.cuda.reset_peak_memory_stats()

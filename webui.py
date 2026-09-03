@@ -7,10 +7,14 @@ import json
 import random
 import re
 import time
-import args_manager as args
+
+from functools import partial
+from pathlib import Path
+from json import dumps
+from PIL import Image as _Image
+
 import comfy.comfyui_version
 import common
-import enhanced.superprompt
 import ldm_patched.modules.model_management as model_management
 import modules.aspect_ratios as AR
 import modules.async_worker as worker
@@ -28,19 +32,16 @@ import modules.ui_support as UIS
 import modules.ui_util as UIU
 import modules.user_structure as US
 
-from functools import partial
-from pathlib import Path
-from json import dumps
-from PIL import Image as _Image
-
+import enhanced.comfy_task as comfy_task
 import enhanced.editor as edit
-import enhanced.gallery as gallery_util
-import enhanced.toolbox as toolbox
 import enhanced.enhanced_parameters as enhanced_parameters
+import enhanced.gallery as gallery_util
+import enhanced.superprompt
+import enhanced.toolbox as toolbox
 import enhanced.version as version
 import enhanced.wildcards as wildcards
-import enhanced.comfy_task as comfy_task
 
+from args_manager import args as cli_args
 from backend_base.__init__ import get_torch_xformers_cuda_version as torch_info
 from enhanced.translator import interpret, \
     interpret_info, interpret_warn, render
@@ -95,7 +96,7 @@ with common.GRADIO_ROOT:
         with gr.Column(scale=2):
             with gr.Group():
                 with gr.Row(visible=config.enable_preset_bar) as preset_row:
-                    if not args.args.disable_preset_selection:
+                    if not cli_args.disable_preset_selection:
                         # obsolete hidden preset code
                         # disable the iFrame display of help for preset selections:
                         preset_instruction = gr.HTML(visible=False,
@@ -152,7 +153,7 @@ with common.GRADIO_ROOT:
                     elem_id='final_gallery', preview=True )
 
                 toolbox_info_box = gr.HTML(
-                    toolbox.make_infobox_HTML(None, args.args.mode),
+                    toolbox.make_infobox_HTML(None, cli_args.mode),
                     visible=False, elem_id='infobox',
                     elem_classes='infobox')
 
@@ -238,7 +239,7 @@ with common.GRADIO_ROOT:
                     with gr.Column(scale=2, min_width=75):
                         # Note: the en_master.json reference file will display "Translate"
                         # although no translation will occur
-                        if args.args.language == 'en' or args.args.language == 'en_uk':
+                        if cli_args.language == 'en' or cli_args.language == 'en_uk':
                             random_button = gr.Button(value="Random Prompt",
                                 elem_classes='type_row_half',
                                 size="sm", min_width = 75)
@@ -320,7 +321,7 @@ with common.GRADIO_ROOT:
                                 container=False, visible=True,
                                 elem_id='preset_label')
                             preset_info = gr.Markdown(
-                                value=f'<b>{args.args.preset}</b>',
+                                value=f'<b>{cli_args.preset}</b>',
                                 container=False, visible=True,
                                 elem_id='preset_info')
 
@@ -779,8 +780,7 @@ with common.GRADIO_ROOT:
                                 gr.HTML('<font size="3">&emsp;<a href="https://github.com/DavidDragonsage/FooocusPlus/wiki/Image-Editor-Backgrounds" target="_blank">\U0001F4DA Background Replacement</a>')
 
                     with gr.Tab(label='IC-Light', id='layer_tab') as layer_tab:
-
-                        with gr.Row():
+                        with gr.Row(visible=common.comfy_active) as iclight_row_controls:
                             with gr.Column():
                                 layer_input_image = grh.Image(
                                 label='Place image here',
@@ -795,27 +795,45 @@ with common.GRADIO_ROOT:
                                         elem_classes='iclight_source',
                                         elem_id='iclight_source')
 
-                        with gr.Row():
+                        with gr.Row(visible=common.comfy_active) as iclight_row_subjects:
                             example_quick_subjects = gr.Dataset(
                                 samples=comfy_task.quick_subjects,
                                 label='Subject Quick List',
                                 samples_per_page=1000,
                                 components=[prompt])
 
-                        with gr.Row():
+                        with gr.Row(visible=common.comfy_active) as iclight_row_prompts:
                             example_quick_prompts = gr.Dataset(
-                                samples=comfy_task.quick_prompts,
+                                samples= comfy_task.quick_prompts,
                                 label='Lighting Quick List',
                                 samples_per_page=1000,
                                 components=[prompt])
 
-                        with gr.Row(
-                            elem_classes='elem_centre'):
+                        with gr.Row(visible=common.comfy_active) as iclight_row_links:
                             with gr.Column():
                                 gr.HTML('<font size="3">&emsp;<a href="https://github.com/DavidDragonsage/FooocusPlus/wiki/IC%E2%80%90Light" target="_blank">\U0001F4DA IC-Light</a>')
 
                             with gr.Column():
                                 gr.HTML('* The IC-Light project page: <a href="https://github.com/lllyasviel/IC-Light" target="_blank">IC-Light</a>')
+
+                        with gr.Row(visible=not common.comfy_active) as iclight_row_shield:
+                            lockout_subtext = ''
+                            if common.torch_status != 'New':
+                                lockout_subtext = (
+                                    "<p style='font-size: 0.9em; color: var(--neutral-400); margin-top: 5px;'>"
+                                    "(This feature requires PyTorch 2.7.1 or later to run on your graphics hardware.)"
+                                    "</p>"
+                                )
+
+                            gr.HTML(
+                                f"<div style='padding: 30px; text-align: center; border: 1px solid var(--neutral-300); border-radius: 8px; margin: 20px 0;'>"
+                                f"<h3>🔌 ComfyUI Backend Required</h3>"
+                                f"<p style='color: var(--neutral-500); margin-top: 10px;'>"
+                                f"IC-Light is disabled because ComfyUI is locked out or inactive on this system."
+                                f"</p>"
+                                f"{lockout_subtext}"
+                                f"</div>"
+                            )
 
             with gr.Row(visible=config.default_input_image_checkbox) as image_input_panel:
                 with gr.Tabs(selected=config.default_selected_image_input_tab_id):
@@ -1468,14 +1486,14 @@ with common.GRADIO_ROOT:
 
         with gr.Column(scale=1, visible=config.default_advanced_checkbox, elem_id="scrollable-box-hidden") as advanced_column:
             with gr.Tab(label='Settings', elem_id="scrollable-box"):
-                if not args.args.disable_preset_selection and PR.get_preset_list():
+                if not cli_args.disable_preset_selection and PR.get_preset_list():
                     with gr.Group():
 
                         if config.default_list_all_presets:
                             PR.category_selection = 'All'
                         category_selection = gr.Dropdown(label='Preset Categories',
-                            choices=PR.get_preset_categories(),
-                            value=PR.category_selection,
+                            choices= PR.get_preset_categories(),
+                            value= PR.category_selection,
                             elem_id = 'cat_select',
                             visible=True, interactive=True)
 
@@ -1486,7 +1504,7 @@ with common.GRADIO_ROOT:
 
                         preset_selection = gr.Dropdown(label='Presets',
                             choices=PR.get_presetnames_in_folder(PR.category_selection),
-                            value=args.args.preset if args.args.preset else "initial",
+                            value=cli_args.preset if cli_args.preset else "initial",
                             elem_id = 'preset_select',
                             visible=True, interactive=True)
 
@@ -1834,7 +1852,7 @@ with common.GRADIO_ROOT:
                             choices=flags.OutputFormat.list(),
                             value=config.default_output_format)
 
-                        if not args.args.disable_metadata:
+                        if not cli_args.disable_metadata:
                             save_metadata_to_images = gr.Checkbox(
                                 label='Save Metadata to Images',
                                 value=config.default_save_metadata_to_images,
@@ -1978,9 +1996,10 @@ with common.GRADIO_ROOT:
                                 gateway_info = interpret(
                                     'Open the Comfy UI in a new tab. To conserve VRAM, FooocusPlus should not be generating images while the gateway is open.',
                                     '', silent=True)
-                                gr.Markdown(
+                                gateway_info_markdown = gr.Markdown(
                                     value=gateway_info,
-                                    elem_classes='button_info2')
+                                    visible= common.comfy_active,
+                                    elem_classes= 'button_info2')
 
                             with gr.Row(
                                 elem_classes='elem_centre'):
@@ -1989,7 +2008,8 @@ with common.GRADIO_ROOT:
                                     '', silent=True)
                                 btn_gateway = gr.Button(
                                     value=gateway_value,
-                                    elem_classes= 'button_classic'
+                                    visible= common.comfy_active,
+                                    elem_classes=  'button_classic'
                                 )
 
                             debugging_cn_preprocessor = gr.Checkbox(
@@ -2026,21 +2046,23 @@ with common.GRADIO_ROOT:
                                 value=False,
                                 info='Disable adaptive Guidance Scale & Override Sampling Step slider control when changing presets')
 
-                            with gr.Row():
+                            with gr.Row(
+                                visible= cli_args.gpu_type != 'none'):
                                 remove_info = interpret(
                                     'Remove dynamic PyTorch components and configs',
                                     '', silent=True)
                                 gr.Markdown(
-                                    value=remove_info,
-                                    elem_classes='button_info2')
+                                    value = remove_info,
+                                    elem_classes = 'button_info2')
                             with gr.Row(
-                                elem_classes='elem_centre'):
+                                visible= cli_args.gpu_type != 'none',
+                                elem_classes = 'elem_centre'):
                                 remove_value = interpret(
                                     'Remove Torch Components',
                                     '', silent=True)
                                 remove_torch_btn = gr.Button(
-                                    value=remove_value,
-                                    elem_classes= 'button_classic'
+                                    value = remove_value,
+                                    elem_classes = 'button_classic'
                                 )
 
                         common.GRADIO_ROOT.load(
@@ -2066,7 +2088,7 @@ with common.GRADIO_ROOT:
 
             with gr.Tab(label='Extras', elem_id="scrollable-box"):
 
-                if not args.args.disable_preset_selection and PR.get_preset_list():
+                if not cli_args.disable_preset_selection and PR.get_preset_list():
                     with gr.Accordion(label='Favorite Preset Control', visible=True, open=False):
                         with gr.Row():
                             gr.Markdown(value='Add or remove the current preset from the Favorite category. Removed favorites are saved in "UserDir/user_presets/Old Favorites". The Default preset cannot be removed.',
@@ -2085,7 +2107,7 @@ with common.GRADIO_ROOT:
                             gr.Markdown(value='Remove all Favorites except the Default and store them in "UserDir/user_presets/Old Favorites".',
                                 elem_classes='button_info2')
                         try:
-                            init_interactive=US.init_preset_structure()>0
+                            init_interactive=US.init_preset_structure(comfy_active=common.comfy_active)>0
                         except:
                             init_interactive=interactive=False
                         with gr.Row(elem_classes='elem_centre'):
@@ -2117,7 +2139,7 @@ with common.GRADIO_ROOT:
                             choices=[''], value='', interactive=False)
                         background_mode = gr.Radio(label='Background Mode',
                             choices=['light', 'dark'],
-                            value=args.args.mode, interactive=True)
+                            value=cli_args.mode, interactive=True)
 
                     audio_notification_checkbox = gr.Checkbox(label='Enable Audio Notification',
                         value=config.audio_notification,
@@ -2131,22 +2153,21 @@ with common.GRADIO_ROOT:
                         interactive = True,
                         visible = True)
 
-                    if not args.args.disable_comfyd:
-                        comfyd_active_checkbox = gr.Checkbox(label='Enable Comfyd Always Active',
-                            value=config.default_comfy_active_checkbox,
-                            info='Enabling will improve execution speed but occupy some memory')
-
+                    comfyd_active_checkbox = gr.Checkbox(label='Enable Comfy Mode',
+                        value= config.default_comfy_active_checkbox,
+                        visible = common.comfy_capable,
+                        info= 'Comfy provides access to advanced models such as Flux, SD3.5 and Z-Image but consumes more system and video memory (VRAM).')
 
                     prompt_translator_checkbox = gr.Checkbox(label='Enable Prompt Translator',
                         value=config.default_prompt_translator_enable,
                         info='If disabled, all prompts must be entered in English',
-                        visible = args.args.language != 'en' and args.args.language != 'en_uk')
+                        visible = cli_args.language != 'en' and cli_args.language != 'en_uk')
 
                     wildcard_line_slider = gr.Slider(label='Wildcard Lines to Interpret',
                         minimum=0, maximum=380, step=5,
                         value=config.wildcard_lines_to_interpret,
                         info='Set to 0 to disable. Large numbers can cause long delays',
-                        visible = args.args.language != 'en' and args.args.language != 'en_uk')
+                        visible = cli_args.language != 'en' and cli_args.language != 'en_uk')
 
                     translation_methods = gr.Radio(label='', choices='',
                         value='', interactive=False, visible = False)
@@ -2165,12 +2186,12 @@ with common.GRADIO_ROOT:
 
                 if UIU.security_alert():
                     with gr.Row():
-                        if args.args.listen != "127.0.0.1":
-                            listen_str = f'The --listen argument has changed the network address from the default "127.0.0.1" to \"{args.args.listen}\"<br>'
+                        if cli_args.listen != "127.0.0.1":
+                            listen_str = f'The --listen argument has changed the network address from the default "127.0.0.1" to \"{cli_args.listen}\"<br>'
                         else:
                             listen_str = ''
-                        if args.args.port != 7860:
-                            port_str = f'The --port argument has changed the network listening port number from the default 7860 to {args.args.port}<br>'
+                        if cli_args.port != 7860:
+                            port_str = f'The --port argument has changed the network listening port number from the default 7860 to {cli_args.port}<br>'
                         else:
                             port_str = ''
                         gr.Markdown(value=f'<h3>Security Report</h3>\
@@ -2194,13 +2215,13 @@ with common.GRADIO_ROOT:
                             elem_classes='button_classic')
 
                 with gr.Row(elem_classes='elem_up'):
-                    if args.args.always_offload_from_vram:
+                    if cli_args.always_offload_from_vram:
                         smart_memory = interpret(
                             'Disabled (VRAM unloaded whenever possible)',
                             '', silent=True)
                     else:
                         smart_memory = interpret(
-                            'Enabled (VRAM unloaded only when necessary',
+                            'Enabled (VRAM unloaded only when necessary)',
                             '', silent=True)
                     video_system = model_management.get_torch_device_name(
                     model_management.get_torch_device())
@@ -2211,15 +2232,14 @@ with common.GRADIO_ROOT:
 
                     fooocusplus_ver, hotfix, hotfix_title = version.get_fooocusplus_ver()
                     gr.Markdown(value=f'<h3>System Information</h3>\
-                    System RAM: {int(model_management.get_sysram())} MB,\
-                    Video RAM: {int(model_management.get_vram())} MB<br>\
+                    System RAM: {common.total_sysram_gb} GB,\
+                    Video RAM: {common.total_vram_gb} GB<br>\
                     Smart Memory: {smart_memory}<br>\
                     Video System: {video_system}<br>\
                     Python {platform.python_version()}, Library {version.get_library_ver()}, \
-                    Comfy {comfy.comfyui_version.__version__}<br>\
+                    Comfy {common.comfy_ver}<br>\
                     Gradio {gr.__version__}, Torch {torch_ver}{cuda_ver}, Xformers {xformers_ver}<br>\
                     FooocusPlus {fooocusplus_ver}, Hotfix {hotfix}')
-
 
                 with gr.Row(elem_classes='elem_centre'):
                     gr.HTML('<font size="3"><a href="https://github.com/DavidDragonsage/FooocusPlus/wiki/System-Information" target="_blank">\U0001F4DA System Information</a>')
@@ -2277,6 +2297,7 @@ with common.GRADIO_ROOT:
 
     system_params = gr.JSON({}, visible=False)
 
+
     def parse_meta(raw_prompt_txt, is_generating, state_params, panel_status):
         loaded_json = None
         if len(raw_prompt_txt)>=1 and (raw_prompt_txt[-1]=='[' or raw_prompt_txt[-1]=='_'):
@@ -2290,11 +2311,36 @@ with common.GRADIO_ROOT:
         except:
             loaded_json = None
 
+        # Lockout Comfy-based metadata if Comfy is not available
+        if loaded_json is not None:
+            is_comfy_required = gallery_util.is_comfy_metadata(loaded_json)
+            if is_comfy_required and not common.comfy_active:
+                loaded_json = None
+
+                # Create a highly visible warning to replace the metadata
+                warning_banner = f"⚠️ *** {interpret('This metadata requires Comfy to be available!', silent=True)} *** ⚠️"
+
+                print('\033[1;33m', end='')
+                print()
+                print(warning_banner)
+                print()
+                print('\033[0m', end='')
+
+                return [
+                    warning_banner, # Overwrite the text with the warning
+                    gr.update(visible=True),  # Keep Generate visible
+                    gr.update(visible=False), # Keep Load Parameters hidden
+                    gr.update()
+                ]
+
         if loaded_json is None:
             if is_generating:
                 return [gr.update()] * 4
             else:
                 return [gr.update(), gr.update(visible=True), gr.update(visible=False), gr.update()]
+
+        print()
+        interpret('The prompt textbox contains valid metadata')
 
         return [json.dumps(loaded_json), gr.update(visible=False), gr.update(visible=True), gr.update()]
 
@@ -2605,26 +2651,12 @@ with common.GRADIO_ROOT:
     )
 
 
-    def trigger_metadata_preview(file):
-        parameters, metadata_scheme = meta_parser.read_meta_from_image(file)
-        results = {}
-        if parameters is not None:
-            results['parameters'] = parameters
-
-        if isinstance(metadata_scheme, flags.MetadataScheme):
-            results['metadata_scheme'] = metadata_scheme.value
-            if metadata_scheme.value.lower() == 'simple':
-                results['metadata_scheme'] = 'Fooocus'
-            if metadata_scheme.value.lower() == 'a1111':
-                results['metadata_scheme'] = 'A1111'
-                parameters = None
-
-        return [results, gr.update(interactive=parameters is not None)]
-
-    metadata_input_image.upload(trigger_metadata_preview,
+    metadata_input_image.upload(
+        meta_parser.trigger_metadata_preview,
         inputs=metadata_input_image,
         outputs=[metadata_json, metadata_import_button],
-        queue=False, show_progress=True)
+        # Set queue=True to support interpret_warn popups:
+        queue=True, show_progress=True)
 
     model_check = [prompt, negative_prompt, base_model, refiner_model] + lora_ctrls
     nav_bars = [bar_title] + bar_buttons
@@ -2654,8 +2686,9 @@ with common.GRADIO_ROOT:
             negative_prompt,
             toolbox_note_info,
             toolbox_note_input_name,
-            toolbox_note_load_button,
+            toolbox_note_load_button, # Confirmation button
             toolbox_note_preset_button,
+            toolbox_load_button,
             state_topbar],
         show_progress=False)
 
@@ -4784,7 +4817,9 @@ with common.GRADIO_ROOT:
     def refresh_files_clicked(state_params):
         print()
         interpret_info('Refreshing all files...')
-        US.create_user_structure(args.args.user_dir)
+        US.create_user_structure(
+            cli_args.user_dir,
+            common.comfy_active)
         US.create_model_structure(
             common.paths_checkpoints,
             common.paths_loras)
@@ -4807,7 +4842,7 @@ with common.GRADIO_ROOT:
         results += [gr.update(choices=model_filenames)]
         results += [gr.update(choices=['None'] + model_filenames)]
         results += [gr.update(choices=[flags.default_vae] + vae_filenames)]
-        if not args.args.disable_preset_selection:
+        if not cli_args.disable_preset_selection:
             results += [gr.update(choices=PR.get_all_presetnames())]
         for i in range(config.default_max_lora_number):
             results += [gr.update(interactive=True),
@@ -4820,7 +4855,7 @@ with common.GRADIO_ROOT:
         return results
 
     refresh_files_output = [v2_substyle, wildcards_list, base_model, refiner_model, vae_name]
-    if not args.args.disable_preset_selection:
+    if not cli_args.disable_preset_selection:
         refresh_files_output += [preset_selection]
 
     refresh_files.click(refresh_files_clicked,
@@ -5436,6 +5471,10 @@ with common.GRADIO_ROOT:
                 clear_favorites_button],
             queue=False, show_progress=False
         ).then(
+            PR.select_after_restore,
+            outputs=[preset_selection],
+            queue=False, show_progress=False
+        ).then(
             fn=lambda: interpret_info('Restored the default favorites'),
             outputs=None)
 
@@ -5463,8 +5502,26 @@ with common.GRADIO_ROOT:
         outputs=[audio_notification_checkbox, audio_output],
         queue=False, show_progress=False)
 
-    comfyd_active_checkbox.change(lambda x: comfyd.active(x), inputs=comfyd_active_checkbox,\
-        queue=False, show_progress=False)
+    comfyd_active_checkbox.change(
+        fn=UIS.handle_comfy_active_change,
+        inputs=[comfyd_active_checkbox, preset_selection, state_topbar],
+        outputs=[
+            comfyd_active_checkbox,
+            iclight_row_controls,
+            iclight_row_subjects,
+            iclight_row_prompts,
+            iclight_row_links,
+            iclight_row_shield,
+            gateway_info_markdown,
+            btn_gateway,
+            category_selection,
+            preset_selection,
+            clear_favorites_button,
+            preset_row
+        ] + bar_buttons,
+        queue=False,
+        show_progress=False
+    )
 
     def translator_control(enable_translator):
         config.default_prompt_translator_enable = enable_translator
@@ -5846,14 +5903,13 @@ hydit_logger.setLevel(logging.WARNING)
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-
-if not args.args.disable_comfyd and comfyd_active_checkbox:
-    comfyd.active(True)
+# Initialize the Comfy backend server on startup
+comfyd.active(common.comfy_active)
 
 common.GRADIO_ROOT.launch(
-    inbrowser=args.args.in_browser,
-    server_name=args.args.listen,
-    server_port=args.args.port,
+    inbrowser=cli_args.in_browser,
+    server_name=cli_args.listen,
+    server_port=cli_args.port,
     share=False, quiet=True,
     allowed_paths=[config.path_outputs], # allows log viewing
     blocked_paths=[constants.AUTH_FILENAME]

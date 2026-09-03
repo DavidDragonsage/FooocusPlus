@@ -1,0 +1,53 @@
+{
+    "default_model": "Pony/finalcutPony_hybridJOY.safetensors",
+    "default_refiner": "None",
+    "default_refiner_switch": 0.6,
+    "default_loras": [
+        [
+            true,
+            "None",
+            1.0
+        ],
+        [
+            true,
+            "None",
+            1.0
+        ],
+        [
+            true,
+            "None",
+            1.0
+        ],
+        [
+            true,
+            "None",
+            1.0
+        ],
+        [
+            true,
+            "None",
+            1.0
+        ]
+    ],
+    "default_cfg_scale": 5.0,
+    "default_sample_sharpness": 6.0,
+    "default_sampler": "dpmpp_2m_sde_gpu",
+    "default_scheduler": "karras",
+    "default_vae": "Default (model)",
+    "default_clip_skip": 2,
+    "default_performance": "Speed",
+    "default_prompt": "",
+    "default_prompt_negative": "",
+    "default_styles": [
+        "Fooocus V2",
+        "Fooocus Enhance"
+    ],
+    "v2_substyle": "Unlit",
+    "default_aspect_ratio": "0*0",
+    "checkpoint_downloads": {
+        "Pony/finalcutPony_hybridJOY.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/finalcutPony_hybridJOY.safetensors"
+    },
+    "embeddings_downloads": {},
+    "lora_downloads": {},
+    "previous_default_models": []
+}

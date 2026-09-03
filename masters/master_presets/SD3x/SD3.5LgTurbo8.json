@@ -50,7 +50,9 @@
         "SD3x/sd3.5_large_turbo-q8_0.gguf": "https://huggingface.co/calcuis/sd3.5-large-turbo/resolve/main/sd3.5_large_turbo-q8_0.gguf"
     },
     "clip_downloads": {
-        "clip_g.safetensors": "https://huggingface.co/AUTOMATIC/stable-diffusion-3-medium-text-encoders/resolve/main/clip_g.safetensors"
+        "clip_g.safetensors": "https://huggingface.co/AUTOMATIC/stable-diffusion-3-medium-text-encoders/resolve/main/clip_g.safetensors",
+        "clip_l.safetensors": "https://huggingface.co/lllyasviel/flux_text_encoders/resolve/main/clip_l.safetensors",
+        "t5xxl_fp8_e4m3fn.safetensors": "https://huggingface.co/lllyasviel/flux_text_encoders/resolve/main/t5xxl_fp8_e4m3fn.safetensors"
     },
     "embeddings_downloads": {},
     "lora_downloads": {},

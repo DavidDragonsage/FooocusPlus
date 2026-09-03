@@ -108,19 +108,78 @@ def select_index(choice, image_tools_checkbox, state_params, evt: gr.SelectData)
     return [gr.update(visible=True)] + [gr.update(visible=image_tools_checkbox)] + [gr.update(visible=False)] * 8 + [state_params]
 
 
+def is_comfy_metadata(parameters, metadata_scheme=None) -> bool:
+    """
+    Determines if the parsed image parameters require the ComfyUI engine.
+    Works for both dictionary configurations and raw multiline text logs.
+    """
+    try:
+        if parameters is None:
+            return False
+
+        # 1. Handle Multiline Text/A1111 Metadata String
+        if isinstance(parameters, str):
+            match = re.search(r'Backend Engine:\s*"?([^,\n"\\}]+)"?', parameters)
+            if match:
+                engine_name = match.group(1).strip()
+                return engine_name not in ['Fooocus', 'SDXL-Fooocus']
+            return False
+
+        # 2. Handle Dictionary (JSON / Simple / Fooocus Scheme)
+        if isinstance(parameters, dict):
+            engine_name = parameters.get('Backend Engine', parameters.get('backend_engine'))
+            if not engine_name and 'engine' in parameters:
+                engine_obj = parameters['engine']
+                if isinstance(engine_obj, dict):
+                    engine_name = engine_obj.get('backend_engine')
+                elif isinstance(engine_obj, str):
+                    engine_name = engine_obj
+
+            if engine_name:
+                return str(engine_name).lower() not in ['fooocus', 'sdxl-fooocus']
+
+        return False
+    except Exception as e:
+        print(f'[Gallery] Safe-bypass triggered in is_comfy_metadata: {e}')
+        return False
+
+
 def select_history_gallery(choice, state_params, backfill_prompt, evt: gr.SelectData):
-    if "__output_list" not in state_params.keys():
-        return  [gr.update()] * 7 + [state_params]
-    state_params.update({"note_box_state": ['',0,0]})
-    state_params.update({"prompt_info": [choice, evt.index]})
-    if choice is None and len(state_params["__output_list"]) > 0:
-        choice = state_params["__output_list"][0]
-    result = get_images_prompt(choice, evt.index, state_params["__max_per_page"], True)
-    #print(f'[Gallery] Selected_gallery: selected index {evt.index} of {choice} images_list:{result["Filename"]}.')
+    if '__output_list' not in state_params.keys():
+        return  [gr.update()] * 8 + [state_params]
+    state_params.update({'note_box_state': ['',0,0]})
+    state_params.update({'prompt_info': [choice, evt.index]})
+    if choice is None and len(state_params['__output_list']) > 0:
+        choice = state_params['__output_list'][0]
+    result = get_images_prompt(choice, evt.index, state_params['__max_per_page'], True)
+
+    # Check if the selected image requires Comfy Mode for regeneration
+    is_comfy_required = is_comfy_metadata(result)
+    load_interactive = True
+    if is_comfy_required and not common.comfy_active:
+        load_interactive = False
+        interpret('This image requires Comfy Mode to be available for regeneration.')
+
+    note_updates = [
+        gr.update(visible=False), # toolbox_note_info
+        gr.update(visible=False), # toolbox_note_input_name
+        gr.update(visible=False), # toolbox_note_load_button (Confirmation button)
+        gr.update(visible=False)  # toolbox_note_preset_button
+    ]
+
     if backfill_prompt and 'Prompt' in result:
-        return [gr.update(value=toolbox.make_infobox_HTML(result, state_params['__theme'])), gr.update(value=result["Prompt"]), gr.update(value=result["Negative Prompt"])] + [gr.update(visible=False)] * 4 + [state_params]
+        return [
+            gr.update(value=toolbox.make_infobox_HTML(result, state_params['__theme'])),
+            gr.update(value=result['Prompt']),
+            gr.update(value=result['Negative Prompt'])
+        ] + note_updates + [gr.update(interactive=load_interactive), state_params]
     else:
-        return [gr.update(value=toolbox.make_infobox_HTML(result, state_params['__theme'])), gr.update(), gr.update()] + [gr.update(visible=False)] * 4 + [state_params]
+        return [
+            gr.update(value=toolbox.make_infobox_HTML(result, state_params['__theme'])),
+            gr.update(),
+            gr.update()
+        ] + note_updates + [gr.update(interactive=load_interactive), state_params]
+
 
 def select_gallery_progress(state_params, evt: gr.SelectData):
     #if "__output_list" not in state_params.keys():

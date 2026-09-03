@@ -1,3 +1,41 @@
+# 1.1.5 Comfy Discontinued for Legacy GPUs
+
+* Comfy mode is now disabled for legacy GPUs
+  * legacy GPUs require PyTorch 2.5 or earlier
+  * ComfyUI no longer supports these GPUs
+  * all Comfy features are suppressed if Comfy is off
+* Forced Compatibility Mode provides Comfy access
+  * for legacy GPUs with at least 11 GB VRAM
+  * it promotes PyTorch 2.4 or 2.5 to PyTorch 2.7
+  * SDXL performance will be somewhat reduced
+* to support Pinokio, added --gpu_type none argument
+  * verified all dependencies using the uv utility
+* Performance Check documents all the new modes
+* the huge UserDir/models distribution is gone
+  * it is replaced by on-demand-downloading
+  * initial installation will be fast & reliable
+  * updated python_embedded to version 1.1.5
+  * python_embedded.7z now contains the startup files
+* Removed xformers except for legacy NVIDIA GPUs
+  * otherwise native (PyTorch) attention is used
+  * speed increase of 0.4% to 8% with PyTorch 2.7
+* Applied Blackwell specific tuning in launch.py
+  * AI estimates a 20% to 40% speed increase for
+    Blackwell GPUs but that remains to be seen
+* debugged issue with prompt not updating reliably
+* subfolders are now accessible to SDXL models & LoRAs
+* introduced three new SDXL compatible models:
+  * FinalCut Hybrid-JOY natural language Pony model
+  * IllustriousV4 Low VRAM model
+  * OpenDalle realistic fantasy model
+* Comfy Node Maintenance Report:
+  * Removed the unused & unsupported PuLID_ComfyUI
+  * Use the ZHO-ZHO-ZHO fork if needed in the future
+* Release Date: September 2nd, 2026<br/>
+* Hotfix0:
+<br/><br/>
+
+
 # 1.1.4 Comfy Incompatible with Legacy GPUs
 
 * Comfy does not support PyTorch 2.5 or earlier
@@ -19,7 +57,9 @@
 * removed the "Global Trap" from launch.py
 * reverted Onnxruntime from 1.20.1 to 1.20.0
 * Release Date: August 13th, 2026<br/>
-* Hotfix0:
+* Hotfix3: Prevent PyGit version flipping
+* Hotfix2: A slight adjustment to Comfy libraries
+* Hotfix1: Pinokio compatible library updates
 <br/><br/>
 
 

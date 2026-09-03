@@ -11,7 +11,7 @@ import modules.config as config
 import modules.flags as flags
 import modules.html
 
-from args_manager import args
+from args_manager import args as cli_args
 from enhanced.translator import interpret, \
     interpret_info, interpret_warn
 from launch_support import get_nvidia_driver_compatibility, \
@@ -23,7 +23,7 @@ from modules.util import cleanup_temp_files, save_image_grid
 batch_counter = 0
 last_batch_size = 1
 last_execution_time = 0.0
-last_preset = args.preset
+last_preset = cli_args.preset
 
 
 def init_batch_counter():
@@ -72,7 +72,7 @@ def generate_clicked(task: worker.AsyncTask):
     global batch_counter, last_batch_size, \
         last_execution_time, last_preset
 
-    last_preset = args.preset
+    last_preset = cli_args.preset
 
     with model_management.interrupt_processing_mutex:
         model_management.interrupt_processing = False
@@ -303,7 +303,7 @@ def security_warn():
 
 def security_alert():
     try:
-        if (args.listen == "127.0.0.1") and (args.port == 7860):
+        if (cli_args.listen == "127.0.0.1") and (cli_args.port == 7860):
             alert = False
         else:
             alert = True
@@ -391,7 +391,11 @@ def check_performance_handler():
     arch_version = get_nvidia_arch(device_names)
 
     # 2. Check the raw driver compatibility status
-    is_compatible, message = get_nvidia_driver_compatibility()
+    if arch_version >0:
+        is_compatible, message = get_nvidia_driver_compatibility()
+    else:
+        is_compatible = True
+        message = 'Non-NVIDIA Graphics System'
 
     # 3. Check the currently running PyTorch environment version
     is_running_cu130 = torch.__version__.startswith('2.10.')
@@ -406,7 +410,23 @@ def check_performance_handler():
     status_label = interpret('Status:', silent=True)
     details_label = interpret('Details:', silent=True)
 
-    # Grab the latest generation metrics (if any exist) to append to the bottom
+    if cli_args.disable_comfyd:
+        comfy_msg = interpret('Comfy mode is disabled by the "--disable-confyd" startup argument.', silent=True)
+    elif common.total_vram_gb < 4:
+        comfy_msg = interpret('Comfy mode is disabled because it is not practical to run Comfy with  less than 4 GB of video RAM (VRAM).', silent=True)
+    elif not config.default_comfy_active_checkbox:
+        comfy_msg = interpret('Comfy mode is temporarily disabled but can be activated using the "Enable Comfy Mode" checkbox under the Extras tab.', silent=True)
+    else:
+        comfy_msg = ''
+
+    if cli_args.attention_pytorch:
+        attention_msg = interpret('Using optimal PyTorch native attention.', silent=True)
+    else:
+        attention_msg = interpret('Using sub-optimal xformers attention.', silent=True)
+    comfy_msg = comfy_msg + ' ' + attention_msg
+
+    # Grab the latest generation metrics (if any exist)
+    # to append to the bottom
     stats_msg = format_last_generation_time()
 
     # =============================================================================
@@ -416,7 +436,12 @@ def check_performance_handler():
         if is_compatible:
             if is_running_cu130:
                 # Scenario A1: Blackwell running optimal CUDA 13.0
-                status_val = interpret('Fully Upgraded (Optimal with CU130)', silent=True)
+                if cli_args.gpu_type == 'none':
+                    status_val = interpret('PyTorch Configuration Managed by', 'Pinokio', silent=True)
+                elif cli_args.attention_pytorch:
+                    status_val = interpret('Fully Upgraded and Optimal with', 'CUDA 13.0', silent=True)
+                else:
+                    status_val = interpret('Not Using Native Attention but Optimized with', 'CUDA 13.0', silent=True)
                 already_upgraded = interpret('Your Blackwell GPU is running on the native CUDA 13.0 high-performance stack.', silent=True)
 
                 msg = (
@@ -424,7 +449,7 @@ def check_performance_handler():
                     f"**{gpu_label}** {gpu_val}\n\n"
                     f"**{status_label}** {status_val}\n\n"
                     f"**{details_label}** {message}\n\n"
-                    f"{already_upgraded}\n\n"
+                    f"{already_upgraded} {comfy_msg}\n\n"
                 )
                 return (
                     gr.update(visible=True),                             # perf_modal_box
@@ -436,7 +461,7 @@ def check_performance_handler():
                 )
             else:
                 # Scenario A2: Blackwell running old version (Prompt Upgrade)
-                status_val = interpret('Running in Compatibility Mode using CUDA 12.8', silent=True)
+                status_val = interpret('Running in Compatibility Mode using', 'CUDA 12.8', silent=True)
                 gpu_support = interpret('Your Blackwell GPU supports full native CUDA 13.0 with Blackwell FP4 performance. With the current configuration, Flux generation speed will be about 11% slower than it needs to be.', silent=True)
                 ask_upgrade = interpret('Do you want to enable the high-performance environment upgrade?', silent=True)
                 restart_warn = interpret('This will automatically download then reconfigure PyTorch and its dependencies on your next restart.', silent=True)
@@ -463,7 +488,7 @@ def check_performance_handler():
             # Scenario A3: Blackwell with outdated driver (Recommend Driver Upgrade)
             status_val = interpret('Video Driver Upgrade Recommended', silent=True)
             driver_old = interpret('Your NVIDIA graphics driver is older than the required version 580.65.', silent=True)
-            recommend_upgrade = interpret('Please upgrade your NVIDIA display driver to version 580.xx or newer to unlock native CUDA 13.0.', silent=True)
+            recommend_upgrade = interpret('Please upgrade your NVIDIA display driver to version 580.xx or newer to unlock native', 'CUDA 13.0', silent=True)
 
             msg = (
                 f"### **{header_check}**\n\n"
@@ -513,17 +538,29 @@ def check_performance_handler():
                     gr.update(visible=True)                              # perf_cancel_btn (Show cancel)
                 )
             else:
-                # Scenario B2: Non-Blackwell running optimal CUDA 12.8 (Optimal!)
-                status_val = interpret('Optimal Configuration using CUDA 12.8', silent=True)
-                message = interpret('Fully Compliant Video Driver', silent=True)
-                already_optimal = interpret('Your GPU is running on the stable CUDA 12.8 stack, which is the optimal high-performance configuration for your GPU architecture. Your NVIDIA display driver fully supports this system.', silent=True)
-
+                # Scenario B2: Non-Blackwell running optimal CUDA 12.8
+                # or Non-VIDIA GPU
+                if cli_args.gpu_type == 'none':
+                    status_val = interpret('PyTorch Configuration Managed by', 'Pinokio', silent=True)
+                else:
+                    if arch_version >0:
+                        if cli_args.attention_pytorch:
+                            status_val = interpret('Optimal Configuration using', 'CUDA 12.8', silent=True)
+                        else:
+                            status_val = interpret('Not Using Native Attention but Optimized with', 'CUDA 12.8', silent=True)
+                    else:
+                        status_val = interpret('Optimal Configuration using', f'PyTorch {torch.__version__}', silent=True)
+                        message = interpret('Fully Compliant Non-NVIDIA GPU', silent=True)
+                already_optimal = interpret('Your GPU is running on the stable CUDA 12.8 stack, which is the optimal high-performance configuration for your GPU architecture.')
+                if arch_version >0:
+                    optimal_driver = interpret('Your NVIDIA display driver fully supports this system.', silent=True)
+                    already_optimal = already_optimal + ' ' + optimal_driver
                 msg = (
                     f"### **{header_check}**\n\n"
                     f"**{gpu_label}** {gpu_val}\n\n"
                     f"**{status_label}** {status_val}\n\n"
                     f"**{details_label}** {message}\n\n"
-                    f"{already_optimal}\n\n"
+                    f"{already_optimal} {comfy_msg}\n\n"
                 )
                 return (
                     gr.update(visible=True),                             # perf_modal_box
@@ -556,10 +593,16 @@ def check_performance_handler():
                 gr.update(visible=False)                             # perf_cancel_btn
             )
     else:
-        # Legacy hardware running PyTorch 2.5 or earlier
-        status_val = interpret('Legacy Configuration using PyTorch', common.torch_status , silent=True)
-        message = interpret('No Longer Supported by ComfyUI', silent=True)
-        already_optimal = interpret('FooocusPlus has integrated ComfyUI to provide image generation with diverse models including Flux, HyDit, Kolors and SD1.5. The current version of ComfyUI (0.27.0) was adopted to support both SD3.5 and Z-Image. However, continuing investigation has shown that Comfy causes unsolvable problems with legacy hardware. For systems using PyTorch 2.5 and earlier, Comfy mode will be completely disabled in the near future.', silent=True)
+        if common.force_compatibility:
+            # Force Compatibility Mode
+            status_val = interpret('Forced Compatibility Mode using', 'PyTorch 2.7', silent=True)
+            message = interpret('Legacy Access to ComfyUI', silent=True)
+            already_optimal = interpret('Although the computer system uses legacy video hardware it contains at least 11 GB of video RAM (VRAM). This makes the use of PyTorch 2.7 practical, enabling Comfy access. However, SDXL performance will be somewhat reduced. If do not need Comfy access use the --disable-comfyd startup argument.', silent=True)
+        else:
+            # Legacy GPU running PyTorch 2.5 or earlier
+            status_val = interpret('Legacy Configuration using PyTorch', common.torch_status , silent=True)
+            message = interpret('No Longer Supported by ComfyUI', silent=True)
+            already_optimal = interpret('FooocusPlus has integrated ComfyUI to provide image generation with diverse models including Flux, HyDit, Kolors and SD1.5. The current version of ComfyUI (0.27.0) was adopted to support both SD3.5 and Z-Image. It is now known that Comfy causes unsolvable problems with legacy hardware. For systems using PyTorch 2.5 and earlier, Comfy mode is disabled. However Fooocus mode, which uses SDXL models, is not affected.', silent=True)
 
         msg = (
             f"### **{header_check}**\n\n"
