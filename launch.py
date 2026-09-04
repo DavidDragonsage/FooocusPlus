@@ -317,7 +317,7 @@ if (torch_ver == '2.10.0'
 
 write_torch_base(torch_ver)
 
-# Comfy Lockout Control
+# Comfy Lockout Control & Bypass Check
 # common.total_vram_gb & common.torch_status
 # are set in launch_support.
 # Set the terminal text colour to
@@ -343,8 +343,14 @@ elif common.torch_status != 'New':
     interpret('This was an agonizing choice but it is irresponsible to support a partially broken system.')
     interpret('However FooocusPlus will continue to fully support SDXL mode (original Fooocus mode) which is completely independent of Comfy.')
 elif not config.default_comfy_active_checkbox:
+    print()
     interpret('Comfy has been temporarily disabled using the config.txt "comfyd_active_checkbox" option.')
     interpret('It can be re-enabled within the UI from the "Enable Comfy Mode" checkbox under the Extras tab.')
+elif common.comfy_active and common.is_legacy_gpu and not common.force_compatibility:
+    print()
+    interpret('Comfy lockout has been bypassed using run_FooocusPlus_cu128.bat or a similar file. Please be aware that this is entirely at your own risk. This method is unsupported and any Comfy related bug reports filed for a system that bypasses Comfy Lockout will be removed.')
+    print()
+    interpret('At the very least, expect this method to cause image generation to be slower in both Comfy and SDXL modes, and indeed Comfy may still not work using this option due to hardware limitations. You can revert to optimal mode using run_FooocusPlus_cu124.bat.')
 
 # Reset the terminal text colour to default
 print('\033[0m', end='')

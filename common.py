@@ -38,7 +38,7 @@ comfy_ver = 'Not Available'
 # Legacy GPU forced to PyTorch == 2.7
 # to support Comfy operations.
 # Set by launch_support.dependency_resolver()
-# Read by ui_util
+# Read by launch & ui_util
 force_compatibility = False
 
 # It is useful to know actual legacy GPU status

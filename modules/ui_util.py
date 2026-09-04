@@ -411,9 +411,9 @@ def check_performance_handler():
     details_label = interpret('Details:', silent=True)
 
     if cli_args.disable_comfyd:
-        comfy_msg = interpret('Comfy mode is disabled by the "--disable-confyd" startup argument.', silent=True)
+        comfy_msg = interpret('Comfy mode is disabled by the "--disable-comfyd" startup argument.', silent=True)
     elif common.total_vram_gb < 4:
-        comfy_msg = interpret('Comfy mode is disabled because it is not practical to run Comfy with  less than 4 GB of video RAM (VRAM).', silent=True)
+        comfy_msg = interpret('Comfy mode is disabled because it is not practical to run Comfy with less than 4 GB of video RAM (VRAM).', silent=True)
     elif not config.default_comfy_active_checkbox:
         comfy_msg = interpret('Comfy mode is temporarily disabled but can be activated using the "Enable Comfy Mode" checkbox under the Extras tab.', silent=True)
     else:
@@ -510,7 +510,7 @@ def check_performance_handler():
     # =============================================================================
     # PATH B: USER HAS NON-BLACKWELL GPU (RTX 20/30/40 series, CC <= 12.0)
     # =============================================================================
-    elif common.torch_status == "New":
+    elif common.torch_status == "New" and not common.is_legacy_gpu:
         if is_compatible:
             if is_running_cu130:
                 # Scenario B1: Non-Blackwell GPU running experimental CUDA 13.0
@@ -551,7 +551,7 @@ def check_performance_handler():
                     else:
                         status_val = interpret('Optimal Configuration using', f'PyTorch {torch.__version__}', silent=True)
                         message = interpret('Fully Compliant Non-NVIDIA GPU', silent=True)
-                already_optimal = interpret('Your GPU is running on the stable CUDA 12.8 stack, which is the optimal high-performance configuration for your GPU architecture.')
+                already_optimal = interpret('Your GPU is running on the stable CUDA 12.8 stack, which is the optimal high-performance configuration for your GPU architecture.', silent=True)
                 if arch_version >0:
                     optimal_driver = interpret('Your NVIDIA display driver fully supports this system.', silent=True)
                     already_optimal = already_optimal + ' ' + optimal_driver
@@ -597,7 +597,16 @@ def check_performance_handler():
             # Force Compatibility Mode
             status_val = interpret('Forced Compatibility Mode using', 'PyTorch 2.7', silent=True)
             message = interpret('Legacy Access to ComfyUI', silent=True)
-            already_optimal = interpret('Although the computer system uses legacy video hardware it contains at least 11 GB of video RAM (VRAM). This makes the use of PyTorch 2.7 practical, enabling Comfy access. However, SDXL performance will be somewhat reduced. If do not need Comfy access use the --disable-comfyd startup argument.', silent=True)
+            already_optimal = interpret('Although the computer system uses legacy video hardware it contains at least 11 GB of video RAM (VRAM). This makes the use of PyTorch 2.7 practical, enabling Comfy access. However, SDXL performance will be somewhat reduced. If you do not need Comfy access use the --disable-comfyd startup argument.', silent=True)
+        elif common.comfy_active and getattr(common, 'is_legacy_gpu', False):
+            if cli_args.gpu_type == 'cu130':
+                status_val = interpret('Comfy Lockout Bypassed Using', 'run_FooocusPlus_cu130.bat', silent=True)
+                message = interpret('Bypass Access to ComfyUI Using', 'PyTorch 2.10.0', silent=True)
+            else:
+                status_val = interpret('Comfy Lockout Bypassed Using', 'run_FooocusPlus_cu128.bat', silent=True)
+                message = interpret('Bypass Access to ComfyUI Using', 'PyTorch 2.7.1', silent=True)
+            already_optimal = interpret('Please be aware that the use of Lockout Bypass is entirely at your own risk. This method is unsupported and any Comfy related bug reports filed for a system that bypasses Comfy Lockout will be removed. At the very least, expect this method to cause image generation to be slower in both Comfy and SDXL modes, and indeed Comfy may still not work using this option due to hardware limitations. You can revert to the optimal configuration using run_FooocusPlus_cu124.bat.', silent=True)
+
         else:
             # Legacy GPU running PyTorch 2.5 or earlier
             status_val = interpret('Legacy Configuration using PyTorch', common.torch_status , silent=True)
