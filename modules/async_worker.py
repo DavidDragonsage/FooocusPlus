@@ -1788,6 +1788,10 @@ def worker():
         interpret(f'[Worker] Task Class: {async_task.task_class}, Task Name: {async_task.task_name}, Workflow: {async_task.task_method}')
 
         if async_task.task_class in flags.comfy_classes:
+            if common.is_legacy_gpu and not common.force_compatibility:
+                print('\033[1;33m', end='')
+                interpret('{Worker} Lockout Bypass in effect...')
+                print('\033[0m', end='')
             interpret('[Worker] Enabled Comfyd Backend')
             comfyd.start()
         else:
