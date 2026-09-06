@@ -59,7 +59,8 @@ from modules.launch_requirements import is_installed, \
     python, run_pip_url, requirements_met, windows_patch, \
     git_clone, index_url, target_path_install, met_diff
 
-from launch_support import delete_torch_dependencies, \
+from launch_support import arch_version, \
+    delete_torch_dependencies, \
     dependency_resolver, read_torch_base, \
     write_torch_base
 
@@ -267,11 +268,7 @@ os.environ['GRADIO_TEMP_DIR'] = str(config.temp_path)
 
 # Blackwell sm_100 Specific Performance Tuning
 # Excludes Apple Silicon using the force_compatibility flag
-if (torch_ver == '2.10.0'
-        and not getattr(common, 'is_legacy_gpu', False)
-        and not getattr(common, 'force_compatibility', False)
-        and sys.platform != 'darwin'):
-
+if arch_version >= 12.0:
     print()
     interpret('[Launch] Applying optimized Blackwell CUDA 13 and hardware tuning settings...')
     print()

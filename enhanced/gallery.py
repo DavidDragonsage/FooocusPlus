@@ -160,6 +160,10 @@ def select_history_gallery(choice, state_params, backfill_prompt, evt: gr.Select
         load_interactive = False
         interpret('This image requires Comfy Mode to be available for regeneration.')
 
+    # The Transform button is interactive
+    # if any valid metadata is found on the image
+    transform_interactive = (result is not None and '[Gallery]' not in result)
+
     note_updates = [
         gr.update(visible=False), # toolbox_note_info
         gr.update(visible=False), # toolbox_note_input_name
@@ -172,13 +176,21 @@ def select_history_gallery(choice, state_params, backfill_prompt, evt: gr.Select
             gr.update(value=toolbox.make_infobox_HTML(result, state_params['__theme'])),
             gr.update(value=result['Prompt']),
             gr.update(value=result['Negative Prompt'])
-        ] + note_updates + [gr.update(interactive=load_interactive), state_params]
+        ] + note_updates + [
+            gr.update(interactive=load_interactive),      # Main Load button
+            gr.update(interactive=transform_interactive), # Main Transform button
+            state_params
+        ]
     else:
         return [
             gr.update(value=toolbox.make_infobox_HTML(result, state_params['__theme'])),
             gr.update(),
             gr.update()
-        ] + note_updates + [gr.update(interactive=load_interactive), state_params]
+        ] + note_updates + [
+            gr.update(interactive=load_interactive),      # Main Load button
+            gr.update(interactive=transform_interactive), # Main Transform button
+            state_params
+        ]
 
 
 def select_gallery_progress(state_params, evt: gr.SelectData):

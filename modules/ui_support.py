@@ -356,6 +356,15 @@ def manage_image_buffers(inpaint_img=None, inpaint_mask=None):
 
 def process_before_generation(state_params, backend_params, backfill_prompt, translation_methods, comfyd_active_checkbox):
     common.is_generating = True
+
+    # If a transform action is active,
+    # restore the positive prompt from our safe cache
+    # to bypass the empty-string override
+    # submitted by the browser.
+    if getattr(common, 'transform_active', False):
+        config.default_prompt = getattr(common, 'transformed_prompt', '')
+        common.transform_active = False # Reset the flag
+
     if '__nav_name_list' not in state_params.keys():
         state_params.update({'__nav_name_list': PR.get_all_presetnames()})
     superprompt.remove_superprompt()
@@ -590,8 +599,21 @@ def remove_tokenizer():
 
 def prompt_token_prediction(text, style_selections):
     global tokenizer, cur_clip_path
-    # save the prompt for preset_resource & meta_parser:
-    config.default_prompt = text
+
+    # Only save the prompt if it is not empty,
+    # or if we are not doing an image transition
+    if text and str(text).strip() != '':
+        config.default_prompt = text
+    elif getattr(common, 'transform_active', False):
+        # If transform is active, keep the current
+        # saved default_prompt (prevents Gradio
+        # empty-string overrides)
+        pass
+    else:
+        # save the prompt for preset_resource
+        # and meta_parser:
+        config.default_prompt = text
+
     if 'tokenizer' not in globals():
         globals()['tokenizer'] = None
     if tokenizer is None:

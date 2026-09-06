@@ -189,6 +189,18 @@ task_method = ''
 metadata_loading = False
 log_metadata = []
 
+# Indicates transform metadata loading is in progress
+# Set by meta_parser.transform_params_by_meta()
+# Read by UIS.prompt_token_prediction
+# Reset by UIS.process_before_generation()
+transform_active = False
+
+# Buffers prompt for transform transfer to async_worker
+# Updated by meta_parser.transform_params_by_meta()
+# Read by UIS.process_before_generation()
+# to update config.transform_active
+transformed_prompt = ''
+
 # input & base metadata used by the Image Editor
 input_meta = ''
 base_meta = ''

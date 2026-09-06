@@ -19,6 +19,7 @@ if is_win32_standalone_build:
 if args.disable_in_browser:
     args.in_browser = False
 
+arch_version = 0.0
 torch_base_ver = ''
 
 
@@ -101,35 +102,17 @@ def get_nvidia_driver_compatibility():
 def get_system_vram_gb():
     """
     Safely retrieves the total VRAM
-    (or Apple Unified Memory) of the primary GPU
-    prioritizing PyTorch's native checks if available
-    to prevent slow subprocess calls on subsequent boots.
+    (or Apple Unified Memory) of the primary GPU.
+    PyTorch is not used here because it can cause
+    reinstallation errors.
     """
     print()
-    # Primary PyTorch Check
-    # For all subsequent boots once PyTorch is installed
-    try:
-        import torch
-        if torch.cuda.is_available():
-            dev = torch.device(torch.cuda.current_device())
-            vram_info = torch.cuda.get_device_properties(dev).total_memory / (1024 * 1024 * 1024)
-            vram_rounded = round(vram_info)
-            print(f'VRAM information loaded from PyTorch: {vram_rounded} GB')
-            return vram_rounded
-        elif hasattr(torch, 'xpu') and torch.xpu.is_available():
-            dev = torch.device('xpu')
-            vram_info = torch.xpu.get_device_properties(dev).total_memory / (1024 * 1024 * 1024)
-            vram_rounded = round(vram_info)
-            print(f'VRAM information loaded from PyTorch XPU: {vram_rounded} GB')
-            return vram_rounded
-    except Exception:
-        pass
 
-    # --- First-Boot Fallback Section Begins ---
-    # Executes only if PyTorch is not yet installed
+    # --- Use NVIDIA Drivers in Windows ---
     if sys.platform == 'win32':
         # Primary NVIDIA Check (Windows)
-        # nvidia-smi is installed natively with all NVIDIA drivers and is 100% accurate.
+        # nvidia-smi is installed natively with
+        # all NVIDIA drivers and is 100% accurate.
         try:
             res = subprocess.run(
                 ['nvidia-smi', '--query-gpu=memory.total', '--format=csv,noheader,nounits'],
@@ -221,6 +204,8 @@ def dependency_resolver():
     from torchruntime.device_db import get_gpus
     from torchruntime.platform_detection import get_torch_platform, get_nvidia_arch
 
+    global arch_version
+
     # Check for video driver compatibility
     new_driver, driver_msg = get_nvidia_driver_compatibility()
 
@@ -263,12 +248,11 @@ def dependency_resolver():
     device_names = set(gpu.device_name for gpu in gpu_infos)
     arch_version = get_nvidia_arch(device_names)
 
+    # Initialize torch_platform_ver immediately to guarantee it is bound in all code paths
+    torch_platform_ver = torchruntime_platform
+
     # Save legacy GPU status for use by launch.py
     common.is_legacy_gpu = arch_version > 0.0 and arch_version < 7.5
-
-    # Initialize torch_platform_ver immediately to
-    # guarantee it is available in all code paths
-    torch_platform_ver = torchruntime_platform
 
     # First, take care of special cases
     # Note, torchruntime.torchruntime.platform_detection.py
@@ -310,73 +294,67 @@ def dependency_resolver():
     # Sync torch_platform_ver with any command-line overrides
     torch_platform_ver = torchruntime_platform
 
-    # Detection Logic: Windows (win32) defaults to
-    # "2.7.1+cu128" for most modern NVidia GPUs
-    if sys.platform == 'win32':
-        # New: Full support for Blackwell (50xx)
-        if arch_version >= 12.0 and new_driver:
-            torch_ver = '2.10.0'
-            torch_platform_ver = 'cu130'
-        elif arch_version >= 7.5:
-            torch_ver = '2.7.1'
-            torch_platform_ver = 'cu128'
+    # Detection Logic: Executed ONLY if gpu_type is 'auto' (the default)
+    if args.gpu_type == 'auto':
+        if sys.platform == 'win32':
+            # New: Full support for Blackwell (50xx)
+            if arch_version >= 12.0 and new_driver:
+                torch_ver = '2.10.0'
+                torch_platform_ver = 'cu130'
+            elif arch_version >= 7.5:
+                torch_ver = '2.7.1'
+                torch_platform_ver = 'cu128'
 
-        # --- FORCED COMPATIBILITY MODE (Windows) ---
-        # If legacy GPU but has at least 11 GB VRAM
-        # and user has not disabled Comfy,
-        # and we are using NVIDIA, allow upgrading
-        # to PyTorch 2.7.1 to bypass the lockout
-        elif arch_version >= 6.0 and total_vram_gb >= 11.0 and not args.disable_comfyd and args.gpu_type != 'cu124':
-            common.force_compatibility = True
-            torch_ver = '2.7.1'
-            torch_platform_ver = 'cu128'
-        else:
-            torch_ver = '2.4.1'
+            # --- FORCED COMPATIBILITY MODE (Windows) ---
+            # If legacy GPU but has at least 11 GB VRAM
+            # and user has not disabled Comfy,
+            # and we are using NVIDIA, allow upgrading
+            # to PyTorch 2.7.1 to bypass the lockout
+            elif arch_version >= 6.0 and total_vram_gb >= 11.0 and not args.disable_comfyd:
+                common.force_compatibility = True
+                torch_ver = '2.7.1'
+                torch_platform_ver = 'cu128'
+            else:
+                torch_ver = '2.4.1'
 
-    # Linux detection logic
-    elif sys.platform == 'linux':
-        if arch_version >= 12.0 and new_driver:
-            torch_ver = '2.10.0'
-            torch_platform_ver = 'cu130'
-        elif arch_version >= 7.5:
-            torch_ver = '2.7.1'
-            torch_platform_ver = 'cu128'
-        # --- FORCED COMPATIBILITY MODE (Linux NVIDIA) ---
-        elif arch_version >= 6.0 and total_vram_gb >= 11.0 and not args.disable_comfyd and args.gpu_type != 'cu124':
-            common.force_compatibility = True
-            torch_ver = '2.7.1'
-            torch_platform_ver = 'cu128'
-        else:
-            torch_ver = '2.4.1'
-        if torchruntime_platform == 'rocm5.7':
-            torch_ver = '2.3.1'
-        elif torchruntime_platform == 'rocm5.2':
-            torch_ver = '1.13.1'
+        # Linux detection logic
+        elif sys.platform == 'linux':
+            if arch_version >= 12.0 and new_driver:
+                torch_ver = '2.10.0'
+                torch_platform_ver = 'cu130'
+            elif arch_version >= 7.5:
+                torch_ver = '2.7.1'
+                torch_platform_ver = 'cu128'
+            # --- FORCED COMPATIBILITY MODE (Linux NVIDIA) ---
+            elif arch_version >= 6.0 and total_vram_gb >= 11.0 and not args.disable_comfyd:
+                common.force_compatibility = True
+                torch_ver = '2.7.1'
+                torch_platform_ver = 'cu128'
+            else:
+                torch_ver = '2.4.1'
+            if torchruntime_platform == 'rocm5.7':
+                torch_ver = '2.3.1'
+            elif torchruntime_platform == 'rocm5.2':
+                torch_ver = '1.13.1'
 
-    # (OSX) Apple Silicon / Intel Mac Detection
-    elif sys.platform == "darwin":
-        if platform.machine() == 'x86_64':
-            # Keep Intel-based Macs on stable legacy
-            torch_ver = "2.2.2"
-        # --- FORCED COMPATIBILITY MODE (Apple Silicon) ---
-        # If not Intel (guaranteed Apple Silicon)
-        # and has at least 11 GB of Unified Memory,
-        # allow upgrading to PyTorch 2.10.0
-        elif total_vram_gb >= 11.0 and not args.disable_comfyd:
-            common.force_compatibility = True
-            # Upgraded to 2.10.0 for
-            # modern MPS optimizations
-            torch_ver = "2.10.0"
-        else:
-            # Lower unified memory Macs remain on
-            # stable legacy 2.5.1 (Comfy lockout)
-            torch_ver = "2.5.1"
+        # (OSX) Apple Silicon / Intel Mac Detection
+        elif sys.platform == "darwin":
+            if platform.machine() == 'x86_64':
+                # Keep Intel-based Macs on stable legacy
+                torch_ver = "2.2.2"
+            # --- FORCED COMPATIBILITY MODE (Apple Silicon) ---
+            elif total_vram_gb >= 11.0 and not args.disable_comfyd:
+                common.force_compatibility = True
+                torch_ver = "2.10.0"
+            else:
+                # Lower unified memory Macs remain on
+                # stable legacy 2.5.1 (Comfy lockout)
+                torch_ver = "2.5.1"
 
     # Ensure the returned torchruntime_platform stays synchronized with platform overrides
     torchruntime_platform = torch_platform_ver
 
-
-# Begin the assignment of xformers:
+    # Begin the assignment of xformers:
     is_nvidia_platform = torch_platform_ver.startswith('cu') if torch_platform_ver else False
     xformers_ver = 'None'
 

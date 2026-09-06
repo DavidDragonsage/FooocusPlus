@@ -14,6 +14,7 @@ import enhanced.gallery as gallery
 import enhanced.version
 import modules.aspect_ratios as AR
 import modules.config as config
+import modules.constants as constants
 import modules.loader as loader
 import modules.preset_resource as PR
 import modules.sdxl_styles
@@ -1153,15 +1154,360 @@ def trigger_metadata_preview(file):
             results['metadata_scheme'] = 'A1111'
             parameters = None
 
-    # Resolve validation using the newly routed gallery helper
+    # Resolve validation using the
+    # newly routed gallery helper
     is_comfy_required = gallery.is_comfy_metadata(parameters, metadata_scheme)
-    if is_comfy_required and not common.comfy_active:
-        button_interactive = False
-        interpret_warn('This image requires Comfy to be available for regeneration.')
-    else:
-        button_interactive = (parameters is not None)
 
-    return [results, gr.update(interactive=button_interactive)]
+    # The Transform button is interactive
+    # if ANY valid metadata is present
+    transform_interactive = (parameters is not None)
+
+    # The Import button is blocked if Comfy
+    # is required but not available
+    if is_comfy_required and not common.comfy_active:
+        import_interactive = False
+        interpret_warn('This image requires Comfy Mode to be enabled for regeneration.')
+    else:
+        import_interactive = (parameters is not None)
+
+    return [
+        results,
+        gr.update(interactive=import_interactive),
+        gr.update(interactive=transform_interactive)
+    ]
+
+
+def transform_log_metadata(raw_prompt_txt):
+    """
+    Extracts and transforms only the 7 key visual parameters from a JSON metadata block
+    pasted inside the prompt textbox, leaving the active model/engine intact.
+    """
+    try:
+        loaded_dict = json.loads(raw_prompt_txt)
+    except Exception as e:
+        interpret(f'[MetaParser] Error parsing prompt metadata:', e)
+        loaded_dict = {}
+
+    if not isinstance(loaded_dict, dict):
+        loaded_dict = {}
+
+    loaded_dict = PR.modernize_legacy_metadata(loaded_dict)
+
+    # 1. Positive Prompt (Prompt)
+    prompt_val = loaded_dict.get('prompt', loaded_dict.get('Prompt', ''))
+
+    # Save the positive prompt to config and save a backup
+    config.default_prompt = prompt_val
+    common.transformed_prompt = prompt_val
+    # Set the transform_active flag to
+    # trigger the pre-generation restore block
+    common.transform_active = True
+
+    # 2. Negative Prompt
+    negative_prompt_val = loaded_dict.get('negative_prompt', loaded_dict.get('Negative Prompt', ''))
+
+    disvisible_fields = []
+    if common.default_engine and isinstance(common.default_engine, dict):
+        disvisible_fields = common.default_engine.get('disvisible', [])
+
+    if 'negative_prompt' in disvisible_fields:
+        negative_prompt_val = ''
+
+    config.default_prompt_negative = negative_prompt_val
+
+    # 3. Styles List
+    styles_val = loaded_dict.get('styles', loaded_dict.get('Styles', '[]'))
+    if isinstance(styles_val, str):
+        try:
+            styles_val = eval(styles_val)
+        except:
+            styles_val = []
+    if not isinstance(styles_val, list):
+        styles_val = []
+
+    # 4. Fooocus V2 Substyle
+    substyle_val = loaded_dict.get('v2_substyle', loaded_dict.get('Substyle', 'Default'))
+
+    # 5. Seed
+    seed_val = loaded_dict.get('seed', loaded_dict.get('Seed', -1))
+    try:
+        seed_val = int(seed_val)
+    except:
+        seed_val = -1
+    use_random_seed = (seed_val == -1)
+
+    # 6. Resolution / Aspect Ratio
+    # (Gradio UI-Compatible String)
+    res_val = loaded_dict.get('resolution', loaded_dict.get('Resolution', ''))
+    res_ui_update = gr.update()
+
+    radio_updates = [gr.update() for _ in constants.aspect_ratios_templates]
+
+    if res_val:
+        res_val = normalize_AR(res_val)
+        template = getattr(AR, 'AR_template', 'Standard')
+        if template:
+            res_val = AR.validate_AR(res_val, template)
+            width, height = AR.AR_split(res_val)
+            formatted_ratio = AR.add_ratio(f'{width}*{height}')
+            common.resolution = res_val
+            res_ui_update = gr.update(value=f'{formatted_ratio},{template}')
+
+            if template in constants.aspect_ratios_templates:
+                idx = constants.aspect_ratios_templates.index(template)
+                matching_label = formatted_ratio
+                for label in common.full_AR_labels[template]:
+                    if label.replace(' ', '').replace('×', '*').startswith(f'{width}*{height}'):
+                        matching_label = label
+                        break
+                radio_updates[idx] = gr.update(value=matching_label, visible=True)
+    else:
+        res_ui_update = gr.update(value=common.resolution)
+
+    # 7. Image Quantity is always set to 1
+    quantity_val = 1
+
+    return [
+        gr.update(value=prompt_val),
+        gr.update(value=negative_prompt_val),
+        gr.update(value=styles_val),
+        gr.update(value=substyle_val),
+        gr.update(value=use_random_seed),
+        gr.update(value=seed_val),
+        res_ui_update,
+        gr.update(value=quantity_val),
+        gr.update(visible=True),  # generate_button
+        gr.update(visible=False), # load_parameter_button
+        gr.update(visible=False), # transform_log_button
+    ] + radio_updates
+
+
+def transform_toolbox_image(state_params):
+    """
+    Extracts only Prompt, Negative Prompt,
+    Styles, Substyle, Seed, and Resolution
+    from the currently selected gallery image,
+    leaving the active model/engine intact.
+    """
+    # Fetch the metadata of the currently selected image
+    [choice, selected] = state_params.get('prompt_info', [None, 0])
+    if choice is None:
+        return [gr.update() for _ in range(8 + len(constants.aspect_ratios_templates))]
+
+    loaded_dict = gallery.get_images_prompt(
+        choice,
+        selected,
+        state_params.get('__max_per_page', config.default_image_catalog_max_per_page)
+    )
+
+    if not isinstance(loaded_dict, dict):
+        loaded_dict = {}
+
+    loaded_dict = PR.modernize_legacy_metadata(loaded_dict)
+
+    # 1. Positive Prompt (Prompt)
+    prompt_val = loaded_dict.get('prompt', loaded_dict.get('Prompt', ''))
+
+    # Save the positive prompt to config and a backup
+    config.default_prompt = prompt_val
+    common.transformed_prompt = prompt_val
+    # Set the transform_active flag to trigger the pre-generation restore block
+    common.transform_active = True
+
+    # 2. Negative Prompt (Negative Prompt)
+    negative_prompt_val = loaded_dict.get('negative_prompt', loaded_dict.get('Negative Prompt', ''))
+
+    # Sync with active engine visibility: if
+    # 'negative_prompt' is hidden, clear it
+    disvisible_fields = []
+    if common.default_engine and isinstance(common.default_engine, dict):
+        disvisible_fields = common.default_engine.get('disvisible', [])
+
+    if 'negative_prompt' in disvisible_fields:
+        negative_prompt_val = ''
+
+    config.default_prompt_negative = negative_prompt_val
+
+    # 3. Styles List
+    styles_val = loaded_dict.get('styles', loaded_dict.get('Styles', '[]'))
+    if isinstance(styles_val, str):
+        try:
+            styles_val = eval(styles_val)
+        except:
+            styles_val = []
+    if not isinstance(styles_val, list):
+        styles_val = []
+
+    # 4. Fooocus V2 Substyle
+    substyle_val = loaded_dict.get('v2_substyle', loaded_dict.get('Substyle', 'Default'))
+
+    # 5. Seed
+    seed_val = loaded_dict.get('seed', loaded_dict.get('Seed', -1))
+    try:
+        seed_val = int(seed_val)
+    except:
+        seed_val = -1
+    use_random_seed = (seed_val == -1)
+
+    # 6. Resolution / Aspect Ratio
+    # (Gradio UI-Compatible String)
+    res_val = loaded_dict.get('resolution', loaded_dict.get('Resolution', ''))
+    res_ui_update = gr.update()
+
+    radio_updates = [gr.update() for _ in constants.aspect_ratios_templates]
+
+    if res_val:
+        res_val = normalize_AR(res_val)
+        template = getattr(AR, 'AR_template', 'Standard')
+        if template:
+            res_val = AR.validate_AR(res_val, template)
+            width, height = AR.AR_split(res_val)
+            formatted_ratio = AR.add_ratio(f'{width}*{height}')
+            common.resolution = res_val
+            res_ui_update = gr.update(value=f'{formatted_ratio},{template}')
+
+            if template in constants.aspect_ratios_templates:
+                idx = constants.aspect_ratios_templates.index(template)
+                matching_label = formatted_ratio
+                for label in common.full_AR_labels[template]:
+                    if label.replace(' ', '').replace('×', '*').startswith(f'{width}*{height}'):
+                        matching_label = label
+                        break
+                radio_updates[idx] = gr.update(value=matching_label, visible=True)
+    else:
+        res_ui_update = gr.update(value=common.resolution)
+
+    # 7. Image Quantity is always set to 1
+    quantity_val = 1
+
+    return [
+        gr.update(value=prompt_val),
+        gr.update(value=negative_prompt_val),
+        gr.update(value=styles_val),
+        gr.update(value=substyle_val),
+        gr.update(value=use_random_seed),
+        gr.update(value=seed_val),
+        res_ui_update,
+        gr.update(value=quantity_val)
+    ] + radio_updates
+
+
+def transform_params_by_meta(file_path):
+    """
+    Extracts only Prompt, Negative Prompt, Styles,
+    Substyle, Seed, and Resolution from the metadata, leaving the currently active model, engine,
+    and preset intact.
+    """
+    parameters, metadata_scheme = read_meta_from_image(file_path)
+
+    # Standardize metadata schema if needed
+    if isinstance(parameters, str) and not parameters.strip().startswith('{'):
+        loaded_dict = parse_log_text_to_dict(parameters)
+    else:
+        metadata_parser = get_metadata_parser(MetadataScheme('simple'))
+        loaded_dict = metadata_parser.to_json(parameters)
+
+    # 1. Positive Prompt (Prompt)
+    prompt_val = loaded_dict.get('prompt', loaded_dict.get('Prompt', ''))
+
+    # Save the positive prompt to config
+    # and save a secure backup
+    config.default_prompt = prompt_val
+    common.transformed_prompt = prompt_val
+    # Set the transform_active flag to trigger
+    # the pre-generation restore block
+    common.transform_active = True
+
+    # 2. Negative Prompt (Negative Prompt)
+    # with active engine protection
+    negative_prompt_val = loaded_dict.get('negative_prompt', loaded_dict.get('Negative Prompt', ''))
+
+    # Sync with active engine visibility:
+    # if 'negative_prompt' is hidden, clear it
+    disvisible_fields = []
+    if common.default_engine and isinstance(common.default_engine, dict):
+        disvisible_fields = common.default_engine.get('disvisible', [])
+
+    if 'negative_prompt' in disvisible_fields:
+        negative_prompt_val = ''
+
+    # Save the negative prompt to config
+    config.default_prompt_negative = negative_prompt_val
+
+    # 3. Styles List
+    styles_val = loaded_dict.get('styles', loaded_dict.get('Styles', '[]'))
+    if isinstance(styles_val, str):
+        try:
+            styles_val = eval(styles_val)
+        except:
+            styles_val = []
+    if not isinstance(styles_val, list):
+        styles_val = []
+
+    # 4. Fooocus V2 Substyle
+    substyle_val = loaded_dict.get('v2_substyle', loaded_dict.get('Substyle', 'Default'))
+
+    # 5. Seed
+    seed_val = loaded_dict.get('seed', loaded_dict.get('Seed', -1))
+    try:
+        seed_val = int(seed_val)
+    except:
+        seed_val = -1
+    use_random_seed = (seed_val == -1)
+
+    # 6. Resolution / Aspect Ratio
+    # (Gradio UI-Compatible String)
+    res_val = loaded_dict.get('resolution', loaded_dict.get('Resolution', ''))
+    res_ui_update = gr.update() # Default for the hidden aspect_ratios_selection textbox
+
+    # Build an update list for each
+    # individual template radio button
+    radio_updates = [gr.update() for _ in constants.aspect_ratios_templates]
+
+    if res_val:
+        res_val = normalize_AR(res_val) # Converts "(1344, 756)" to "1344*756"
+        template = getattr(AR, 'AR_template', 'Standard')
+
+        if template:
+            width, height = AR.AR_split(res_val)
+            formatted_ratio = AR.add_ratio(f'{width}*{height}')
+
+            common.resolution = res_val
+
+            # Construct the precise UI update for the
+            # hidden aspect_ratios_selection textbox
+            res_ui_update = gr.update(value=f'{formatted_ratio},{template}')
+
+            # Locate and update the specific active
+            # template's radio button on the screen
+            if template in constants.aspect_ratios_templates:
+                idx = constants.aspect_ratios_templates.index(template)
+
+                # Align the formatted ratio with the
+                # available choices in the radio
+                matching_label = formatted_ratio
+                for label in common.full_AR_labels[template]:
+                    if label.replace(' ', '').replace('×', '*').startswith(f'{width}*{height}'):
+                        matching_label = label
+                        break
+                radio_updates[idx] = gr.update(value=matching_label, visible=True)
+    else:
+        # Fallback to current active resolution
+        res_ui_update = gr.update(value=common.resolution)
+
+    # 7. Image Quantity is always set to 1
+    quantity_val = 1
+
+    return [
+        gr.update(value=prompt_val),
+        gr.update(value=negative_prompt_val),
+        gr.update(value=styles_val),
+        gr.update(value=substyle_val),
+        gr.update(value=use_random_seed),
+        gr.update(value=seed_val),
+        res_ui_update, # hidden aspect_ratios_selection textbox update
+        gr.update(value=quantity_val)
+        ] + radio_updates  # individual template radio buttons updates
 
 
 def extract_preset_name_from_image(image_file):

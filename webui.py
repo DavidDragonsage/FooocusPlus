@@ -279,6 +279,11 @@ with common.GRADIO_ROOT:
                             elem_id='load_parameter_button',
                             visible=False, min_width = 75)
 
+                        transform_log_button = gr.Button(
+                            value="Transform Parameters",
+                            elem_classes='type_row',
+                            visible=False, min_width = 75)
+
                         skip_button = gr.Button(
                             value="Skip",
                             elem_classes='type_row_half',
@@ -327,9 +332,22 @@ with common.GRADIO_ROOT:
 
             with gr.Group(visible=False, elem_classes='toolbox') as image_toolbox:
                 image_tools_box_title = gr.Markdown('<b>Toolbox</b>', visible=True)
-                toolbox_info_button = gr.Button(value='View Log Info', size='sm', visible=True)
-                toolbox_load_button = gr.Button(value='Load Log Info', size='sm', visible=True)
-                toolbox_delete_button = gr.Button(value='Delete Image', size='sm', visible=True)
+
+                toolbox_info_button = gr.Button(
+                    value='View Log Info',
+                    size='sm', visible=True)
+
+                toolbox_load_button = gr.Button(
+                    value='Load Log Info',
+                    size='sm', visible=True)
+
+                toolbox_transform_button = gr.Button(
+                    value='Transform Image',
+                    size='sm', visible=True)
+
+                toolbox_delete_button = gr.Button(
+                    value='Delete Image',
+                    size='sm', visible=True)
 
             with gr.Group(visible=False,
                 elem_classes='perf_modal_box') as perf_modal_box:
@@ -1682,6 +1700,10 @@ with common.GRADIO_ROOT:
                                 value='Apply Metadata',
                                 interactive=False)
 
+                            transform_image_button = gr.Button(
+                                value='Transform Image',
+                                interactive=False)
+
                             with gr.Row(elem_classes='elem_centre'):
                                 gr.HTML('<font size="3"><a href="https://github.com/DavidDragonsage/FooocusPlus/wiki/Image-Regeneration" target="_blank">\U0001F4DA Image Regeneration</a>')
 
@@ -2301,7 +2323,7 @@ with common.GRADIO_ROOT:
     def parse_meta(raw_prompt_txt, is_generating, state_params, panel_status):
         loaded_json = None
         if len(raw_prompt_txt)>=1 and (raw_prompt_txt[-1]=='[' or raw_prompt_txt[-1]=='_'):
-            return [gr.update()] * 3 + [True]
+            return [gr.update()] * 4 + [True]
         try:
             if '{' in raw_prompt_txt:
                 if '}' in raw_prompt_txt:
@@ -2311,38 +2333,44 @@ with common.GRADIO_ROOT:
         except:
             loaded_json = None
 
-        # Lockout Comfy-based metadata if Comfy is not available
         if loaded_json is not None:
             is_comfy_required = gallery_util.is_comfy_metadata(loaded_json)
+
+            # Check if Comfy is required but not available
             if is_comfy_required and not common.comfy_active:
-                loaded_json = None
-
-                # Create a highly visible warning to replace the metadata
-                warning_banner = f"⚠️ *** {interpret('This metadata requires Comfy to be available!', silent=True)} *** ⚠️"
-
-                print('\033[1;33m', end='')
-                print()
-                print(warning_banner)
-                print()
-                print('\033[0m', end='')
-
+                # Hide Load Parameters, but
+                # reveal Transform Parameters
                 return [
-                    warning_banner, # Overwrite the text with the warning
-                    gr.update(visible=True),  # Keep Generate visible
-                    gr.update(visible=False), # Keep Load Parameters hidden
+                    json.dumps(loaded_json),
+                    gr.update(visible=False), # Generate hidden
+                    gr.update(visible=False), # Load Parameters hidden
+                    gr.update(visible=True),  # Transform Parameters visible
+                    gr.update()
+                ]
+            else:
+                # Comfy is active or it's standard SDXL:
+                # both Load and Transform are visible
+                return [
+                    json.dumps(loaded_json),
+                    gr.update(visible=False), # Generate hidden
+                    gr.update(visible=True),  # Load Parameters visible
+                    gr.update(visible=True),  # Transform Parameters visible
                     gr.update()
                 ]
 
         if loaded_json is None:
             if is_generating:
-                return [gr.update()] * 4
+                return [gr.update()] * 5
             else:
-                return [gr.update(), gr.update(visible=True), gr.update(visible=False), gr.update()]
-
-        print()
-        interpret('The prompt textbox contains valid metadata')
-
-        return [json.dumps(loaded_json), gr.update(visible=False), gr.update(visible=True), gr.update()]
+                # Revert to standard text prompt
+                # behaviour: only Generate is visible
+                return [
+                    gr.update(),
+                    gr.update(visible=True),  # Generate visible
+                    gr.update(visible=False), # Load Parameters hidden
+                    gr.update(visible=False), # Transform Parameters hidden
+                    gr.update()
+                ]
 
 
     def calculateTokenCounter(
@@ -2362,7 +2390,9 @@ with common.GRADIO_ROOT:
         inputs=[prompt, state_is_generating,
             state_topbar, prompt_panel_checkbox],
         outputs=[prompt, generate_button,
-            load_parameter_button, prompt_panel_checkbox],
+            load_parameter_button,
+            transform_log_button,
+            prompt_panel_checkbox],
         queue=False, show_progress=False)
 
 
@@ -2603,7 +2633,12 @@ with common.GRADIO_ROOT:
     )
 
     # ROUTE 1: Main Load Button
-    main_load_event = load_parameter_button.click(fn=lambda: None)
+    main_load_event = load_parameter_button.click(
+        fn=lambda: (gr.update(visible=False)),
+        inputs=None,
+        outputs=[transform_log_button],
+        queue=False, show_progress=False
+    )
     attach_load_log_pipeline(main_load_event)
 
     # ROUTE 2: Toolbox Load Button
@@ -2615,12 +2650,36 @@ with common.GRADIO_ROOT:
     attach_load_log_pipeline(toolbox_load_event)
 
 
+    transform_log_button.click(
+        fn=meta_parser.transform_log_metadata,
+        inputs=[prompt], # Takes the raw JSON pasted in the prompt textbox
+        outputs=[
+            prompt,
+            negative_prompt,
+            style_selections,
+            v2_substyle,
+            seed_random,
+            image_seed,
+            aspect_ratios_selection,
+            image_quantity,
+            generate_button,
+            load_parameter_button,
+            transform_log_button,
+        ] + aspect_ratios_selections,
+        queue=False, show_progress=False
+    ).then(
+        fn=lambda: (interpret_info('[UI] Transformed log metadata!')),
+        queue=True, show_progress=False
+    )
+
+
     def prepare_UI_for_image_metadata():
         print()
         interpret_info('Loading image metadata...')
         return (gr.update(visible=False),
                 gr.update(visible=False),
                 gr.update(value=False))
+
 
     # Apply Metadata after image load
     metadata_import_button.click(
@@ -2651,10 +2710,51 @@ with common.GRADIO_ROOT:
     )
 
 
+    def prepare_UI_for_image_transform():
+        print()
+        interpret_info('Transforming image metadata...')
+        return (gr.update(visible=False),
+                gr.update(visible=False),
+                gr.update(value=False))
+
+    # Reconstruct image from only 7 specific metadata keys
+    transform_image_button.click(
+        fn=prepare_UI_for_image_transform,
+        inputs=None,
+        outputs=[toolbox_note_load_button,
+                 toolbox_note_box,
+                 input_image_checkbox],
+    ).then(
+        lambda: None,
+        inputs=None,
+        outputs=None,
+        queue=False, show_progress=False,
+        _js='()=>{window.close_finished_images_catalog();}'
+    ).then(
+        # Extract and apply only the 7 selected parameters
+        fn=meta_parser.transform_params_by_meta,
+        inputs=[metadata_input_image],
+        # Append aspect_ratios_selections to the outputs list so we can update the radio buttons
+        outputs=[
+            prompt,
+            negative_prompt,
+            style_selections,
+            v2_substyle,
+            seed_random,
+            image_seed,
+            aspect_ratios_selection,
+            image_quantity
+        ] + aspect_ratios_selections,
+        queue=False, show_progress=False
+    )
+
+
     metadata_input_image.upload(
         meta_parser.trigger_metadata_preview,
         inputs=metadata_input_image,
-        outputs=[metadata_json, metadata_import_button],
+        outputs=[metadata_json,
+                 metadata_import_button,
+                 transform_image_button],
         # Set queue=True to support interpret_warn popups:
         queue=True, show_progress=True)
 
@@ -2680,7 +2780,7 @@ with common.GRADIO_ROOT:
     history_gallery.select(
         gallery_util.select_history_gallery,
         inputs=[gallery_index,
-            state_topbar, backfill_prompt],\
+            state_topbar, backfill_prompt],
         outputs=[toolbox_info_box,
             prompt,
             negative_prompt,
@@ -2689,6 +2789,7 @@ with common.GRADIO_ROOT:
             toolbox_note_load_button, # Confirmation button
             toolbox_note_preset_button,
             toolbox_load_button,
+            toolbox_transform_button,
             state_topbar],
         show_progress=False)
 
@@ -2740,6 +2841,31 @@ with common.GRADIO_ROOT:
             state_topbar
         ],
         show_progress=False)
+
+    toolbox_transform_button.click(
+        fn=meta_parser.transform_toolbox_image,
+        inputs=[state_topbar],
+        outputs=[
+            prompt,
+            negative_prompt,
+            style_selections,
+            v2_substyle,
+            seed_random,
+            image_seed,
+            aspect_ratios_selection,
+            image_quantity
+        ] + aspect_ratios_selections,
+        queue=False, show_progress=False
+    ).then(
+        lambda: None,
+        inputs=None,
+        outputs=None,
+        queue=False, show_progress=False,
+        _js='()=>{window.close_finished_images_catalog();}'
+    ).then(
+        fn=lambda: print(interpret('[UI] Transformed image metadata from gallery!')),
+        queue=False, show_progress=False
+    )
 
     toolbox_delete_button.click(
         toolbox.toggle_note_box_delete,
