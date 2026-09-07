@@ -1705,7 +1705,13 @@ with common.GRADIO_ROOT:
                                 interactive=False)
 
                             with gr.Row(elem_classes='elem_centre'):
-                                gr.HTML('<font size="3"><a href="https://github.com/DavidDragonsage/FooocusPlus/wiki/Image-Regeneration" target="_blank">\U0001F4DA Image Regeneration</a>')
+                                gr.HTML(
+                                    '<font size="3">'
+                                    '<a href="https://github.com/DavidDragonsage/FooocusPlus/wiki/Image-Regeneration" target="_blank" style="white-space: nowrap;">📚 Regeneration</a>'
+                                    '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'
+                                    '<a href="https://github.com/DavidDragonsage/FooocusPlus/wiki/Image-Transformation" target="_blank" style="white-space: nowrap;">📚 Transformation</a>'
+                                    '</font>'
+                                )
 
                             with gr.Accordion("Preview Metadata", open=False, visible=True) as metadata_preview:
                                 metadata_json = gr.JSON(label='Metadata')
@@ -2260,7 +2266,8 @@ with common.GRADIO_ROOT:
                     Video System: {video_system}<br>\
                     Python {platform.python_version()}, Library {version.get_library_ver()}, \
                     Comfy {common.comfy_ver}<br>\
-                    Gradio {gr.__version__}, Torch {torch_ver}{cuda_ver}, Xformers {xformers_ver}<br>\
+                    Gradio {gr.__version__}, Torch {torch_ver}{cuda_ver}<br>\
+                    Xformers {xformers_ver}<br>\
                     FooocusPlus {fooocusplus_ver}, Hotfix {hotfix}')
 
                 with gr.Row(elem_classes='elem_centre'):
@@ -2863,8 +2870,8 @@ with common.GRADIO_ROOT:
         queue=False, show_progress=False,
         _js='()=>{window.close_finished_images_catalog();}'
     ).then(
-        fn=lambda: print(interpret('[UI] Transformed image metadata from gallery!')),
-        queue=False, show_progress=False
+        fn=lambda: interpret_info('[UI] Transformed log metadata from the catalog!'),
+        queue=True, show_progress=False
     )
 
     toolbox_delete_button.click(

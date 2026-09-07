@@ -32,6 +32,8 @@
   * Removed the unused & unsupported PuLID_ComfyUI
   * Use the ZHO-ZHO-ZHO fork if needed in the future
 * Release Date: September 2nd, 2026<br/>
+* Hotfix6: Linked the Transformation wiki article
+  * found below the Image Metadata Transform button
 * Hotfix5: Introduced Transform Image functions
   * debugged FooocusPlus reinstallation errors
 * Hotfix4: Added async_worker Bypass reporting

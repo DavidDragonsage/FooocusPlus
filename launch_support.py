@@ -20,6 +20,7 @@ if args.disable_in_browser:
     args.in_browser = False
 
 arch_version = 0.0
+gpu_infos = []
 torch_base_ver = ''
 
 
@@ -204,7 +205,7 @@ def dependency_resolver():
     from torchruntime.device_db import get_gpus
     from torchruntime.platform_detection import get_torch_platform, get_nvidia_arch
 
-    global arch_version
+    global arch_version, gpu_infos
 
     # Check for video driver compatibility
     new_driver, driver_msg = get_nvidia_driver_compatibility()

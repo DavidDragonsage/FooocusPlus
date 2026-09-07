@@ -14,7 +14,9 @@ import modules.html
 from args_manager import args as cli_args
 from enhanced.translator import interpret, \
     interpret_info, interpret_warn
-from launch_support import get_nvidia_driver_compatibility, \
+from launch_support import arch_version, \
+    gpu_infos, \
+    get_nvidia_driver_compatibility, \
     get_torch_base_path
 from modules.flags import inpaint_option_detail, inpaint_option_modify
 from modules.util import cleanup_temp_files, save_image_grid
@@ -382,13 +384,8 @@ def check_performance_handler():
     and configuring the UI popup.
     """
     import torch
-    # 1. Fetch the GPU's hardware architecture version via torchruntime
-    from torchruntime.device_db import get_gpus
-    from torchruntime.platform_detection import get_nvidia_arch
 
-    gpu_infos = get_gpus()
     device_names = set(gpu.device_name for gpu in gpu_infos)
-    arch_version = get_nvidia_arch(device_names)
 
     # 2. Check the raw driver compatibility status
     if arch_version >0:
@@ -605,7 +602,7 @@ def check_performance_handler():
             else:
                 status_val = interpret('Comfy Lockout Bypassed Using', 'run_FooocusPlus_cu128.bat', silent=True)
                 message = interpret('Bypass Access to ComfyUI Using', 'PyTorch 2.7.1', silent=True)
-            already_optimal = interpret('Please be aware that the use of Lockout Bypass is entirely at your own risk. This method is unsupported and any Comfy related bug reports filed for a system that bypasses Comfy Lockout will be removed. At the very least, expect this method to cause image generation to be slower in both Comfy and SDXL modes, and indeed Comfy may still not work using this option due to hardware limitations. You can revert to the optimal configuration using run_FooocusPlus_cu124.bat.', silent=True)
+            already_optimal = interpret('Please be aware that the use of Lockout Bypass is entirely at your own risk. This method is unsupported and any Comfy related bug reports filed for a system that bypasses Comfy Lockout will be removed. At the very least, expect this method to cause image generation to be slower in both Comfy and SDXL modes, and indeed Comfy may still not work with this option due to hardware limitations.', silent=True)
 
         else:
             # Legacy GPU running PyTorch 2.5 or earlier
