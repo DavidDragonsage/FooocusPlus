@@ -2409,7 +2409,7 @@ with common.GRADIO_ROOT:
         seed=image_seed),
         inputs=[prompt, super_prompter_prompt, translation_methods],
         outputs=prompt,
-        queue=False,
+        queue=True,
         show_progress=True)
 
     translator_button.click(

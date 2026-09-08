@@ -1,6 +1,12 @@
 import gradio as gr
+from pathlib import Path
+
+import common
 import custom.OneButtonPrompt.shared
+import modules.loader as loader
+
 from custom.OneButtonPrompt.shared import add_ctrl
+from enhanced.translator import interpret
 
 from random_prompt.build_dynamic_prompt import build_dynamic_prompt, OBPresets
 from random_prompt.csv_reader import load_config_csv
@@ -268,7 +274,7 @@ if(generatevehicle or generateobject or generatefood or generatebuilding or gene
           subjects.append("object - space")
     if(generateflora):
           subjects.append("object - flora")
-          
+
 if(generateanimal or generatebird or generatecat or generatedog or generateinsect or generatepokemon or generatemarinelife):
     subjects.append("--- animal - all")
     if(generateanimal):
@@ -414,6 +420,15 @@ def ui_onebutton(prompt, run_event, random_button):
         promptenhance,
         modeltype,
     ):
+        # Auto-download the superprompter model if
+        # hyperprompting is enabled on a new installation
+        if promptenhance == 'hyperprompt':
+            model_dir = loader.get_write_directory(common.paths_llms) / 'superprompt-v1'
+            if not (model_dir / 'model.safetensors').exists():
+                interpret('[OneButton] Downloading the model files for Random Prompt...')
+                print()
+                loader.download_superprompter_model()
+
         prompt = build_dynamic_prompt(
             insanitylevel,
             subject,
@@ -443,7 +458,7 @@ def ui_onebutton(prompt, run_event, random_button):
             promptenhance,
         )
 
-        return prompt 
+        return prompt
 
     def instant_gen_prompt(
         insanitylevel,
@@ -467,6 +482,13 @@ def ui_onebutton(prompt, run_event, random_button):
         modeltype,
         run_event,
     ):
+        model_dir = loader.get_write_directory(common.paths_llms) / 'superprompt-v1'
+        if not (model_dir / 'model.safetensors').exists():
+            if not (model_dir / 'model.safetensors').exists():
+                interpret('[OneButton] Downloading the model files for Random Prompt...')
+                print()
+                loader.download_superprompter_model()
+
         prompt = build_dynamic_prompt(
             insanitylevel,
             subject,
@@ -493,7 +515,7 @@ def ui_onebutton(prompt, run_event, random_button):
             False,
             modeltype,
             OBP_preset,
-            promptenhance, 
+            promptenhance,
         )
 
         return prompt, run_event+1
@@ -520,6 +542,15 @@ def ui_onebutton(prompt, run_event, random_button):
         promptenhance,
         modeltype,
     ):
+        # Auto-download the superprompter model if
+        # hyperprompting is enabled on a new installation
+        if promptenhance == 'hyperprompt':
+            model_dir = loader.get_write_directory(common.paths_llms) / 'superprompt-v1'
+            if not (model_dir / 'model.safetensors').exists():
+                interpret('[OneButton] Downloading the model files for Random Prompt...')
+                print()
+                loader.download_superprompter_model()
+
         prompt = (
             prompt
             + "---"
@@ -686,12 +717,12 @@ def ui_onebutton(prompt, run_event, random_button):
             promptenhance = gr.Dropdown(
                 choices=promptenhancelist, label="HYPERPROMPTING",
                 value="hyperprompt", visible=False)
-            add_ctrl("OBP_promptenhance", promptenhance)          
+            add_ctrl("OBP_promptenhance", promptenhance)
             modeltype = gr.Dropdown(
                 choices=modeltypelist, label="Model type",
                 value="SDXL", visible=False)
             add_ctrl("OBP_modeltype", modeltype)
-            
+
         obp_outputs = [
                     obp_preset_name,
                     obp_preset_save,
@@ -712,7 +743,7 @@ def ui_onebutton(prompt, run_event, random_button):
                     giventypeofimage,
                     antistring,
                 ]
-                
+
         def act_obp_preset_save(
                     obp_preset_name,
                     obp_preset_save,
@@ -765,15 +796,15 @@ def ui_onebutton(prompt, run_event, random_button):
         obp_preset_save.click(act_obp_preset_save,
                     inputs=obp_outputs,
                     outputs=[OBP_preset],
-                )     
-    
+                )
+
         def obppreset_changed(selection):
                 if selection == OBPresets.CUSTOM_OBP:
                     return (
                         [obp_preset_name.update(value="", visible=True)]
                         + [maingroup.update(visible=True)]
                     )
-    
+
                 else:
                     return (
                         [obp_preset_name.update(visible=False)]
@@ -782,8 +813,8 @@ def ui_onebutton(prompt, run_event, random_button):
         OBP_preset.change(obppreset_changed,
                 inputs=[OBP_preset],
                 outputs=[obp_preset_name] + [maingroup]
-            )       
-        
+            )
+
         def OBPPreset_changed_update_custom(selection):
                 # Skip if Custom was selected
                 if selection == OBPresets.CUSTOM_OBP:
@@ -792,7 +823,7 @@ def ui_onebutton(prompt, run_event, random_button):
                 # Update Custom values based on selected One Button preset
                 if selection == OBPresets.RANDOM_PRESET_OBP:
                     selected_opb_preset = OBPresets.get_obp_preset("Standard")
-                else:     
+                else:
                     selected_opb_preset = OBPresets.get_obp_preset(selection)
                 return [
                     insanitylevel.update(value=selected_opb_preset["insanitylevel"]),
@@ -814,25 +845,25 @@ def ui_onebutton(prompt, run_event, random_button):
                 ]
         OBP_preset.change(OBPPreset_changed_update_custom,
                 inputs=[OBP_preset],
-                outputs=[insanitylevel] + 
-                [subject] + 
-                [artist] + 
-                [chosensubjectsubtypeobject] + 
-                [chosensubjectsubtypehumanoid] + 
-                [chosensubjectsubtypeconcept] + 
-                [chosengender] + 
-                [imagetype] + 
-                [imagemodechance] + 
-                [givensubject] + 
-                [smartsubject] + 
+                outputs=[insanitylevel] +
+                [subject] +
+                [artist] +
+                [chosensubjectsubtypeobject] +
+                [chosensubjectsubtypehumanoid] +
+                [chosensubjectsubtypeconcept] +
+                [chosengender] +
+                [imagetype] +
+                [imagemodechance] +
+                [givensubject] +
+                [smartsubject] +
                 [givenoutfit] +
                 [prefixprompt] +
                 [suffixprompt] +
                 [giventypeofimage] +
-                [antistring], 
+                [antistring],
         )
-      
-        
+
+
         # turn things on and off for gender
         def subjectsvalue(subject):
             enable = "human" in subject

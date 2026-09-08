@@ -61,6 +61,7 @@
     },
     "lora_downloads": {},
     "vae_downloads": {
+        "ae.safetensors": "https://huggingface.co/lovis93/testllm/resolve/ed9cf1af7465cebca4649157f118e331cf2a084f/ae.safetensors?download=true",
         "UltraFlux.safetensors": "https://huggingface.co/Owen777/UltraFlux-v1/resolve/main/vae/diffusion_pytorch_model.safetensors?download=true"
     },
     "default_inpaint_engine": {}
