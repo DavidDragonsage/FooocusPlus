@@ -20,6 +20,7 @@ import modules.sdxl_styles
 import modules.sdxl_styles as sdxl_styles
 import modules.style_sorter as style_sorter
 import modules.util as util
+import modules.user_structure as US
 
 from args_manager import args
 from enhanced.backend import comfyd
@@ -172,7 +173,12 @@ def init_nav_bars(state_params, request: gr.Request):
 
     # Synchronize the menu bar with
     # the Comfy state at startup
-    config.default_bar_category = 'Favorite' if common.comfy_active else 'SDXL_Favorite'
+    if config.default_low_vram_presets == True:
+        common.preset_bar_category = 'LowVRAM_Favorite'
+    elif common.comfy_active:
+        common.preset_bar_category = 'Favorite'
+    else:
+        common.preset_bar_category = 'SDXL_Favorite'
 
     if '__lang' not in state_params.keys():
         state_params.update({'__lang': args.language})
@@ -248,8 +254,8 @@ def get_preset_inc_url(preset_name='blank'):
         return f'file={blank_inc_path}'
 
 def refresh_nav_bars(state_params):
-    state_params.update({'__nav_name_list': PR.get_presetnames_in_folder(config.default_bar_category)})
-    preset_name_list = PR.get_presetnames_in_folder(config.default_bar_category)
+    state_params.update({'__nav_name_list': PR.get_presetnames_in_folder(common.preset_bar_category)})
+    preset_name_list = PR.get_presetnames_in_folder(common.preset_bar_category)
     results = []
     if state_params['__is_mobile'] or not config.enable_preset_bar:
         results += [gr.update(visible=False)]
@@ -669,53 +675,62 @@ def prompt_token_prediction(text, style_selections):
     return len(tokenizer.tokenize(positive_basic_workloads[0]))
 
 
-def handle_comfy_active_change(enabled: bool, current_preset: str, state_params: dict):
+def handle_comfy_active_change(
+    enabled: bool,
+    current_preset: str,
+    state_params: dict):
     common.comfy_active = enabled
     config.default_comfy_active_checkbox = enabled
     # tell Comfy to start or stop:
     comfyd.active(enabled)
 
-    # Resolve the active favourites category
-    # dynamically based on the target toggle state
-    active_fav_cat = 'Favorite' if enabled else 'SDXL_Favorite'
+    # 1. Resolve active 4-way category and bar
+    is_low_vram = PR.is_low_vram_active()
+    active_fav_cat = US.get_active_favorite_category(enabled, is_low_vram)
+    default_name = PR.get_default_preset_name()
+    common.preset_bar_category = active_fav_cat
 
-    # Sync the default bar category configuration so that
-    # refresh_nav_bars() queries the correct folder on disk
-    config.default_bar_category = active_fav_cat
-
-    # Resolve target category selection transition:
-    if PR.category_selection == 'Favorite' and not enabled:
-        target_category = 'SDXL_Favorite'
-    elif PR.category_selection == 'SDXL_Favorite' and enabled:
-        target_category = 'Favorite'
+    # 2. Transition category between Comfy and SDXL
+    if not enabled:
+        if PR.category_selection == 'Favorite':
+            target_category = 'SDXL_Favorite'
+        elif PR.category_selection == 'LowVRAM_Favorite':
+            target_category = 'SDXL_LowVRAM_Favorite'
+        else:
+            target_category = PR.category_selection
     else:
-        target_category = PR.category_selection
+        if PR.category_selection == 'SDXL_Favorite':
+            target_category = 'Favorite'
+        elif PR.category_selection == 'SDXL_LowVRAM_Favorite':
+            target_category = 'LowVRAM_Favorite'
+        else:
+            target_category = PR.category_selection
 
     PR.category_selection = target_category
     target_preset = current_preset
 
+    # 3. Preserved Try/Except Fallback Block:
+    # If Comfy is disabled while a Comfy-engine
+    # preset was active, fallback to the
+    # appropriate anchor preset (Default or 4GB_Default)
     if not enabled:
         try:
             config_preset = PR.get_preset_content(current_preset, quiet=True)
             preset_prepared = parse_meta_from_preset(config_preset)
             engine = preset_prepared.get('engine', {}).get('backend_engine', 'Fooocus')
 
-            # If Comfy is disabled, but a Comfy-based
-            # preset was running, fallback to 'Default'
-            # inside the favourite directory.
             if engine != 'Fooocus':
-                target_preset = 'Default'
+                target_preset = default_name
                 target_category = active_fav_cat
                 PR.category_selection = target_category
-                interpret('[UI Support] Comfy disabled. Swapped active preset to Default.')
+                interpret(f'[UI Support] Comfy disabled. Swapped active preset to {default_name}.')
         except Exception as e:
             print(f'[UI Support] Warning: Preset fallback failed: {e}')
 
     category_choices = PR.get_preset_categories()
-
     preset_choices = PR.get_presetnames_in_folder(target_category)
 
-    # 4. Construct the basic UI updates list
+    # 4. Construct basic UI updates list
     basic_updates = [
         gr.update(value=enabled),   # comfyd_active_checkbox
         gr.update(visible=enabled), # iclight_row_controls
@@ -730,9 +745,7 @@ def handle_comfy_active_change(enabled: bool, current_preset: str, state_params:
         gr.update(interactive=len(preset_choices) > 1)
     ]
 
-    # 5. Dynamically fetch the topbar Favorites bar updates
-    # (This returns [preset_row_update] +
-    # bar_buttons_updates)
+    # 5. Topbar Favorites bar updates
     topbar_updates = refresh_nav_bars(state_params)
 
     return basic_updates + topbar_updates

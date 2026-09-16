@@ -161,7 +161,7 @@ else:
         XFORMERS_IS_AVAILABLE = False
 
 # --- DYNAMIC HARDWARE SYNCHRONIZATION ---
-interpret(f'Total System RAM {common.total_sysram_gb} GB, Total VRAM {common.total_vram_gb} GB, ')
+interpret(f'Total System RAM {common.total_sysram_gb} GB, Total VRAM {common.total_vram_gb} GB')
 
 if not args.always_normal_vram and not args.always_cpu:
     if lowvram_available and common.total_vram_gb <= 4.0:

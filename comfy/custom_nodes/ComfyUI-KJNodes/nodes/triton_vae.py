@@ -18,7 +18,14 @@ try:
     import triton
     import triton.language as tl
 except ImportError as e:
-    raise ImportError("PatchTritonVAE requires triton (pip install triton, or triton-windows)") from e
+    # FooocusPlus silent Triton patch
+    class PatchTritonVAE:
+        @classmethod
+        def INPUT_TYPES(s): return {'required': {}}
+        RETURN_TYPES = ()
+        FUNCTION = 'patch'
+        CATEGORY = 'KJNodes/triton'
+        def patch(self, **kwargs): pass
 
 from comfy.ldm.wan.vae import RMS_norm
 from comfy.ldm.modules.diffusionmodules.model import ResnetBlock

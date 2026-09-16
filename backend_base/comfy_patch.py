@@ -11,8 +11,8 @@ def apply_comfy_patch():
     selective logging mutes, and file patching
     required to keep ComfyUI fully stable under CUDA 13.
     """
-    #  Clean the local system PATH to prevent
-    #  PyTorch/CUDA from resolving obsolete PhysX DLLs
+    # Clean the local system PATH to prevent
+    # PyTorch/CUDA from resolving obsolete PhysX DLLs
     try:
         path_env = os.environ.get('PATH', '')
         if 'PhysX' in path_env:
@@ -31,23 +31,25 @@ def apply_comfy_patch():
             end_marker = '# FooocusPlus ComfyUI path injection end'
 
             # 1. Surgical Self-Healing Recovery Block
-            # If the file contains a legacy patch, slice out the entire polluted block
+            # If the file contains a legacy patch,
+            # slice out the entire polluted block
             if patch_marker in content:
                 start_idx = content.find(patch_marker)
-                
+
                 # Check for our clean end marker first
                 if end_marker in content:
                     end_idx = content.rfind(end_marker)
                     clean_content = content[:start_idx] + content[end_idx + len(end_marker):]
                 else:
-                    # Legacy Recovery: Search from the end to find the absolute end of any old hooks
+                    # Legacy Recovery: Search from the end
+                    # to find the absolute end of any old hooks
                     hook_end = 'logging.Logger.warning = _safe_logger_warning'
                     end_idx = content.rfind(hook_end)
                     if end_idx != -1:
                         clean_content = content[:start_idx] + content[end_idx + len(hook_end):]
                     else:
                         clean_content = content.replace(patch_marker, '')
-                
+
                 # Strip out leading whitespace/newlines
                 clean_content = clean_content.lstrip()
             else:
@@ -81,8 +83,8 @@ def apply_comfy_patch():
                 "_orig_logger_warning = logging.Logger.warning\n"
                 "def _safe_logger_warning(self, msg, *args, **kwargs):\n"
                 "    msg_str = str(msg)\n"
-                "    # Added 'comfyui-workflow-templates' to silently swallow the version mismatch box\n"
-                "    if 'Unsupported Pytorch' in msg_str or 'cu130' in msg_str or 'VRAM estimates' in msg_str or 'IMPORT FAILED' in msg_str or 'comfy_extras' in msg_str or 'comfyui-workflow-templates' in msg_str:\n"
+                "    # Added 'PatchTritonVAE' and 'comfyui-workflow-templates' to silently swallow non-fatal warnings\n"
+                "    if 'Unsupported Pytorch' in msg_str or 'cu130' in msg_str or 'VRAM estimates' in msg_str or 'IMPORT FAILED' in msg_str or 'comfy_extras' in msg_str or 'comfyui-workflow-templates' in msg_str or 'PatchTritonVAE' in msg_str:\n"
                 "        return\n"
                 "    _orig_logger_warning(self, msg, *args, **kwargs)\n"
                 "logging.Logger.warning = _safe_logger_warning\n"
@@ -90,12 +92,15 @@ def apply_comfy_patch():
             )
 
             new_content = patch_code + clean_content
-            # Only write to disk if the file differs (prevents unnecessary SSD wear-and-tear)
+            # Only write to disk if the file differs
+            # (prevents unnecessary SSD wear-and-tear)
             if content != new_content:
                 comfy_main.write_text(new_content, encoding='utf-8')
                 print('[ComfyPatch] Successfully applied ComfyUI path and silent logging patch!')
 
-            # 3. Self-Healing Placeholder: Write a valid, empty node mapping to satisfy Comfy's loader and silence GLSL/OpenGL errors
+            # 3. Self-Healing Placeholder: Write a valid,
+            # empty node mapping to satisfy Comfy's loader
+            # and silence GLSL/OpenGL errors
             glsl_nodes = comfy_dir / 'comfy_extras' / 'nodes_glsl.py'
             placeholder_text = (
                 "# FooocusPlus placeholder to silence unused OpenGL nodes\n"
@@ -109,7 +114,8 @@ def apply_comfy_patch():
                 except Exception as e:
                     print(f"[ComfyPatch] Warning: Failed to create placeholder for OpenGL nodes: {e}")
 
-            # 4. Self-Healing rgthree-comfy Patch: Mute the tedious "Nodes 2.0" warning inside __init__.py
+            # 4. Self-Healing rgthree-comfy Patch: Mute the
+            # tedious "Nodes 2.0" warning inside __init__.py
             rgthree_dir = comfy_dir / 'custom_nodes' / 'rgthree-comfy'
             rgthree_init = rgthree_dir / '__init__.py'
 
@@ -117,10 +123,10 @@ def apply_comfy_patch():
                 rgthree_content = rgthree_init.read_text(encoding='utf-8')
                 rgthree_marker = '# FooocusPlus rgthree-comfy Nodes 2.0 warning mute'
                 if rgthree_marker not in rgthree_content:
-                    # Clean out any old patch attempts
                     rgthree_content = rgthree_content.replace(rgthree_marker, '')
 
-                    # Target the conditional statement directly to make it always fail (if False:)
+                    # Target the conditional statement directly
+                    # to make it always fail (if False:)
                     old_line = "if get_config_value('announcements.comfy-nodes-20.incompatible', True):"
                     new_line = f"if False:  {rgthree_marker}"
 
@@ -131,14 +137,41 @@ def apply_comfy_patch():
                     else:
                         print('[ComfyPatch] Warning: Failed to find Nodes 2.0 warning condition in rgthree-comfy __init__.py')
 
+            # 5. Self-Healing ComfyUI-KJNodes Patch:
+            # Silently handle missing Triton on non-Triton
+            # systems (macOS, Windows without Triton, etc.)
+            kjnodes_dir = comfy_dir / 'custom_nodes' / 'ComfyUI-KJNodes'
+            kjnodes_triton = kjnodes_dir / 'nodes' / 'triton_vae.py'
+
+            if kjnodes_triton.exists():
+                kj_content = kjnodes_triton.read_text(encoding='utf-8')
+                kj_marker = '# FooocusPlus silent Triton patch'
+
+                if kj_marker not in kj_content:
+                    old_raise = 'raise ImportError("PatchTritonVAE requires triton (pip install triton, or triton-windows)") from e'
+                    new_handling = (
+                        f"{kj_marker}\n"
+                        "    class PatchTritonVAE:\n"
+                        "        @classmethod\n"
+                        "        def INPUT_TYPES(s): return {'required': {}}\n"
+                        "        RETURN_TYPES = ()\n"
+                        "        FUNCTION = 'patch'\n"
+                        "        CATEGORY = 'KJNodes/triton'\n"
+                        "        def patch(self, **kwargs): pass"
+                    )
+
+                    if old_raise in kj_content:
+                        kj_content = kj_content.replace(old_raise, new_handling)
+                        kjnodes_triton.write_text(kj_content, encoding='utf-8')
+                        print('[ComfyPatch] Successfully patched ComfyUI-KJNodes to silently handle missing Triton!')
+
     except Exception as e:
         print(f"[ComfyPatch] Warning: Failed to apply CUDA 13 / Comfy compatibility patch: {e}")
 
-    # 5. Programmatic System Patch:
+    # 6. Programmatic System Patch:
     # Automatically remove the obsolete NVIDIA NGC
     # extra-index-url from the untracked local
-    # pip.ini file to solve DNS warnings for
-    # existing users.
+    # pip.ini file to solve DNS warnings for existing users.
     python_embedded_dir = Path(ROOT).parent / 'python_embedded'
     if python_embedded_dir.is_dir():
         try:

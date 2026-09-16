@@ -24,8 +24,8 @@ logging.Logger.info = _safe_logger_info
 _orig_logger_warning = logging.Logger.warning
 def _safe_logger_warning(self, msg, *args, **kwargs):
     msg_str = str(msg)
-    # Added 'comfyui-workflow-templates' to silently swallow the version mismatch box
-    if 'Unsupported Pytorch' in msg_str or 'cu130' in msg_str or 'VRAM estimates' in msg_str or 'IMPORT FAILED' in msg_str or 'comfy_extras' in msg_str or 'comfyui-workflow-templates' in msg_str:
+    # Added 'PatchTritonVAE' and 'comfyui-workflow-templates' to silently swallow non-fatal warnings
+    if 'Unsupported Pytorch' in msg_str or 'cu130' in msg_str or 'VRAM estimates' in msg_str or 'IMPORT FAILED' in msg_str or 'comfy_extras' in msg_str or 'comfyui-workflow-templates' in msg_str or 'PatchTritonVAE' in msg_str:
         return
     _orig_logger_warning(self, msg, *args, **kwargs)
 logging.Logger.warning = _safe_logger_warning

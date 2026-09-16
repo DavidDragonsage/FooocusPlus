@@ -31,12 +31,14 @@ def control_notification(enable_notification):
 
 
 def add_to_favorites(preset_file, category_selection):
+    import modules.config as config
     preset_file = f'{preset_file}.json'
     master_presets_path = Path('masters/master_presets')
-    source_file = Path(master_presets_path/category_selection/preset_file)
+    source_file = Path(master_presets_path / category_selection / preset_file)
 
-    # Resolve the current favorite folder using common
-    active_fav_cat = 'Favorite' if common.comfy_active else 'SDXL_Favorite'
+    # Resolve 4-state active favorite folder
+    is_low_vram = getattr(config, 'default_low_vram_presets', False) or (getattr(common, 'total_vram_gb', 8.0) < 7.0)
+    active_fav_cat = US.get_active_favorite_category(common.comfy_active, is_low_vram)
     dest_dir = Path(US.user_path / 'user_presets' / active_fav_cat)
 
     success = US.mkdir_copy_file(source_file, dest_dir)
@@ -48,8 +50,9 @@ def add_to_favorites(preset_file, category_selection):
 
 
 def remove_from_favorites(preset_file):
-    # Resolve the current favorite folder using common
-    active_fav_cat = 'Favorite' if common.comfy_active else 'SDXL_Favorite'
+    import modules.config as config
+    is_low_vram = getattr(config, 'default_low_vram_presets', False) or (getattr(common, 'total_vram_gb', 8.0) < 7.0)
+    active_fav_cat = US.get_active_favorite_category(common.comfy_active, is_low_vram)
     source_file = Path(US.user_path / 'user_presets' / active_fav_cat / f'{preset_file}.json')
 
     dest_dir = Path(US.user_path / 'user_presets' / 'Old Favorites')

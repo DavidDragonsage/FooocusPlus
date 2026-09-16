@@ -1,0 +1,3 @@
+# FooocusPlus macOS (Darwin) Platform Requirements
+cmake
+insightface==0.7.3

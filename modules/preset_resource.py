@@ -17,6 +17,8 @@ from modules.ui_features import add_to_favorites, \
     remove_from_favorites
 from pathlib import Path
 
+
+ALL_FAV_CATEGORIES = {'Favorite', 'SDXL_Favorite', 'LowVRAM_Favorite', 'SDXL_LowVRAM_Favorite'}
 current_preset = args.args.preset
 category_selection = 'Favorite'
 presets_path = Path('presets')
@@ -116,29 +118,25 @@ def normalize_preset_loading():
 
 
 def find_preset_file(preset):
-    global presets_path
+    global ALL_FAV_CATEGORIES, presets_path
 
     preset_file_path = ''
     preset_name_path = Path(preset)
     if preset_name_path.suffix != 'json':
         preset_name_path = Path(preset_name_path.with_suffix(preset_name_path.suffix + '.json'))
 
-    # Dynamically map the target favourites path
-    # using the active category selection
-    if category_selection in ['Favorite', 'SDXL_Favorite']:
+    # Dynamically map the target favourites
+    # path using the active category selection
+    if category_selection in ALL_FAV_CATEGORIES:
         favorite_path = Path(presets_path / category_selection)
         preset_file_path = US.find_file_path(favorite_path, preset_name_path)
 
-    if not preset_file_path or category_selection not in ['Favorite', 'SDXL_Favorite']:
-        # Determine the active favorites folder
-        # to exclude during the fallback search
-        active_fav_cat = 'Favorite' if common.comfy_active else 'SDXL_Favorite'
-        # Fallback: search overall presets,
-        # excluding the currently active favourite
-        # directory to prevent double matches
-        preset_file_path = US.find_file_path(presets_path, preset_name_path, excluding_dir = active_fav_cat)
+    if not preset_file_path or category_selection not in ALL_FAV_CATEGORIES:
+        active_fav_cat = get_active_fav_cat()
+        # Fallback: search overall presets, excluding the active favourite directory
+        preset_file_path = US.find_file_path(presets_path, preset_name_path, excluding_dir=active_fav_cat)
         if not preset_file_path:
-            if preset != 'Default':
+            if preset not in ['Default', '4GB_Default']:
                 interpret('[Preset] Could not find the preset:', preset)
                 print()
             return {}
@@ -157,10 +155,9 @@ def find_preset_category(preset):
             else:
                 preset_category = (preset_file.parent).name
         else:
-            # Replaces hardcoded 'Favorite' fallback
-            preset_category = 'Favorite' if common.comfy_active else 'SDXL_Favorite'
-    except:
-        preset_category = 'Favorite' if common.comfy_active else 'SDXL_Favorite'
+            preset_category = get_active_fav_cat()
+    except Exception:
+        preset_category = get_active_fav_cat()
     return preset_category
 
 category_selection = find_preset_category(current_preset)
@@ -172,7 +169,7 @@ def is_comfy_preset_file(preset_file_path: Path) -> bool:
     Uses fast directory name matching, falling back to JSON parsing only for mixed folders.
     """
     # 1. Fast Directory Check: If inside a known Comfy category, classify immediately
-    comfy_folders = {'Flux1Dev', 'Flux1Krea', 'Flux1Schnell', 'HyperFlux1D', 'SD3x', 'Z-Image Base', 'Z-Image Turbo', 'SD1.5'}
+    comfy_folders = {'Flux1Dev', 'Flux1Krea', 'Flux1Schnell', 'HyperFlux1D', 'LowVRAM_Plus', 'SD3x', 'Z-Image Base', 'Z-Image Turbo', 'SD1.5'}
     if preset_file_path.parent.name in comfy_folders:
         return True
 
@@ -220,6 +217,8 @@ def get_presets_in_folder(arg_folder_name):
 
 
 def get_presetnames_in_folder(folder_name):
+    global ALL_FAV_CATEGORIES, presets_path
+
     presetnames_in_folder = []
     if folder_name == 'All':
         folder_name = presets_path
@@ -229,18 +228,22 @@ def get_presetnames_in_folder(folder_name):
         for preset_file in presets_in_folder:
             preset_file_path = Path(preset_file)
 
-            # If Comfy is inactive, filter out
-            # any Comfy-specific presets from the list
+            # If Comfy is inactive,
+            # filter out any Comfy-specific presets
             if not common.comfy_active:
                 if is_comfy_preset_file(preset_file_path):
                     continue
 
             presetnames_in_folder.append(preset_file_path.stem)
 
-    # Determine if the active query is a favourite category
-    is_favorite_cat = folder_name in ['Favorite', 'SDXL_Favorite']
+    # Determine if the active query
+    # is any of the 4 favourite categories
+    is_favorite_cat = folder_name in ALL_FAV_CATEGORIES
 
-    default_name = 'Default'
+    if folder_name in ['LowVRAM_Favorite', 'SDXL_LowVRAM_Favorite']:
+        default_name = '4GB_Default'
+    else:
+        default_name = 'Default'
 
     # If it's a favourite category, force-insert
     # 'Default' to prevent empty UI states
@@ -294,14 +297,22 @@ def get_preset_foldernames(omit_current_dir = False):
 def get_preset_categories():
     preset_categories = get_preset_foldernames()
     if preset_categories:
-        if common.comfy_active:
-            # Comfy Active: Hide the 'SDXL_Favorite' folder
-            preset_categories = [c for c in preset_categories if c != 'SDXL_Favorite']
-        else:
-            # Comfy Disabled: Hide 'Favorite'
-            # and all other Comfy categories,
-            # showing 'SDXL_Favorite'
-            comfy_categories = {'Favorite', 'Flux1Dev', 'Flux1Krea', 'Flux1Schnell', 'HyperFlux1D', 'SD1.5', 'SD3x', 'Z-Image Base', 'Z-Image Turbo'}
+        is_low = is_low_vram_active()
+        active_fav = get_active_fav_cat()
+
+        # 1. Hide the 3 inactive Favorite
+        # folders from the dropdown
+        for fav_cat in ALL_FAV_CATEGORIES:
+            if fav_cat != active_fav and fav_cat in preset_categories:
+                preset_categories.remove(fav_cat)
+
+        # 2. When Comfy is disabled, hide
+        # all Comfy-specific categories
+        if not common.comfy_active:
+            comfy_categories = {
+                'Flux1Dev', 'Flux1Krea', 'Flux1Schnell', 'HyperFlux1D',
+                'LowVRAM_Plus', 'SD1.5', 'SD3x', 'Z-Image Base', 'Z-Image Turbo'
+            }
             preset_categories = [c for c in preset_categories if c not in comfy_categories]
 
         preset_categories.append('All')
@@ -496,17 +507,17 @@ def get_preset_content(preset, quiet=True):
 
 
 def check_for_favorite(preset):
-    # is preset a favourite?
     global presets_path
     preset_name_path = Path(preset)
     if preset_name_path.suffix != 'json':
         preset_name_path = Path(preset_name_path.with_suffix(preset_name_path.suffix + '.json'))
-    favorite_path = Path(presets_path/'Favorite')
+    favorite_path = Path(presets_path / get_active_fav_cat())
     return US.find_file_path(favorite_path, preset_name_path)
 
 
 def preset_favorite_value():
-    if check_for_favorite(current_preset) and current_preset != 'Default':
+    default_name = get_default_preset_name()
+    if check_for_favorite(current_preset) and current_preset != default_name:
         return 'Remove Current Preset from Favorites'
     else:
         return 'Add Current Preset to Favorites'
@@ -710,13 +721,14 @@ def get_initial_preset_content():
             common.preset_content = json_content
     return json_content
 
+
 def get_lowVRAM_preset_content():
     global current_preset, category_selection
     json_content = ''
     if find_preset_file('4GB_Default'):
         config.default_low_vram_presets = True
-        category_selection = 'LowVRAM'
-        config.default_bar_category = category_selection
+        category_selection = get_active_fav_cat()
+        common.preset_bar_category = category_selection
         args.args.preset = '4GB_Default'
         current_preset = args.args.preset
         json_content = get_preset_content(current_preset, quiet=False)
@@ -727,76 +739,97 @@ def get_lowVRAM_preset_content():
     return json_content
 
 
-def preset_favorite_modify1():
-    global current_preset, current_category, \
-        favorite_preset, favorite_category
-    favorite_preset = current_preset
-    favorite_category = category_selection
-    print()
+def is_low_vram_active() -> bool:
+    return getattr(config, 'default_low_vram_presets', False) or (getattr(common, 'total_vram_gb', 8.0) < 7.0)
 
-    # Dynamically resolve the active favorites folder name
-    active_fav_cat = 'Favorite' if common.comfy_active else 'SDXL_Favorite'
+def get_active_fav_cat() -> str:
+    return US.get_active_favorite_category(common.comfy_active, is_low_vram_active())
 
-    if category_selection == active_fav_cat and current_preset != 'Default':
-        # Delete preset from the active favorites list:
-        return gr.update(value='Default')
-    else:
-        return
+def get_default_preset_name() -> str:
+    return '4GB_Default' if is_low_vram_active() else 'Default'
 
 
-def preset_favorite_modify2():
-    global current_preset, current_category, \
+def preset_favorite_toggle():
+    global current_preset, category_selection, \
         favorite_preset, favorite_category
 
-    # Dynamically resolve the active favourites folder name
-    active_fav_cat = 'Favorite' if common.comfy_active else 'SDXL_Favorite'
+    active_fav_cat = get_active_fav_cat()
+    default_name = get_default_preset_name()
+    common.preset_bar_category = active_fav_cat
 
-    if favorite_preset == 'Default' or current_preset == 'Default':
-        interpret('[Preset] Cannot add or delete the Default preset')
-    elif favorite_category == active_fav_cat:
-        remove_from_favorites(favorite_preset)
+    target_preset = current_preset
+    target_category = category_selection
+
+    if current_preset == default_name:
+        interpret(f'[Preset] Cannot add or delete the {default_name} preset')
+        PR_choices = get_presetnames_in_folder(active_fav_cat)
+        return (gr.update(choices=PR_choices, value=default_name),
+                gr.update(value=active_fav_cat))
+
+    # 1. Perform File Operations
+    if category_selection == active_fav_cat:
+        # Removing from active favorites
+        remove_from_favorites(current_preset)
+        target_preset = default_name
     else:
-        add_to_favorites(favorite_preset, favorite_category)
-    US.init_preset_structure(comfy_active=common.comfy_active)
+        # Adding to active favorites
+        add_to_favorites(current_preset, category_selection)
+        target_preset = current_preset
+        target_category = active_fav_cat
+
+    # 2. Re-sync working structure completely BEFORE telling Gradio to update
+    US.init_preset_structure(
+        comfy_active=common.comfy_active,
+        is_low_vram=is_low_vram_active()
+    )
+
+    # 3. Update global trackers
+    current_preset = target_preset
+    category_selection = target_category
     PR_choices = get_presetnames_in_folder(active_fav_cat)
-    current_preset = 'Default'
-    category_selection = active_fav_cat
-    return (gr.update(value='Default'),
-            gr.update(value=active_fav_cat))
+
+    # 4. Now return safely to Gradio
+    return (gr.update(choices=PR_choices,
+            value=current_preset),
+            gr.update(value=category_selection))
 
 
 def restore_favorites():
     global current_preset, current_category
+    active_fav_cat = get_active_fav_cat()
+    default_name = get_default_preset_name()
+
     count = US.init_preset_structure(
         init=True,
         restore_favorites=True,
-        comfy_active=common.comfy_active)
-    active_fav_cat = 'Favorite' if common.comfy_active else 'SDXL_Favorite'
+        comfy_active=common.comfy_active,
+        is_low_vram=is_low_vram_active()
+    )
 
-    # Fetch the freshly restored preset names list from disk
     preset_names = get_presetnames_in_folder(active_fav_cat)
 
-    # Ensure 'Default' is at the beginning of the list
-    if 'Default' not in preset_names:
-        preset_names.insert(0, 'Default')
+    # Ensure anchor preset is first in the list
+    if default_name not in preset_names:
+        preset_names.insert(0, default_name)
 
-    current_preset = 'Default'
+    current_preset = default_name
     current_category = active_fav_cat
 
     return (gr.update(choices=preset_names, value=current_preset),
             gr.update(value=active_fav_cat),
-            gr.update(interactive=count>0))
+            gr.update(interactive=count > 0))
 
 
 def select_after_restore():
     global current_preset
-    active_fav_cat = 'Favorite' if common.comfy_active else 'SDXL_Favorite'
+    active_fav_cat = get_active_fav_cat()
+    default_name = get_default_preset_name()
     preset_names = get_presetnames_in_folder(active_fav_cat)
 
-    # Locate the first restored non-Default preset to select
-    first_preset = 'Default'
+    # Locate first restored non-anchor preset to select
+    first_preset = default_name
     for name in preset_names:
-        if name != 'Default':
+        if name != default_name:
             first_preset = name
             break
 
@@ -805,27 +838,27 @@ def select_after_restore():
 
 
 def clear_favorites():
-    global current_preset, current_category
+    global current_preset, category_selection
+    active_fav_cat = get_active_fav_cat()
+    default_name = get_default_preset_name()
+
     count = US.init_preset_structure(
         clear_favorites=True,
-        comfy_active=common.comfy_active)
-    active_fav_cat = 'Favorite' if common.comfy_active else 'SDXL_Favorite'
+        comfy_active=common.comfy_active,
+        is_low_vram=is_low_vram_active()
+    )
 
-    # Fetch the freshly emptied favorites
+    # Fetch the freshly emptied folder choices
+    # (now containing only the default anchor)
     preset_names = get_presetnames_in_folder(active_fav_cat)
 
-    # This guarantees a change event in Gradio:
-    if current_preset == 'Default':
-        current_preset = 'Elsewhere'
-        current_category = 'General'
-        preset_names = get_presetnames_in_folder('General')
-    else:
-        current_preset = 'Default'
-        current_category = active_fav_cat
+    current_preset = default_name
+    category_selection = active_fav_cat
 
-    return (gr.update(value=current_preset),
-            gr.update(value=current_category),
-            gr.update(interactive=count>0))
+    # Notice choices=preset_names is now included:
+    return (gr.update(choices=preset_names, value=current_preset),
+            gr.update(value=category_selection),
+            gr.update(interactive=count > 0))
 
 
 def preset_count():

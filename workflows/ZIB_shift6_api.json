@@ -44,7 +44,7 @@
     "_meta": { "title": "result_image" }
   },
   "21": {
-    "inputs": { "vae_name": "ae.safetensors" },
+    "inputs": { "vae_name": "UltraFlux.safetensors" },
     "class_type": "VAELoader",
     "_meta": { "title": "Load VAE" }
   },

@@ -85,7 +85,7 @@
   },
   "21": {
     "inputs": {
-      "vae_name": "ae.safetensors"
+      "vae_name": "UltraFlux.safetensors"
     },
     "class_type": "VAELoader",
     "_meta": {

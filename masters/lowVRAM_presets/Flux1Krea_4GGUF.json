@@ -4,11 +4,11 @@
 		"disvisible": ["backend_selection", "negative_prompt", "performance_selection", "refiner_model", "sharpness"],
 		"disinteractive": ["enhance_checkbox", "input_image_checkbox", "refiner_model"],
         "backend_params": {
-            "task_method": "flux_base_gguf",
+            "task_method": "flux_base_4gguf",
             "clip_model": "t5xxl_fp8_e4m3fn.safetensors"
-        }
-    },
-    "default_model": "FluxSchnell/flux1-schnell-Q8_0.gguf",
+            }
+    	},
+    "default_model": "FluxKrea/flux1-krea-dev-Q4_K_M.gguf",
     "default_refiner": "None",
     "default_refiner_switch": 0.6,
     "default_loras": [
@@ -38,21 +38,22 @@
             1.0
         ]
     ],
-    "default_cfg_scale": 3.5,
+    "default_cfg_scale": 4.5,
     "default_sample_sharpness": 2,
     "default_sampler": "euler",
     "default_scheduler": "simple",
     "default_vae": "ae.safetensors",
     "default_clip_skip": 1,
     "default_performance": "",
+    "default_prompt": "",
     "default_styles": [
         "Fooocus V2"
     ],
     "v2_substyle": "Default",
     "default_aspect_ratio": "0*0",
-    "default_overwrite_step": 4,
+    "default_overwrite_step": 20,
     "checkpoint_downloads": {
-        "FluxSchnell/flux1-schnell-Q8_0.gguf": "https://huggingface.co/city96/FLUX.1-schnell-gguf/resolve/main/flux1-schnell-Q8_0.gguf?download=true"
+     "FluxKrea/flux1-krea-dev-Q4_K_M.gguf": "https://huggingface.co/QuantStack/FLUX.1-Krea-dev-GGUF/resolve/main/flux1-krea-dev-Q4_K_M.gguf"
     },
     "clip_downloads": {
         "clip_l.safetensors": "https://huggingface.co/lllyasviel/flux_text_encoders/resolve/main/clip_l.safetensors",

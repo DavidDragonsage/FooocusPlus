@@ -606,38 +606,64 @@ def replace_obsolete_categories(user_presets_path):
     return
 
 
+def get_active_favorite_category(comfy_active: bool = True, is_low_vram: bool = False) -> str:
+    """
+    Resolves the active Favorite folder name based on the 2x2 matrix:
+    - Low VRAM + Comfy Active   -> 'LowVRAM_Favorite'
+    - Low VRAM + Comfy Inactive -> 'SDXL_LowVRAM_Favorite'
+    - Normal   + Comfy Active   -> 'Favorite'
+    - Normal   + Comfy Inactive -> 'SDXL_Favorite'
+    """
+    if is_low_vram:
+        return 'LowVRAM_Favorite' if comfy_active else 'SDXL_LowVRAM_Favorite'
+    else:
+        return 'Favorite' if comfy_active else 'SDXL_Favorite'
+
+
 def init_starter_presets(
         user_presets_path,
         restore=False,
-        arg_comfy=True):
-    # from 1.0.9 & 1.1.5
-    if arg_comfy:
-        starter_presets_path = Path('masters/starter_presets')
-        user_favorites_path = Path(user_presets_path/'Favorite')
+        arg_comfy=True,
+        is_low_vram=False):
+
+    # The universal master-to-user folder pairings
+    pairs = [
+        (Path('masters/starter_presets'), Path(user_presets_path / 'Favorite')),
+        (Path('masters/sdxl_presets'), Path(user_presets_path / 'SDXL_Favorite')),
+        (Path('masters/lowVRAM_presets'), Path(user_presets_path / 'LowVRAM_Favorite')),
+        (Path('masters/sdxl_lowVRAM_presets'), Path(user_presets_path / 'SDXL_LowVRAM_Favorite'))
+    ]
+
+    if restore:
+        # User explicitly clicked 'Restore Favorites':
+        # Overwrite/refill ONLY the currently active favorite category
+        active_cat_name = get_active_favorite_category(arg_comfy, is_low_vram)
+        active_target = Path(user_presets_path / active_cat_name)
+
+        for master_path, target_path in pairs:
+            if target_path == active_target:
+                copy_dirs(master_path, target_path)
+                break
     else:
-        starter_presets_path = Path('masters/sdxl_presets')
-        user_favorites_path = Path(user_presets_path/'SDXL_Favorite')
-    # add starter or SDXL presets to user favorites
-    # but only for a new installation
-    # or the "Restore Favorites" button was selected
-    if not user_favorites_path.is_dir() or restore==True:
-        if not user_favorites_path.is_dir():
-            print()
-            interpret('Initializing the Favorite directory with five starter presets.')
-            interpret('When FooocusPlus is running, they can be added to or removed using the button under the Extras tab.')
-            print()
-        copy_dirs(starter_presets_path, user_favorites_path)
+        # Startup: Seed any folder that does not exist at all.
+        # If the directory already exists (even if empty),
+        # do NOT overwrite user choices!
+        for master_path, target_path in pairs:
+            if not target_path.is_dir():
+                print()
+                interpret('Initializing the', f'{target_path.name} directory with starter presets.')
+                copy_dirs(master_path, target_path)
     return
 
 
-def update_favorite_presets(user_presets_path, comfy_active=True):
+def update_favorite_presets(user_presets_path, comfy_active=True, is_low_vram=False):
     """
-    Scans UserDir/user_presets/Favorite or SDXL_Favorite
-    for standard presets. If a preset with a matching filename is found in  masters/master_presets,
-    it updates the user's favorite copy with
-    the master version to keep it current.
+    Scans the active Favorite folder for standard presets.
+    If a preset with a matching filename is found in
+    masters/master_presets, it updates the user's
+    favourite copy with the master version to keep it current.
     """
-    active_fav_cat = 'Favorite' if comfy_active else 'SDXL_Favorite'
+    active_fav_cat = get_active_favorite_category(comfy_active, is_low_vram)
     fav_dir = Path(user_presets_path / active_fav_cat)
     if not fav_dir.is_dir():
         return
@@ -646,12 +672,12 @@ def update_favorite_presets(user_presets_path, comfy_active=True):
     if not master_presets_dir.is_dir():
         return
 
-    # Build a dictionary of master presets,
-    # excluding the Favorite / SDXL_Favorite subfolders
+    # Exclude all 4 Favorite subfolders from the master scan
+    excluded_fav_folders = {'Favorite', 'SDXL_Favorite', 'LowVRAM_Favorite', 'SDXL_LowVRAM_Favorite'}
     master_presets = {}
     for file_path in master_presets_dir.rglob('*'):
         if file_path.is_file():
-            if 'Favorite' in file_path.parts or 'SDXL_Favorite' in file_path.parts:
+            if any(folder in file_path.parts for folder in excluded_fav_folders):
                 continue
             master_presets[file_path.name] = file_path
 
@@ -661,8 +687,6 @@ def update_favorite_presets(user_presets_path, comfy_active=True):
             filename = user_fav_file.name
             if filename in master_presets:
                 master_file = master_presets[filename]
-                # Overwrite the outdated favourite
-                # with the master file
                 success, existed = copy_file(master_file, user_fav_file, overwrite=True)
                 if success:
                     updated_count += 1
@@ -674,12 +698,11 @@ def update_favorite_presets(user_presets_path, comfy_active=True):
 
 def clear_user_favorites(
         user_presets_path,
-        comfy_active):
-    if comfy_active:
-        source_dir = Path(user_path/f'user_presets/Favorite/')
-    else:
-        source_dir = Path(user_path/f'user_presets/SDXL_Favorite/')
-    dest_dir = Path(user_path/f'user_presets/Old Favorites')
+        comfy_active=True,
+        is_low_vram=False):
+    active_fav_cat = get_active_favorite_category(comfy_active, is_low_vram)
+    source_dir = Path(user_path / f'user_presets/{active_fav_cat}/')
+    dest_dir = Path(user_path / 'user_presets/Old Favorites')
     success = move_files_excluding(source_dir, dest_dir, '')
     return success
 
@@ -688,11 +711,12 @@ def init_preset_structure(
         init=False,
         restore_favorites=False,
         clear_favorites=False,
-        comfy_active=True):
+        comfy_active=True,
+        is_low_vram=False):
     master_presets_path = Path('masters/master_presets')
-    old_presets_path = Path(user_path/'master_presets')
+    old_presets_path = Path(user_path / 'master_presets')
     remove_dirs(old_presets_path)
-    ref_presets_path = Path(user_path/'reference_presets')
+    ref_presets_path = Path(user_path / 'reference_presets')
     remove_dirs(ref_presets_path)
     copy_dirs(master_presets_path, ref_presets_path)
 
@@ -700,38 +724,44 @@ def init_preset_structure(
     remove_dirs(working_presets_path)
     copy_dirs(master_presets_path, working_presets_path)
 
-    user_presets_path = Path(user_path/'user_presets')
+    user_presets_path = Path(user_path / 'user_presets')
     make_dir(user_presets_path)
     if init:
         replace_obsolete_categories(user_presets_path)
         init_starter_presets(
             user_presets_path,
             restore=restore_favorites,
-            arg_comfy = comfy_active)
-        update_favorite_presets(user_presets_path, comfy_active=comfy_active)
+            arg_comfy=comfy_active,
+            is_low_vram=is_low_vram)
+        update_favorite_presets(
+            user_presets_path,
+            comfy_active=comfy_active,
+            is_low_vram=is_low_vram)
     elif clear_favorites:
         clear_user_favorites(
             user_presets_path,
-            comfy_active)
+            comfy_active=comfy_active,
+            is_low_vram=is_low_vram)
 
-    # if count>0 then clear_favorites_button is Interactive:
-    if comfy_active:
-        count=count_files(Path(user_path/f'user_presets/Favorite/'))
-    else:
-        count=count_files(Path(user_path/f'user_presets/SDXL_Favorite/'))
+    # File count of the currently active favorite
+    # category determines button interactivity
+    active_fav_cat = get_active_favorite_category(comfy_active, is_low_vram)
+    count = count_files(Path(user_path / f'user_presets/{active_fav_cat}/'))
 
     copy_dir_structure(master_presets_path, user_presets_path)
     copy_dirs(user_presets_path, working_presets_path)
-    old_favourites_path = Path(working_presets_path/'Old Favorites')
+    old_favourites_path = Path(working_presets_path / 'Old Favorites')
     remove_dirs(old_favourites_path)
-    # do not announce a simple call for favourites count:
+
     if any([init, restore_favorites, clear_favorites]):
         interpret('Verified the working preset directory:', working_presets_path)
     return count
 
 
 def create_user_structure(
-    config_user_dir, arg_comfy_active):
+    config_user_dir,
+    arg_comfy_active,
+    arg_low_vram=False):
     global masters_dir, user_path
     # initialize the user directory, user_path
     interpret('[Structure] Verifying the file structure...')
@@ -798,7 +828,7 @@ def create_user_structure(
 
 
     # also initialize the Presets structure
-    init_preset_structure(init=True, comfy_active=arg_comfy_active)
+    init_preset_structure(init=True, comfy_active=arg_comfy_active, is_low_vram=arg_low_vram)
 
 
     # initialize the Styles structure

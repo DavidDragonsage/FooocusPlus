@@ -55,9 +55,10 @@ os.environ['NO_ALBUMENTATIONS_UPDATE'] = 'True'
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
-from modules.launch_requirements import is_installed, \
-    python, run_pip_url, requirements_met, windows_patch, \
-    git_clone, index_url, target_path_install, met_diff
+from modules.launch_requirements import git_clone, \
+    index_url, is_installed, met_diff, \
+    python, requirements_met, run_pip_url, \
+    target_path_install
 
 from launch_support import arch_version, \
     delete_torch_dependencies, \
@@ -68,19 +69,32 @@ from modules.launch_util import is_win32_standalone_build, \
     python_embedded_path, run, run_pip, \
     verify_installed_version, win32_root
 
-verify_installed_version('torchruntime', '2.1.0', False)
-
-windows_patch()
+# 1. Core cross-platform requirements
 requirements_file = os.environ.get('REQS_FILE', 'requirements_versions.txt')
 if requirements_met(requirements_file):
-    print('All requirements met')
+    print('Core requirements met')
 else:
-    print('Some requirements have not been met')
+    print('Some core requirements have not been met')
+
+# 2. Platform-specific requirements (Windows, Linux, macOS)
+if sys.platform == 'win32':
+    platform_reqs_file = 'requirements_windows.txt'
+elif sys.platform == 'linux':
+    platform_reqs_file = 'requirements_linux.txt'
+elif sys.platform == 'darwin':
+    platform_reqs_file = 'requirements_macos.txt'
+else:
+    platform_reqs_file = ''
+
+if platform_reqs_file and Path(platform_reqs_file).exists():
+    if requirements_met(platform_reqs_file):
+        print(f'{sys.platform.capitalize()} platform requirements met')
+    else:
+        print(f'Some {sys.platform} platform requirements have not been met')
 
 def ini_args():
     from args_manager import args
     return args
-
 
 args = ini_args()
 if not args.language.startswith('en'):
@@ -89,12 +103,6 @@ if not args.language.startswith('en'):
 from enhanced.translator import interpret
 
 interpret('Checking installed software...')
-
-patch_requirements = 'requirements_patch.txt'
-if (REINSTALL_ALL or not requirements_met(patch_requirements)) and not \
-    is_win32_standalone_build:
-        print('Updating with required patch files...')
-        run_pip(f'install -r "{patch_requirements}"', 'patching requirements')
 
 torch_ver = ''
 torch_info = ''
@@ -358,14 +366,16 @@ if common.comfy_capable == False:
 # This equivalence avoids any chance of circular errors:
 common.comfy_active = config.default_comfy_active_checkbox
 
-if common.total_vram_gb < 6:
+if common.total_vram_gb < 7:
     print()
     interpret(f'The video subsystem has only {common.total_vram_gb} GB of memory (VRAM) but FooocusPlus')
     interpret('will give you access to models that are optimized for Low VRAM systems.')
-    interpret('However, any system with less than 6 GB of VRAM will tend to be slow and unreliable.')
-    interpret('Some 4 GB VRAM cards may even be unable to generate SDXL images')
+    interpret('However, any system with less than 7 GB of VRAM will be slow and possibly unreliable.')
     if common.comfy_capable:
-        interpret('and they may or may not be able to generate images using Flux or other large models.')
+        interpret('4 GB VRAM cards may or may not be able to generate images using Flux or other large models')
+        interpret('and they may even be unable to generate SDXL images.')
+    else:
+        interpret('Some 4 GB VRAM cards may even be unable to generate SDXL images.')
 
 print()
 interpret('Initializing preset support...')
@@ -388,7 +398,7 @@ def download_models(default_model, previous_default_models, checkpoint_downloads
     return default_model, checkpoint_downloads
 
 
-if (config.default_low_vram_presets == True or common.total_vram_gb < 6) and \
+if (config.default_low_vram_presets == True or common.total_vram_gb < 7) and \
     (args.preset == 'initial' or args.preset == 'Default'):
     low_vram_preset_content = PR.get_lowVRAM_preset_content()
     if low_vram_preset_content:
@@ -403,6 +413,7 @@ else:
     PR.get_initial_preset_content()
 
 init_config_preset()
+common.preset_bar_category = PR.get_active_fav_cat()
 
 # This call prevents errors but does not
 # download models specified by the presets

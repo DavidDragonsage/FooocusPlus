@@ -71,8 +71,11 @@ def get_base_model_list(engine='Fooocus', task_method=None, for_import=False):
     # 4. For Flux engine modes:
     elif engine == 'Flux':
 
-        # We determine the GGUF state purely from the active model name to prevent timing lags
         is_gguf_mode = '.gguf' in model_lower
+        is_aio_mode = 'aio' in model_lower or 'aio' in method_lower or 'all_in_one' in method_lower
+        is_4gguf_workflow = '4gguf' in method_lower or '_4' in method_lower
+        is_hyperflux = 'hyperflux' in model_lower or '-hyp' in model_lower
+        is_schnell = 'schnell' in model_lower or 'schnell' in method_lower
 
         is_z_image = (
             any(kw in model_lower for kw in flags.Z_IMAGE_MODEL_KEYWORDS) or
@@ -85,38 +88,112 @@ def get_base_model_list(engine='Fooocus', task_method=None, for_import=False):
             any(kw in method_lower for kw in flags.TURBO_METHOD_KEYWORDS)
         )
 
-        # A. Z-Image Sub-Family (Early Return)
+        # ----------------------------------------------------
+        # A. Z-Image Sub-Family (Requirements 1 & 2)
+        # ----------------------------------------------------
         if is_z_image:
+            z_files = [f for f in base_model_list if any(k in f.lower() for k in ['z-image', 'z_image', 'z-img', 'z_img'])]
+            is_z_4gguf = is_4gguf_workflow or 'q4' in model_lower
+
             if is_turbo:
+                turbo_files = [f for f in z_files if 'turbo' in f.lower()]
                 if is_gguf_mode:
-                    # Turbo GGUF (e.g. z_image_turbo-Q8_0.gguf)
-                    return [f for f in base_model_list if 'turbo' in f.lower() and f.endswith('gguf') and ('z-image' in f.lower() or 'z_image' in f.lower())]
+                    # ZI-Turbo 4GGUF shows ONLY Q4 GGUF
+                    # (excludes Q5 and Q8)
+                    if is_z_4gguf:
+                        return [f for f in turbo_files if f.endswith('gguf') and 'q4' in f.lower()]
+                    else:
+                        return [f for f in turbo_files if f.endswith('gguf') and 'q4' not in f.lower()]
+                elif is_aio_mode:
+                    return [f for f in turbo_files if not f.endswith('gguf') and 'aio' in f.lower()]
                 else:
-                    # Turbo Safetensors (e.g. z-image-turbo-fp8-e4m3fn.safetensors)
-                    return [f for f in base_model_list if 'turbo' in f.lower() and not f.endswith('gguf') and ('z-image' in f.lower() or 'z_image' in f.lower())]
+                    return [f for f in turbo_files if not f.endswith('gguf') and 'aio' not in f.lower()]
             else:
+                base_files = [f for f in z_files if 'turbo' not in f.lower()]
                 if is_gguf_mode:
-                    # Base GGUF (e.g. z_image-Q8_0.gguf, z_image-Q5_K_M.gguf)
-                    return [f for f in base_model_list if 'turbo' not in f.lower() and f.endswith('gguf') and ('z-image' in f.lower() or 'z_image' in f.lower() or 'z-img' in f.lower() or 'z_img' in f.lower())]
+                    # ZI-Base 4GGUF shows ONLY Q4 GGUF
+                    # (excludes Q5 and Q8)
+                    if is_z_4gguf:
+                        return [f for f in base_files if f.endswith('gguf') and 'q4' in f.lower()]
+                    else:
+                        return [f for f in base_files if f.endswith('gguf') and 'q4' not in f.lower()]
+                elif is_aio_mode:
+                    return [f for f in base_files if not f.endswith('gguf') and 'aio' in f.lower()]
                 else:
-                    # Base Safetensors / FP8 (e.g. z-img_fp8-e4m3fn.safetensors)
-                    return [f for f in base_model_list if 'turbo' not in f.lower() and not f.endswith('gguf') and ('z-image' in f.lower() or 'z_image' in f.lower() or 'z-img' in f.lower() or 'z_img' in f.lower())]
+                    return [f for f in base_files if not f.endswith('gguf') and 'aio' not in f.lower()]
 
-        # B. Flux Schnell Sub-Family (Early Return)
-        if 'schnell' in model_lower or 'schnell' in method_lower:
-            if is_gguf_mode:
-                # GGUF Schnell only
-                return [f for f in base_model_list if 'schnell' in f.lower() and f.endswith('gguf')]
+        # ----------------------------------------------------
+        # B. LowVRAM / 4GGUF Flux Family (Requirement 3)
+        # ----------------------------------------------------
+        if is_4gguf_workflow and is_gguf_mode:
+            # Match 4-bit quants AND q2k
+            low_quants = ['q4_k_s', 'q4_k_m', 'q4ks', 'q4_0', 'q4_1', 'q2k', 'q2_k', 'q3k', 'q3_k']
+            low_vram_ggufs = [
+                f for f in base_model_list
+                if f.endswith('gguf')
+                and any(q in f.lower() for q in low_quants)
+                and 'z-image' not in f.lower() and 'z_image' not in f.lower()
+            ]
+
+            # HyperFlux4 shows hyperflux Diversity q4KS AND q2K
+            if is_hyperflux:
+                return [f for f in low_vram_ggufs if 'hyperflux' in f.lower() or '-hyp' in f.lower()]
             else:
-                # FP8/Standard Schnell only (exclude GGUF)
-                return [f for f in base_model_list if 'schnell' in f.lower() and not f.endswith('gguf')]
+                return [f for f in low_vram_ggufs if 'hyperflux' not in f.lower() and '-hyp' not in f.lower()]
 
-        # C. Standard Flux GGUF (excluding Schnell and Z-Image) (Early Return)
+        # ----------------------------------------------------
+        # C. Standard Flux GGUF Workflows (flux_base_gguf)
+        # ----------------------------------------------------
         if is_gguf_mode:
-            return [f for f in base_model_list if f.endswith('gguf') and 'schnell' not in f.lower() and 'z-image' not in f.lower() and 'z_image' not in f.lower()]
+            flux_ggufs = [
+                f for f in base_model_list
+                if f.endswith('gguf')
+                and 'z-image' not in f.lower() and 'z_image' not in f.lower()
+            ]
 
-        # D. Standard Flux FP8 / Safetensors (excluding Schnell, GGUF, and Z-Image) (Early Return)
-        return [f for f in base_model_list if not f.endswith('gguf') and 'schnell' not in f.lower() and 'z-image' not in f.lower() and 'z_image' not in f.lower()]
+            # Exclude Q2_K, Q3_K and Q4_K
+            # from standard GGUF workflows
+            flux_ggufs = [
+                f for f in flux_ggufs
+                if 'q2k' not in f.lower()
+                and 'q2_k' not in f.lower()
+                and 'q3k' not in f.lower()
+                and 'q3_k' not in f.lower()
+                and 'q4k' not in f.lower()
+                and 'q4_k' not in f.lower()
+            ]
+
+            # HyperFlux presets
+            if is_hyperflux:
+                # Issue 2 Fix: Distinguish HyperFlux Schnell from HyperFlux Dev
+                if is_schnell:
+                    # HyperFlux1S5 / HyperFlux1S8 show ONLY Schnell HyperFlux models
+                    return [f for f in flux_ggufs if ('hyperflux' in f.lower() or '-hyp' in f.lower()) and 'schnell' in f.lower()]
+                else:
+                    # HyperFluxFast shows ONLY Dev HyperFlux models (Diversity)
+                    return [f for f in flux_ggufs if ('hyperflux' in f.lower() or '-hyp' in f.lower()) and 'schnell' not in f.lower()]
+
+            # Standard Non-HyperFlux GGUFs
+            if is_schnell:
+                return [f for f in flux_ggufs if 'schnell' in f.lower() and 'hyperflux' not in f.lower() and '-hyp' not in f.lower()]
+            else:
+                return [f for f in flux_ggufs if 'schnell' not in f.lower() and 'hyperflux' not in f.lower() and '-hyp' not in f.lower()]
+
+        # ----------------------------------------------------
+        # D. Standard Flux FP8 / Safetensors (Non-GGUF)
+        # ----------------------------------------------------
+        safetensors_models = [
+            f for f in base_model_list
+            if not f.endswith('gguf')
+            and 'z-image' not in f.lower() and 'z_image' not in f.lower()
+        ]
+
+        # Distinguish Flux Schnell FP8 (Flux1S_FP8)
+        # from Flux Dev/Krea FP8
+        if is_schnell:
+            return [f for f in safetensors_models if 'schnell' in f.lower()]
+        else:
+            return [f for f in safetensors_models if 'schnell' not in f.lower()]
 
     # 5. For SD3x engine modes:
     elif engine == 'SD3x':

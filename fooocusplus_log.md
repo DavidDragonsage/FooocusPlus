@@ -1,3 +1,48 @@
+# 1.1.6 Optimize Flux & Z-Image
+
+* Optimized Flux & Z-Image presets
+  * replaced the "ae" VAE with UltraFlux VAE
+  * except LowVRAM 4GGUF presets use the "ae" VAE
+* Introduced Z-Image Turbo All-in-One (AIO) support
+  * uses the presets: ZI-Turbo_AIO & ZI-TurboX_AIO
+* Introduced the LowVRAM_Plus preset category
+  to hold all the new 4GGUF presets:
+  * Flux1D_4GGUF, Flux1Krea_4GGUF & Flux1S_4GGUF
+  * HyperFlux1S4 & HyperFlux4
+  * ZI-BaseX_4GGUF & ZI-Base_4GGUF
+  * ZI-TurboX_4GGUF & ZI-Turbo_4GGUF
+* Low VRAM systems are now defined as < 7 GB
+* Replaced Krea Q5_1 GGUF model with Q5_K_M GGUF
+* Favourites are always displayed in the menu bar
+  * the LowVRAM category is no longer displayed there
+* There are now four available Favourite categories:
+  * Favorite - normal VRAM, Comfy available
+  * SDXL_Favorite - normal VRAM, Comfy not available
+  * LowVRAM_Favorite - LowVram, Comfy available
+  * SDXL_LowVRAM_Favorite - LowVRAM, Comfy not available
+* replaced config.default_bar_category with
+  common.preset_bar_category
+* Debugged a Windows Triton problem causing an error msg.
+  * patched ComfyUI-KJNodes node to resolve this error
+  * Triton is not used in FooocusPlus
+* Added library lists for Windows, Linux & Mac O/S:
+  * windows_requirements.txt
+  * linux_requirements.txt
+  * macos_requirements.txt
+  * added to the original file: requirements_versions.txt
+  * uv can now be used to test all three platforms
+  * there are now no dependency errors on any platform
+* Comfy Workflow Maintenance Report:
+  * added flux_base_4gguf
+  * added ZIB_4gguf & ZIB_shift6_4gguf
+  * added ZIT_4gguf & ZIT_shift6_4gguf
+  * added ZIT_AIO & ZIT_shift6_AIO
+  * renamed flux_base_fp8 to flux_base_AIO
+* Release Date: September 16th, 2026<br/>
+* Hotfix0:
+<br/><br/>
+
+
 # 1.1.5 Comfy Discontinued for Legacy GPUs
 
 * Comfy mode is now disabled for legacy GPUs
@@ -96,7 +141,6 @@
 * introduced Z-Image Base support
 * added Z-Image GGUF support for Base & Turbo
   * added Z-Image Base presets for Q8 and Q5
-  * added an 8 step Z-Image BaseFast preset (Q8)
   * added Z-Image Turbo presets for Q8, Q5 and Q4
   * "X" presets use "ModelSamplingAuraFlow" shift 6
   * this variant increases detail on non-square images

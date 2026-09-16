@@ -212,24 +212,36 @@ def get_comfy_task(task_name, task_method, default_params, input_images, options
 
         # 1. Handle Z-IMAGE Models (Exclusive Logic)
         if is_z_model:
-            # If the preset provides a specific
-            # Z-workflow (like shift6), keep it.
-            # Otherwise, auto-assign the
-            # correct Z-workflow.
-            if not (isinstance(task_method, str) and ('ZIB' in task_method or 'ZIT' in task_method)):
+            base_model_key = f'checkpoints/{base_model}'
+
+            # Check if it is an All-In-One model (> 10 GB) or Split model
+            is_all_in_one = False
+            if common.MODELS_INFO.exists_model_key(base_model_key):
+                model_size_gb = common.MODELS_INFO.get_model_key_info(base_model_key)['size'] / (1024 * 1024 * 1024)
+                if model_size_gb > 10.0:
+                    is_all_in_one = True
+
+            if is_all_in_one:
+                # Force the All-In-One workflow
+                # (no external CLIP or base dtypes needed)
+                task_method = 'ZIT_AIO' if 'turbo' in base_model.lower() else 'ZIB_AIO'
+                comfy_params.delete_params(['clip_model', 'base_model_dtype'])
+            else:
+                # Standard Split/GGUF logic
+                if not (isinstance(task_method, str) and ('ZIB' in task_method or 'ZIT' in task_method)):
+                    if '.gguf' in base_model.lower():
+                        task_method = 'ZIT_gguf' if 'turbo' in base_model.lower() else 'ZIB_gguf'
+                    else:
+                        task_method = 'ZIT' if 'turbo' in base_model.lower() else 'ZIB'
+
+                # Resolve 'clip_model' if set to 'auto'
+                if comfy_params.params.get('clip_model') == 'auto':
+                    comfy_params.update_params({'clip_model': 'Qwen_3_4b-Q6_K.gguf'})
+
                 if '.gguf' in base_model.lower():
-                    task_method = 'ZIT_gguf' if 'turbo' in base_model.lower() else 'ZIB_gguf'
-                else:
-                    task_method = 'ZIT' if 'turbo' in base_model.lower() else 'ZIB'
-
-            # Resolve 'clip_model' if set to 'auto'
-            if comfy_params.params.get('clip_model') == 'auto':
-                comfy_params.update_params({'clip_model': 'Qwen_3_4b-Q6_K.gguf'})
-
-            if '.gguf' in base_model.lower():
-                comfy_params.delete_params(['base_model_dtype'])
-            elif comfy_params.params.get('base_model_dtype') == 'auto':
-                comfy_params.update_params({'base_model_dtype': 'fp8_e4m3fn'})
+                    comfy_params.delete_params(['base_model_dtype'])
+                elif comfy_params.params.get('base_model_dtype') == 'auto':
+                    comfy_params.update_params({'base_model_dtype': 'fp8_e4m3fn'})
 
             return ComfyTask(task_method, comfy_params)
 
@@ -257,7 +269,7 @@ def get_comfy_task(task_name, task_method, default_params, input_images, options
 
         if 'fp8' in base_model.lower() and common.MODELS_INFO.exists_model_key(base_model_key) and common.MODELS_INFO.get_model_key_info(base_model_key)['size']/(1024*1024*1024) > 15:
             if task_method == 'flux_base':
-                task_method = 'flux_base_fp8'
+                task_method = 'flux_base_AIO'
             comfy_params.delete_params(['clip_model', 'base_model_dtype'])
             return ComfyTask(task_method, comfy_params)
 

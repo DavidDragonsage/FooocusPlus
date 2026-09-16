@@ -103,9 +103,10 @@ with common.GRADIO_ROOT:
                         value=UIS.preset_no_instruction())
 
                         bar_buttons = []
-                        preset_bar_list = PR.get_presetnames_in_folder(config.default_bar_category)
+                        fav_title = interpret('Favorites', silent=True)
+                        preset_bar_list = PR.get_presetnames_in_folder(common.preset_bar_category)
                         with gr.Column(scale=0, min_width=75):
-                            real_bar_title = gr.Markdown(f'<b>{config.default_bar_category}:</b>',
+                            real_bar_title = gr.Markdown(f'<b>{fav_title}:</b>',
                             elem_id='bar_title')
                             bar_title = gr.Markdown('',
                                 elem_classes='invisible')
@@ -2135,7 +2136,7 @@ with common.GRADIO_ROOT:
                             gr.Markdown(value='Remove all Favorites except the Default and store them in "UserDir/user_presets/Old Favorites".',
                                 elem_classes='button_info2')
                         try:
-                            init_interactive=US.init_preset_structure(comfy_active=common.comfy_active)>0
+                            init_interactive = US.init_preset_structure(comfy_active=common.comfy_active, is_low_vram=config.default_low_vram_presets) > 0
                         except:
                             init_interactive=interactive=False
                         with gr.Row(elem_classes='elem_centre'):
@@ -5590,12 +5591,17 @@ with common.GRADIO_ROOT:
 
 
     preset_favorite_button.click(
-            PR.preset_favorite_modify1,
-            outputs=[preset_selection],
+            PR.preset_favorite_toggle,
+            outputs=[preset_selection, category_selection],
             queue=False, show_progress=False
         ).then(
-            PR.preset_favorite_modify2,
-            outputs=[preset_selection, category_selection],
+            UIS.refresh_nav_bars,
+            inputs=[state_topbar],
+            outputs=[preset_row] + bar_buttons,
+            queue=False, show_progress=False
+        ).then(
+            fn=lambda: gr.update(value=PR.preset_favorite_value()),
+            outputs=[preset_favorite_button],
             queue=False, show_progress=False)
 
     restore_favorites_button.click(
@@ -5608,7 +5614,12 @@ with common.GRADIO_ROOT:
             outputs=[preset_selection],
             queue=False, show_progress=False
         ).then(
-            fn=lambda: interpret_info('Restored the default favorites'),
+            UIS.refresh_nav_bars,
+            inputs=[state_topbar],
+            outputs=[preset_row] + bar_buttons,
+            queue=False, show_progress=False
+        ).then(
+            fn=lambda: interpret_info('Restored all the default favorites'),
             outputs=None)
 
     clear_favorites_button.click(
@@ -5617,8 +5628,14 @@ with common.GRADIO_ROOT:
                 clear_favorites_button],
             queue=False, show_progress=False
         ).then(
+            UIS.refresh_nav_bars,
+            inputs=[state_topbar],
+            outputs=[preset_row] + bar_buttons,
+            queue=False, show_progress=False
+        ).then(
             fn=lambda: interpret_info('Cleared all favorites except the default'),
             outputs=None)
+
 
     def notification_control(enable_notification):
         config.audio_notification = enable_notification

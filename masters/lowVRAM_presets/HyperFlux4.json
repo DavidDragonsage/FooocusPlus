@@ -1,0 +1,69 @@
+{
+    "default_engine": {
+        "backend_engine": "Flux",
+		"disvisible": ["backend_selection", "negative_prompt", "performance_selection", "refiner_model", "sharpness"],
+		"disinteractive": ["enhance_checkbox", "input_image_checkbox", "refiner_model"],
+        "backend_params": {
+            "task_method": "flux_base_4gguf",
+            "clip_model": "t5xxl_fp8_e4m3fn.safetensors"
+        }
+    },
+    "default_model": "FluxDev/hyperfluxDiversity_q4KS.gguf",
+    "default_refiner": "None",
+    "default_refiner_switch": 0.6,
+    "default_loras": [
+        [
+            false,
+            "Flux/FluxDFaeTasticDetails.safetensors",
+            0.8
+        ],
+        [
+            false,
+            "Flux/Flux_BlackColor_SaMay.safetensors",
+            0.7
+        ],
+        [
+            true,
+            "None",
+            1.0
+        ],
+        [
+            true,
+            "None",
+            1.0
+        ],
+        [
+            true,
+            "None",
+            1.0
+        ]
+    ],
+    "default_cfg_scale": 3.5,
+    "default_sample_sharpness": 2,
+    "default_sampler": "euler",
+    "default_scheduler": "simple",
+    "default_vae": "ae.safetensors",
+    "default_clip_skip": 1,
+    "default_performance": "",
+    "default_styles": [
+        "Fooocus V2"
+    ],
+    "v2_substyle": "Default",
+    "default_aspect_ratio": "0*0",
+    "default_overwrite_step": 20,
+    "checkpoint_downloads": {
+        "FluxDev/hyperfluxDiversity_q4KS.gguf": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/hyperfluxDiversity_q4KS.gguf"
+    },
+    "clip_downloads": {
+        "clip_l.safetensors": "https://huggingface.co/lllyasviel/flux_text_encoders/resolve/main/clip_l.safetensors",
+        "t5xxl_fp8_e4m3fn.safetensors": "https://huggingface.co/lllyasviel/flux_text_encoders/resolve/main/t5xxl_fp8_e4m3fn.safetensors"
+    },
+    "embeddings_downloads": {},
+    "lora_downloads": {
+        "Flux/FluxDFaeTasticDetails.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/LoRAs/FluxDFaeTasticDetails.safetensors",
+        "Flux/Flux_BlackColor_SaMay.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/LoRAs/Flux_BlackColor_SaMay.safetensors"
+    },
+    "vae_downloads": {
+        "ae.safetensors": "https://huggingface.co/lovis93/testllm/resolve/ed9cf1af7465cebca4649157f118e331cf2a084f/ae.safetensors?download=true"
+    }
+}

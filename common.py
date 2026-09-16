@@ -47,6 +47,12 @@ force_compatibility = False
 # Read by launch
 is_legacy_gpu = False
 
+# Track the current Favorites list
+# Set by launch
+# Updated by preset_resource & ui_support
+# Read by ui_support & webui
+preset_bar_category = 'Favorite'
+
 # Old NVIDIA GPU flag, PyTorch < 2.7
 # If <2.7 stores the Torch version string
 # If PyTorch => 2.7 stores "New"

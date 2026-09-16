@@ -8,7 +8,7 @@
             "clip_model": "t5xxl_fp8_e4m3fn.safetensors"
             }
     	},
-    "default_model": "FluxKrea/flux1-krea-dev-Q5_1.gguf",
+    "default_model": "FluxKrea/flux1-krea-dev-Q5_K_M.gguf",
     "default_refiner": "None",
     "default_refiner_switch": 0.6,
     "default_loras": [
@@ -42,7 +42,7 @@
     "default_sample_sharpness": 2,
     "default_sampler": "euler",
     "default_scheduler": "simple",
-    "default_vae": "ae.safetensors",
+    "default_vae": "UltraFlux.safetensors",
     "default_clip_skip": 1,
     "default_performance": "",
     "default_prompt": "",
@@ -53,7 +53,7 @@
     "default_aspect_ratio": "0*0",
     "default_overwrite_step": 20,
     "checkpoint_downloads": {
-     "FluxKrea/flux1-krea-dev-Q5_1.gguf": "https://huggingface.co/QuantStack/FLUX.1-Krea-dev-GGUF/resolve/main/flux1-krea-dev-Q5_1.gguf"
+     "FluxKrea/flux1-krea-dev-Q5_K_M.gguf": "https://huggingface.co/QuantStack/FLUX.1-Krea-dev-GGUF/resolve/main/flux1-krea-dev-Q5_K_M.gguf"
     },
     "clip_downloads": {
         "clip_l.safetensors": "https://huggingface.co/lllyasviel/flux_text_encoders/resolve/main/clip_l.safetensors",
@@ -65,6 +65,6 @@
         "Flux/AntiBlur.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/LoRAs/AntiBlur.safetensors"
     },
     "vae_downloads": {
-        "ae.safetensors": "https://huggingface.co/lovis93/testllm/resolve/ed9cf1af7465cebca4649157f118e331cf2a084f/ae.safetensors?download=true"
+        "UltraFlux.safetensors": "https://huggingface.co/Owen777/UltraFlux-v1/resolve/main/vae/diffusion_pytorch_model.safetensors?download=true"
     }
 }

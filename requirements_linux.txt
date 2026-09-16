@@ -1,0 +1,10 @@
+# FooocusPlus Linux Platform Requirements
+cmake
+cuda-python==11.7.1
+onnxruntime-gpu==1.20.0
+
+# NVIDIA ONNX acceleration wheel (pure Python)
+onnx-graphsurgeon @ https://developer.download.nvidia.com/compute/redist/onnx-graphsurgeon/onnx_graphsurgeon-0.3.27-py2.py3-none-any.whl
+
+# Pre-compiled InsightFace for Linux x86_64 (matches insightface==0.7.3 in versions.txt)
+insightface @ https://huggingface.co/iwr-redmond/linux-wheels/resolve/main/insightface-0.7.3-cp310-cp310-linux_x86_64.whl

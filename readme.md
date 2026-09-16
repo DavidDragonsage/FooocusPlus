@@ -45,7 +45,7 @@ To run FooocusPlus, you will need a computer with a graphics card capable of run
 
 While some graphics cards with 4GB of video RAM (VRAM) will work - some of them even supporting Flux - image generation may be slow or erratic. Some 4GB VRAM cards may not support image generation at all.
 
-For those systems that are capable of generating FooocusPlus images with only 4GB of VRAM, we include a unique default base model that is small and fast. In addition, FooocusPlus supports Stable Diffusion 1.5 (SD1.5), which should run in most 4GB VRAM cards.
+For those systems with less than 7GB of VRAM, we include several presets that are optimized to work with limited VRAM. In addition, FooocusPlus supports Stable Diffusion 1.5 (SD1.5), which should run in most low VRAM cards.
 
 FooocusPlus supports NVIDIA graphics cards on Windows and Linux, macOS on Silicon, and many AMD graphics cards on Linux. We also provide limited support for macOS on Intel. AMD support under Windows is coming soon.
 
