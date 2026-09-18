@@ -22,7 +22,7 @@ import modules.user_structure as US
 
 from enhanced.translator import interpret, interpret_warn
 from modules.flags import MetadataScheme, Performance, Steps, task_class_mapping, get_taskclass_by_fullname
-from modules.flags import default_class_params, scheduler_list, sampler_list, SAMPLERS, CIVITAI_NO_KARRAS
+from modules.flags import default_class_params, scheduler_list, sampler_list, SAMPLERS, CIVITAI_NO_KARRAS, default_vae
 from modules.preset_support import normalize_AR, parse_meta_from_preset, verify_sampler, verify_scheduler
 from modules.util import quote, unquote, extract_styles_from_prompt, is_json, sha256
 from modules.hash_cache import sha256_from_cache
@@ -195,6 +195,18 @@ def process_dictionary(loaded_parameter_dict, is_generating, inpaint_mode, resul
                         if Path(filename).stem == val:
                             loaded_parameter_dict[model_key] = filename
                             break
+
+        # Dynamically resolve VAE filename extensions from
+        # stems (e.g. 'sdxl_vae' -> 'sdxl_vae.safetensors')
+        for vae_key in ['vae', 'VAE']:
+            if vae_key in loaded_parameter_dict:
+                val = loaded_parameter_dict[vae_key]
+                if isinstance(val, str) and val not in ['None', 'Default (model)'] and not any(val.lower().endswith(ext) for ext in valid_extensions):
+                    for filename in getattr(loader, 'vae_filenames', []):
+                        if Path(filename).stem == val:
+                            loaded_parameter_dict[vae_key] = filename
+                            break
+
     except Exception as e:
         print(f"[MetaParser] Model resolution bypassed: {e}")
 
@@ -239,7 +251,7 @@ def process_dictionary(loaded_parameter_dict, is_generating, inpaint_mode, resul
     arg_scheduler = loaded_parameter_dict.get("scheduler")
     if arg_scheduler:
         verify_scheduler(arg_scheduler)
-    get_str('vae', 'VAE', loaded_parameter_dict, results)
+    get_vae('vae', 'VAE', loaded_parameter_dict, results)
     get_seed('seed', 'Seed', loaded_parameter_dict, results)
     get_inpaint_engine_version('inpaint_engine_version', 'Inpaint Engine Version', loaded_parameter_dict, results, inpaint_mode)
     get_inpaint_method('inpaint_method', 'Inpaint Mode', loaded_parameter_dict, results)
@@ -391,6 +403,43 @@ def get_str(key: str, fallback: str | None, source_dict: dict, results: list, de
     except:
         results.append(gr.update())
         return None
+
+
+def get_vae(key: str, fallback: str | None, source_dict: dict, results: list, default=None) -> str | None:
+    try:
+        h = source_dict.get(key, source_dict.get(fallback, source_dict.get('default_vae', default)))
+        assert isinstance(h, str)
+
+        common.MODELS_INFO.refresh_from_path()
+        current_vaes = common.MODELS_INFO.get_model_names('vae')
+
+        if h != default_vae and not any(h.lower().endswith(ext) for ext in ['.safetensors', '.pt', '.pth', '.ckpt', '.bin']):
+            for fn in current_vaes:
+                if Path(fn).stem == h:
+                    h = fn
+                    break
+
+        vae_list = list(current_vaes)
+
+        # Ensure h is in the list even if not downloaded yet
+        # This ensures that the VAE dropdown will be updated
+        if h != default_vae and h not in vae_list:
+            vae_list.append(h)
+
+        vae_list.sort(key=str.lower)
+        # Anchor 'Default (model)' at index 0
+        vae_choices = [default_vae] + vae_list
+
+#        print(f'[DEBUG get_vae] SUCCESS: h="{h}", choices={vae_choices}')
+        results.append(gr.update(choices=vae_choices, value=h))
+        return h
+    except Exception as e:
+        current_vaes = common.MODELS_INFO.get_model_names('vae')
+        vae_choices = [default_vae] + current_vaes
+        print(f'[MetaParser] get_vae failed with error: {e}, fallback choices={vae_choices}')
+        results.append(gr.update(choices=vae_choices))
+        return None
+
 
 def get_list(key: str, fallback: str | None, source_dict: dict, results: list, default=None):
     try:

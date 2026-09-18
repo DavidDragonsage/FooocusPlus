@@ -1,4 +1,4 @@
-import os
+from os import getpid
 import torch
 from pathlib import Path
 
@@ -31,6 +31,45 @@ final_refiner_unet = None
 final_refiner_vae = None
 
 loaded_ControlNets = {}
+
+
+def resolve_vae_path(vae_name: str | None) -> str | None:
+    """
+    Resolves the physical VAE file path using pathlib.Path.
+    Immune to bare stems (e.g. 'sdxl_vae' automatically resolves to 'sdxl_vae.safetensors').
+    """
+    if not vae_name or vae_name == modules.flags.default_vae:
+        return None
+
+    vae_dirs = common.path_vae if isinstance(common.path_vae, list) else [common.path_vae]
+    valid_extensions = ['.safetensors', '.pt', '.pth', '.ckpt', '.bin']
+
+    for folder in vae_dirs:
+        folder_path = Path(folder)
+
+        # 1. Direct file check
+        candidate = folder_path / vae_name
+        if candidate.is_file():
+            return str(candidate)
+
+        # 2. Defensive extension check if given a bare stem
+        for ext in valid_extensions:
+            candidate_ext = folder_path / f'{vae_name}{ext}'
+            if candidate_ext.is_file():
+                return str(candidate_ext)
+
+    # 3. Fallback to existing search utility
+    raw_path = get_file_from_folder_list(vae_name, common.path_vae)
+    if raw_path and Path(raw_path).is_file():
+        return str(raw_path)
+
+    if raw_path:
+        for ext in valid_extensions:
+            candidate_raw = Path(f'{raw_path}{ext}')
+            if candidate_raw.is_file():
+                return str(candidate_raw)
+
+    return str(raw_path) if raw_path else None
 
 
 @torch.no_grad()
@@ -68,10 +107,7 @@ def refresh_base_model(name, vae_name=None):
     global model_base
 
     filename = get_file_from_folder_list(name, common.paths_checkpoints)
-
-    vae_filename = None
-    if vae_name is not None and vae_name != modules.flags.default_vae:
-        vae_filename = get_file_from_folder_list(vae_name, common.path_vae)
+    vae_filename = resolve_vae_path(vae_name)
 
     if model_base.filename == filename and model_base.vae_filename == vae_filename:
         return
@@ -171,7 +207,7 @@ def clone_cond(conds):
     results = []
 
     for c, p in conds:
-        p = p["pooled_output"]
+        p = p['pooled_output']
 
         if isinstance(c, torch.Tensor):
             c = c.clone()
@@ -179,7 +215,7 @@ def clone_cond(conds):
         if isinstance(p, torch.Tensor):
             p = p.clone()
 
-        results.append([c, {"pooled_output": p}])
+        results.append([c, {'pooled_output': p}])
 
     return results
 
@@ -205,7 +241,7 @@ def clip_encode(texts, pool_top_k=1):
         if i < pool_top_k:
             pooled_acc += pooled
 
-    return [[torch.cat(cond_list, dim=1), {"pooled_output": pooled_acc}]]
+    return [[torch.cat(cond_list, dim=1), {'pooled_output': pooled_acc}]]
 
 
 @torch.no_grad()
@@ -219,17 +255,18 @@ def set_clip_skip(clip_skip: int):
     final_clip.clip_layer(-abs(clip_skip))
     return
 
+
 @torch.no_grad()
 @torch.inference_mode()
 def clear_all_caches():
     final_clip.fcs_cond_cache = {}
+    return
 
 
 @torch.no_grad()
 @torch.inference_mode()
 def prepare_text_encoder(async_call=True):
     if async_call:
-        # TODO: make sure that this is always called in an async way so that users cannot feel it.
         pass
     assert_model_integrity()
     ldm_patched.modules.model_management.load_models_gpu([final_clip.patcher, final_expansion.patcher])
@@ -269,17 +306,15 @@ def refresh_everything(refiner_model_name, base_model_name, loras,
     if final_expansion is None:
         final_expansion = FooocusExpansion()
 
-    # if in IC-Light mode then ensure that
-    # Fooocus V2 uses the "Unlit" substyle:
-    if common.features_tab_name=='layer' and common.features_checkbox:
-        final_expansion.update_substyle("Unlit")
+    if common.features_tab_name == 'layer' and common.features_checkbox:
+        final_expansion.update_substyle('Unlit')
     else:
-        # otherwise use the user selected substyle
         final_expansion.update_substyle(config.v2_substyle)
 
     prepare_text_encoder(async_call=True)
     clear_all_caches()
     return
+
 
 @torch.no_grad()
 @torch.inference_mode()
@@ -288,14 +323,12 @@ def reload_expansion():
     if final_expansion is None:
         final_expansion = FooocusExpansion()
 
-    # if in IC-Light mode then ensure that
-    # Fooocus V2 uses the "Unlit" substyle:
-    if common.features_tab_name=='layer' and common.features_checkbox:
-        final_expansion.update_substyle("Unlit")
+    if common.features_tab_name == 'layer' and common.features_checkbox:
+        final_expansion.update_substyle('Unlit')
     else:
-        # otherwise use the user selected substyle
         final_expansion.update_substyle(config.v2_substyle)
     return
+
 
 def free_everything():
     global model_base, model_refiner, final_unet, final_clip, final_vae, final_refiner_unet, final_refiner_vae, final_expansion, loaded_ControlNets
@@ -315,19 +348,18 @@ def free_everything():
     ldm_patched.modules.model_management.unload_and_free_everything()
     return
 
+
 if config.backend_engine == 'Fooocus':
-    # Resolve the physical path of the default model
     default_base_path = common.MODELS_INFO.get_file_path_by_name('checkpoints', loader.base_model_name)
 
-    # Only execute the startup warm-up if
-    # the model is already present on disk
     if default_base_path and Path(default_base_path).is_file():
         refresh_everything(
-            refiner_model_name= modules.config.default_refiner,
+            refiner_model_name=modules.config.default_refiner,
             base_model_name=loader.base_model_name,
             loras=get_enabled_loras(modules.config.default_loras),
             vae_name=modules.config.default_vae,
         )
+
 
 @torch.no_grad()
 @torch.inference_mode()
@@ -335,7 +367,7 @@ def vae_parse(latent):
     if final_refiner_vae is None:
         return latent
 
-    result = vae_interpose.parse(latent["samples"])
+    result = vae_interpose.parse(latent['samples'])
     return {'samples': result}
 
 
@@ -377,7 +409,7 @@ def get_candidate_vae(steps, switch, denoise=1.0, refiner_swap_method='joint'):
         if denoise > 0.9:
             return final_vae, final_refiner_vae
         else:
-            if denoise > (float(steps - switch) / float(steps)) ** 0.834:  # karras 0.834
+            if denoise > (float(steps - switch) / float(steps)) ** 0.834:
                 return final_vae, None
             else:
                 return final_refiner_vae, None
@@ -394,12 +426,11 @@ def process_diffusion(positive_cond, negative_cond, steps, switch, width, height
     assert refiner_swap_method in ['joint', 'separate', 'vae']
 
     if final_refiner_vae is not None and final_refiner_unet is not None:
-        # Refiner Use Different VAE (then it is SD15)
         if denoise > 0.9:
             refiner_swap_method = 'vae'
         else:
             refiner_swap_method = 'joint'
-            if denoise > (float(steps - switch) / float(steps)) ** 0.834:  # karras 0.834
+            if denoise > (float(steps - switch) / float(steps)) ** 0.834:
                 target_unet, target_vae, target_refiner_unet, target_refiner_vae \
                     = final_unet, final_vae, None, None
                 interpret('[Pipeline] Only use Base because of partial denoise.')
@@ -497,7 +528,7 @@ def process_diffusion(positive_cond, negative_cond, steps, switch, width, height
         decoded_latent = core.decode_vae(vae=target_model, latent_image=sampled_latent, tiled=tiled)
 
     if refiner_swap_method == 'vae':
-        modules.patch.patch_settings[os.getpid()].eps_record = 'vae'
+        modules.patch.patch_settings[getpid()].eps_record = 'vae'
 
         if modules.inpaint_worker.current_task is not None:
             modules.inpaint_worker.current_task.unswap()
@@ -535,7 +566,7 @@ def process_diffusion(positive_cond, negative_cond, steps, switch, width, height
                                   denoise=denoise)[switch:] * k_sigmas
         len_sigmas = len(sigmas) - 1
 
-        noise_mean = torch.mean(modules.patch.patch_settings[os.getpid()].eps_record, dim=1, keepdim=True)
+        noise_mean = torch.mean(modules.patch.patch_settings[getpid()].eps_record, dim=1, keepdim=True)
 
         if modules.inpaint_worker.current_task is not None:
             modules.inpaint_worker.current_task.swap()
@@ -565,5 +596,5 @@ def process_diffusion(positive_cond, negative_cond, steps, switch, width, height
         decoded_latent = core.decode_vae(vae=target_model, latent_image=sampled_latent, tiled=tiled)
 
     images = core.pytorch_to_numpy(decoded_latent)
-    modules.patch.patch_settings[os.getpid()].eps_record = None
+    modules.patch.patch_settings[getpid()].eps_record = None
     return images

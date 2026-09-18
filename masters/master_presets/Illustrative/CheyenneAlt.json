@@ -34,7 +34,7 @@
     "default_sample_sharpness": 2.0,
     "default_sampler": "dpmpp_2m",
     "default_scheduler": "karras",
-    "default_vae": "sdxl_vae.safetensors",
+    "default_vae": "Default (model)",
     "default_clip_skip": 2,
     "default_performance": "Speed",
     "default_prompt": "",
@@ -52,7 +52,5 @@
     },
     "embeddings_downloads": {},
     "lora_downloads": {},
-    "vae_downloads": {
-        "sdxl_vae.safetensors": "https://huggingface.co/madebyollin/sdxl-vae-fp16-fix/resolve/main/sdxl_vae.safetensors?download=true"
-    }
+    "vae_downloads": {}
 }

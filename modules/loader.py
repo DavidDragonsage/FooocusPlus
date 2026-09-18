@@ -312,9 +312,6 @@ def load_file_from_url(
         progress: bool = True,
         file_name: Optional[str] = None,
 ) -> str:
-    # this line traps LowVRAMdef when used as the default preset
-    if url.find('segmind-vega.safetensors') != -1:
-        return ''
 
     """Download a file from `url` into `model_dir`, using the file present if possible.
     Returns the path to the downloaded file.
@@ -380,6 +377,11 @@ def load_file_from_url(
                 interpret_info('Could not download', str(cached_file))
                 interpret_warn('It may need to be downloaded manually from', url)
                 print()
+
+        # Rescan models on disk and update loader filenames
+        # immediately after a new file downloads
+        common.MODELS_INFO.refresh_from_path()
+        update_files()
 
     return str(cached_file)
 

@@ -34,7 +34,7 @@
     "default_sample_sharpness": 2.0,
     "default_sampler": "dpmpp_2m_sde_gpu",
     "default_scheduler": "karras",
-    "default_vae": "ponyDiffusionV6XL_vae.safetensors",
+    "default_vae": "Default (model)",
     "default_clip_skip": 2,
     "default_performance": "Speed",
     "default_prompt": "",
@@ -50,7 +50,5 @@
     },
     "embeddings_downloads": {},
     "lora_downloads": {},
-    "vae_downloads": {
-        "ponyDiffusionV6XL_vae.safetensors": "https://huggingface.co/mashb1t/fav_models/resolve/main/fav/ponyDiffusionV6XL_vae.safetensors"
-    }
+    "vae_downloads": {}
 }
