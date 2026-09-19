@@ -658,21 +658,15 @@ def init_starter_presets(
 
 def update_favorite_presets(user_presets_path, comfy_active=True, is_low_vram=False):
     """
-    Scans the active Favorite folder for standard presets.
+    Scans all 4 Favorite folders for standard presets.
     If a preset with a matching filename is found in
-    masters/master_presets, it updates the user's
-    favourite copy with the master version to keep it current.
+    masters/master_presets, it updates the user's favorite
+    copy with the master version to keep it current.
     """
-    active_fav_cat = get_active_favorite_category(comfy_active, is_low_vram)
-    fav_dir = Path(user_presets_path / active_fav_cat)
-    if not fav_dir.is_dir():
-        return
-
     master_presets_dir = Path('masters/master_presets')
     if not master_presets_dir.is_dir():
         return
 
-    # Exclude all 4 Favorite subfolders from the master scan
     excluded_fav_folders = {'Favorite', 'SDXL_Favorite', 'LowVRAM_Favorite', 'SDXL_LowVRAM_Favorite'}
     master_presets = {}
     for file_path in master_presets_dir.rglob('*'):
@@ -682,14 +676,21 @@ def update_favorite_presets(user_presets_path, comfy_active=True, is_low_vram=Fa
             master_presets[file_path.name] = file_path
 
     updated_count = 0
-    for user_fav_file in fav_dir.iterdir():
-        if user_fav_file.is_file():
-            filename = user_fav_file.name
-            if filename in master_presets:
-                master_file = master_presets[filename]
-                success, existed = copy_file(master_file, user_fav_file, overwrite=True)
-                if success:
-                    updated_count += 1
+    # Scan and synchronize all 4 Favorite folders
+    # in user_presets
+    for fav_cat in excluded_fav_folders:
+        fav_dir = Path(user_presets_path / fav_cat)
+        if not fav_dir.is_dir():
+            continue
+
+        for user_fav_file in fav_dir.iterdir():
+            if user_fav_file.is_file():
+                filename = user_fav_file.name
+                if filename in master_presets:
+                    master_file = master_presets[filename]
+                    success, existed = copy_file(master_file, user_fav_file, overwrite=True)
+                    if success:
+                        updated_count += 1
 
     if updated_count > 0:
         interpret('Synchronized the favorite presets with the masters')

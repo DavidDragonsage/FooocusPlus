@@ -4968,7 +4968,12 @@ with common.GRADIO_ROOT:
         engine = state_params.get('engine', 'Fooocus')
         task_method = state_params.get('task_method', None)
         config.available_presets = PR.get_preset_list()
-        model_filenames, lora_filenames, vae_filenames = loader.update_files(engine, task_method)
+
+        # 1. Update checkpoints and LoRAs
+        model_filenames, lora_filenames, _ = loader.update_files(engine, task_method)
+
+        # 2. Update VAEs using the filtered list
+        vae_filenames = loader.get_vae_list(engine, task_method)
 
         results = [gr.update(
             choices=substyle_choices, value='Default')]

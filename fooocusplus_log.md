@@ -39,6 +39,7 @@
   * added ZIT_AIO & ZIT_shift6_AIO
   * renamed flux_base_fp8 to flux_base_AIO
 * Release Date: September 15th, 2026<br/>
+* Hotfix2: Debugged menu bar favourite category selection
 * Hotfix1: Debugged auto-download for 4GB_Default preset
   * the Cheyenne & Pony presets now use the built-in VAE
 <br/><br/>

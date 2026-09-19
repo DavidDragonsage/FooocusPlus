@@ -30,6 +30,16 @@ favorite_category = 'Favorite'
 revert_fooocus = False
 
 
+def is_low_vram_active() -> bool:
+    return getattr(config, 'default_low_vram_presets', False) or (getattr(common, 'total_vram_gb', 8.0) < 7.0)
+
+def get_active_fav_cat() -> str:
+    return US.get_active_favorite_category(common.comfy_active, is_low_vram_active())
+
+def get_default_preset_name() -> str:
+    return '4GB_Default' if is_low_vram_active() else 'Default'
+
+
 def modernize_legacy_metadata(metadata):
     """
     Universal Technical Bridge for Legacy Logs.
@@ -125,40 +135,52 @@ def find_preset_file(preset):
     if preset_name_path.suffix != 'json':
         preset_name_path = Path(preset_name_path.with_suffix(preset_name_path.suffix + '.json'))
 
-    # Dynamically map the target favourites
-    # path using the active category selection
+    active_fav = get_active_fav_cat()
+
+    # 1. Check current category selection first
     if category_selection in ALL_FAV_CATEGORIES:
         favorite_path = Path(presets_path / category_selection)
         preset_file_path = US.find_file_path(favorite_path, preset_name_path)
 
-    if not preset_file_path or category_selection not in ALL_FAV_CATEGORIES:
-        active_fav_cat = get_active_fav_cat()
-        # Fallback: search overall presets, excluding the active favourite directory
-        preset_file_path = US.find_file_path(presets_path, preset_name_path, excluding_dir=active_fav_cat)
-        if not preset_file_path:
-            if preset not in ['Default', '4GB_Default']:
-                interpret('[Preset] Could not find the preset:', preset)
-                print()
-            return {}
+    # 2. Check the active favorite category for this system mode
+    if not preset_file_path:
+        favorite_path = Path(presets_path / active_fav)
+        preset_file_path = US.find_file_path(favorite_path, preset_name_path)
 
-    # used to guarantee use of SD1.5 AR template:
+    # 3. Fallback: Search general preset folders, ignoring ALL favorite folders
+    if not preset_file_path:
+        for candidate_file in Path(presets_path).rglob(preset_name_path.name):
+            if any(fav in candidate_file.parts for fav in ALL_FAV_CATEGORIES):
+                continue
+            preset_file_path = candidate_file.resolve()
+            break
+
+    if not preset_file_path:
+        if preset not in ['Default', '4GB_Default']:
+            interpret('[Preset] Could not find the preset:', preset)
+            print()
+        return {}
+
     common.preset_file_path = preset_file_path
     return preset_file_path
 
 
 def find_preset_category(preset):
+    active_fav = get_active_fav_cat()
     try:
         preset_file = Path(find_preset_file(preset))
         if preset_file:
-            if category_selection == (preset_file.parent).name:
+            parent_name = preset_file.parent.name
+            # If the file belongs to any favorite category, normalize to the active favorite
+            if parent_name in ALL_FAV_CATEGORIES:
+                return active_fav
+            if category_selection == parent_name:
                 return category_selection
-            else:
-                preset_category = (preset_file.parent).name
+            return parent_name
         else:
-            preset_category = get_active_fav_cat()
+            return active_fav
     except Exception:
-        preset_category = get_active_fav_cat()
-    return preset_category
+        return active_fav
 
 category_selection = find_preset_category(current_preset)
 
@@ -693,9 +715,13 @@ def bar_button_change(bar_button, state_params):
     state_params.update({'bar_button': bar_button})
     current_preset = bar_button
     args.args.preset = current_preset
-    category_selection = find_preset_category(current_preset)
+
+    # Bar buttons always belong to the active favorite category
+    category_selection = get_active_fav_cat()
+
     return state_params, gr.update(value=category_selection),\
         gr.update(value=current_preset)
+
 
 def get_initial_preset_content():
     global current_preset, category_selection
@@ -737,16 +763,6 @@ def get_lowVRAM_preset_content():
         config.default_low_vram_presets = False
         interpret('[Preset] The low VRAM 4GB_Default preset is is not available')
     return json_content
-
-
-def is_low_vram_active() -> bool:
-    return getattr(config, 'default_low_vram_presets', False) or (getattr(common, 'total_vram_gb', 8.0) < 7.0)
-
-def get_active_fav_cat() -> str:
-    return US.get_active_favorite_category(common.comfy_active, is_low_vram_active())
-
-def get_default_preset_name() -> str:
-    return '4GB_Default' if is_low_vram_active() else 'Default'
 
 
 def preset_favorite_toggle():

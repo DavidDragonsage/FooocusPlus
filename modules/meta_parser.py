@@ -407,12 +407,35 @@ def get_str(key: str, fallback: str | None, source_dict: dict, results: list, de
 
 def get_vae(key: str, fallback: str | None, source_dict: dict, results: list, default=None) -> str | None:
     try:
+        # Safe extraction of nested dictionaries (immune to None values)
+        engine_dict = (source_dict.get('engine') or {}) if isinstance(source_dict, dict) else {}
+        backend_params = (engine_dict.get('backend_params') or {}) if isinstance(engine_dict, dict) else {}
+        default_engine = (getattr(common, 'default_engine', {}) or {})
+        default_backend_params = (default_engine.get('backend_params') or {}) if isinstance(default_engine, dict) else {}
+
+        raw_engine = (
+            source_dict.get('Backend Engine')
+            or source_dict.get('backend_engine')
+            or engine_dict.get('backend_engine')
+            or default_engine.get('backend_engine')
+            or 'Fooocus'
+        )
+        task_method = (
+            source_dict.get('task_method')
+            or source_dict.get('Workflow')
+            or backend_params.get('task_method')
+            or default_backend_params.get('task_method')
+        )
+
+        # 1. Extract requested VAE; fallback safely to default_vae if missing
         h = source_dict.get(key, source_dict.get(fallback, source_dict.get('default_vae', default)))
-        assert isinstance(h, str)
+        if not h or not isinstance(h, str):
+            h = default_vae
 
         common.MODELS_INFO.refresh_from_path()
-        current_vaes = common.MODELS_INFO.get_model_names('vae')
+        current_vaes = loader.get_vae_list(raw_engine, task_method)
 
+        # If h is a bare stem, match it to the real file on disk
         if h != default_vae and not any(h.lower().endswith(ext) for ext in ['.safetensors', '.pt', '.pth', '.ckpt', '.bin']):
             for fn in current_vaes:
                 if Path(fn).stem == h:
@@ -420,25 +443,30 @@ def get_vae(key: str, fallback: str | None, source_dict: dict, results: list, de
                     break
 
         vae_list = list(current_vaes)
-
-        # Ensure h is in the list even if not downloaded yet
-        # This ensures that the VAE dropdown will be updated
         if h != default_vae and h not in vae_list:
             vae_list.append(h)
 
         vae_list.sort(key=str.lower)
-        # Anchor 'Default (model)' at index 0
-        vae_choices = [default_vae] + vae_list
 
-#        print(f'[DEBUG get_vae] SUCCESS: h="{h}", choices={vae_choices}')
+        engine_str = str(raw_engine).lower()
+        method_str = str(task_method).lower()
+        is_flux_split = 'flux' in engine_str and ('aio' not in method_str and 'all_in_one' not in method_str)
+        is_sd3_split = 'sd3' in engine_str and ('gguf' in method_str)
+
+        if is_flux_split or is_sd3_split:
+            vae_choices = vae_list
+        else:
+            vae_choices = [default_vae] + vae_list
+
         results.append(gr.update(choices=vae_choices, value=h))
         return h
+
     except Exception as e:
-        current_vaes = common.MODELS_INFO.get_model_names('vae')
-        vae_choices = [default_vae] + current_vaes
-        print(f'[MetaParser] get_vae failed with error: {e}, fallback choices={vae_choices}')
-        results.append(gr.update(choices=vae_choices))
-        return None
+        # Fallback must ALWAYS use filtered get_vae_list, never dump raw MODELS_INFO
+        safe_engine = raw_engine if 'raw_engine' in locals() else 'Fooocus'
+        current_vaes = loader.get_vae_list(safe_engine)
+        results.append(gr.update(choices=[default_vae] + current_vaes, value=default_vae))
+        return default_vae
 
 
 def get_list(key: str, fallback: str | None, source_dict: dict, results: list, default=None):

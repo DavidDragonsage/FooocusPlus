@@ -290,16 +290,74 @@ def get_lora_model_list(engine='Fooocus', task_method=None, for_import=False) ->
     return raw_loras
 
 
+def get_vae_list(engine='Fooocus', task_method=None) -> list:
+    global base_model_name
+
+    raw_vaes = common.MODELS_INFO.get_model_names('vae')
+    model_lower = base_model_name.lower() if base_model_name else ''
+    method_lower = str(task_method).lower() if task_method else ''
+    engine_lower = str(engine).lower()
+
+    is_aio = 'aio' in method_lower or 'all_in_one' in method_lower or 'aio' in model_lower
+    is_gguf = 'gguf' in method_lower or '.gguf' in model_lower
+
+    def is_flux_vae(name):
+        n = Path(name).name.lower()
+        return 'flux' in n or 'ultraflux' in n or n.startswith('ae.') or 'z-image' in n or 'z_image' in n
+
+    def is_sd3_vae(name):
+        n = Path(name).name.lower()
+        return 'sd3' in n
+
+    def is_sd15_vae(name):
+        n = Path(name).name.lower()
+        p = str(name).lower()
+        if 'sdxl' in n or 'xl' in n or 'pony' in n:
+            return False
+        keywords = [
+            'sd15', 'sd1.5', 'sd1-5', 'v1-5', '1.5',
+            'mse', 'ema', '560000', '840000',
+            'kl-f8', 'clearvae', 'blessed', 'orangemix', 'anything'
+        ]
+        return any(k in n for k in keywords) or 'sd1.5' in p or 'sd15' in p
+
+    def is_sdxl_vae(name):
+        return not (is_flux_vae(name) or is_sd3_vae(name) or is_sd15_vae(name))
+
+    # 1. Diffusers Pipelines (Kolors & HyDiT use internal VAEs only)
+    if 'kolors' in engine_lower or 'hydit' in engine_lower:
+        return []
+
+    # 2. SD3.5 Engine
+    if 'sd3' in engine_lower:
+        # AIO safetensors uses internal VAE; GGUF uses external SD3 VAE
+        if not is_gguf:
+            return []
+        return [f for f in raw_vaes if is_sd3_vae(f)]
+
+    # 3. Flux / Z-Image Engine
+    if 'flux' in engine_lower:
+        # AIO workflows use embedded VAE only
+        if is_aio:
+            return []
+        return [f for f in raw_vaes if is_flux_vae(f)]
+
+    # 4. SD1.5 Mode
+    if 'sd1' in engine_lower or 'sd1.5' in model_lower or 'sd15' in method_lower:
+        return [f for f in raw_vaes if is_sd15_vae(f)]
+
+    # 5. Standard SDXL
+    return [f for f in raw_vaes if is_sdxl_vae(f)]
+
+
 def update_files(engine='Fooocus', task_method=None):
-    # called by the webui "Refresh All Files" button
-    # and by launch.py
     global model_filenames, lora_filenames, \
         path_wildcards, vae_filenames, \
         wildcard_filenames
     common.MODELS_INFO.refresh_from_path()
     model_filenames = get_base_model_list(engine, task_method)
     lora_filenames = get_lora_model_list(engine, task_method)
-    vae_filenames = common.MODELS_INFO.get_model_names('vae')
+    vae_filenames = get_vae_list(engine, task_method)
     wildcard_filenames = US.list_files_by_patterns(path_wildcards, ['*.txt'])
     return model_filenames, lora_filenames, vae_filenames
 
