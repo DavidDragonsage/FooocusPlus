@@ -43,6 +43,7 @@
     "default_sampler": "euler",
     "default_scheduler": "simple",
 	"default_vae": "UltraFlux.safetensors",
+    "default_vae_sharpness": 0.0,
     "default_clip_skip": 1,
     "default_performance": "",
     "default_styles": [
@@ -55,9 +56,5 @@
         "Z-Image/z-image-turbo-fp8-e4m3fn.safetensors": "https://huggingface.co/T5B/Z-Image-Turbo-FP8/resolve/main/z-image-turbo-fp8-e4m3fn.safetensors?download=true"
     },
     "clip_downloads": {"Qwen_3_4b-Q6_K.gguf": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/Qwen_3_4b-Q6_K.gguf"},
-    "lora_downloads": {},
-    "vae_downloads": {
-        "UltraFlux.safetensors": "https://huggingface.co/Owen777/UltraFlux-v1/resolve/main/vae/diffusion_pytorch_model.safetensors?download=true"
-    },
-    "default_inpaint_engine": {}
+    "lora_downloads": {}
 }

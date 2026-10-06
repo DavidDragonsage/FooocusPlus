@@ -1,3 +1,55 @@
+# 1.1.7 Introduce Advanced VAE Control
+
+* Z-Image AIO presets now override the built-in VAE
+  * the UltraFlux VAE noticeably improves AIO quality
+* Eliminated the UltraFlux VAE white & ragged borders
+* Improved VAE dropdown filtering
+* Moved the dropdown to the new VAE Control tab
+  * located in the Features section
+* Upgraded all Flux/Z-Image 4GGUF Low VRAM presets to
+  use the UltraFlux VAE
+* Added these Flux/Z-Image VAEs:
+  * Standard | ae.safetensors
+  * Greyscale | UltraFlux_greyscale_vae_FP.safetensors
+  * HighRes | UltraFlux.safetensors
+  * Sepia | UltraFlux_sepia_vae_FP.safetensors
+* Added these SD1.5 VAEs in addition to Default (model):
+  * Anime | kl-f8-anime2.vae.safetensors
+  * Clear | ClearVAE_V2.3_fp16.safetensors
+  * Greyscale | sd15_greyscale_vae_FP.safetensors
+  * SAI | vae-ft-mse-840000-ema-pruned.safetensors
+  * Sepia | sd15_sepia_vae_FP.safetensors
+* Added these SD3.5 VAEs:
+  * Greyscale | sd3x_greyscale_vae_FP.safetensors
+  * Sepia | sd3x_sepia_vae_FP.safetensors
+  * Standard | sd3x_fp16.vae.safetensors
+* Added these SDXL VAEs in addition to Default (model):
+  * Bright | toonEffectHyperColor_ultrabright.safetensors
+  * Greyscale | sdxl_greyscale_vae_FP.safetensors
+  * Natural | sdxlNaturalSkintone_bf16.safetensors
+  * Night | nightPhotoHDR_sdxlBASE.safetensors
+  * Sepia | sdxl_sepia_vae_FP.safetensors
+  * Soft | softFastVAESDXLPONY_v10.safetensors
+  * Toon | toonEffectHyperColor_toonEffectVAE.safetensors
+  * Warm | hdrEffectVAE_v3BF16.safetensors
+* Replaced config.default_vae with common.current_vae
+* Introduced the VAE Softness/Sharpness slider control
+  * VAE Sharpness is saved and loaded from metadata
+  * presets can specify the default VAE sharpness
+* Added the SD1.5_DreamShaper preset (Dreamshaper_8)
+* Comfy Node Maintenance Report:
+  * Renamed model_clone_logic.py to FooocusPlus.py
+  * Added VAESharpnessPatch to FooocusPlus.py
+  * Debugged ModelPristineReset when used with AIO presets
+* Comfy Workflow Maintenance Report:
+  * Removed all 4GGUF workflows.
+    With the standardization on the UltraFlux VAE
+    they are now redundant.
+* Release Date: October 6th, 2026<br/>
+* Hotfix0:
+<br/><br/>
+
+
 # 1.1.6 Optimize Flux & Z-Image
 
 * Optimized Flux & Z-Image presets
@@ -18,11 +70,11 @@
 * There are now four available Favourite categories:
   * Favorite - normal VRAM, Comfy available
   * SDXL_Favorite - normal VRAM, Comfy not available
-  * LowVRAM_Favorite - LowVram, Comfy available
+  * LowVRAM_Favorite - LowVRAM, Comfy available
   * SDXL_LowVRAM_Favorite - LowVRAM, Comfy not available
 * replaced config.default_bar_category with
   common.preset_bar_category
-* Debugged a Windows Triton problem causing an error msg.
+* Debugged a Windows Triton problem causing an error msg
   * patched ComfyUI-KJNodes node to resolve this error
   * Triton is not used in FooocusPlus
 * Added library lists for Windows, Linux & Mac O/S:

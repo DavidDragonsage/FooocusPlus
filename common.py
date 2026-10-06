@@ -94,6 +94,16 @@ features_tab_name = 'edit'
 # updated by webui, read by async_worker:
 features_checkbox = False
 
+# Set by webui
+# Read by comfyclient, default_pipeline,
+# meta_parser, async_worker,
+# preset_resource and preset_support
+current_vae = 'Default (model)'
+
+# Set by webui
+# Read by async_worker
+vae_sharpness = 0.0
+
 # The image buffer collection:
 # stored and cleared by webui
 # and/or ui_support,

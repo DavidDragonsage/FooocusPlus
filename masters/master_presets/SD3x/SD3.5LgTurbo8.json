@@ -37,6 +37,7 @@
     "default_sampler": "dpmpp_2m",
     "default_scheduler": "sgm_uniform",
     "default_vae": "sd3x_fp16.vae.safetensors",
+    "default_vae_sharpness": 0.0,
     "default_clip_skip": 1,
     "default_performance": "",
     "default_styles": [
@@ -55,8 +56,5 @@
         "t5xxl_fp8_e4m3fn.safetensors": "https://huggingface.co/lllyasviel/flux_text_encoders/resolve/main/t5xxl_fp8_e4m3fn.safetensors"
     },
     "embeddings_downloads": {},
-    "lora_downloads": {},
-    "vae_downloads": {
-        "sd3x_fp16.vae.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/sd3x_fp16.vae.safetensors"
-    }
+    "lora_downloads": {}
 }

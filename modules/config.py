@@ -707,12 +707,6 @@ default_scheduler = get_config_item_or_set_default(
     validator=lambda x: x in flags.scheduler_list if backend_engine == 'Fooocus' else flags.comfy_scheduler_list,
     expected_type=str
 )
-default_vae = get_config_item_or_set_default(
-    key='default_vae',
-    default_value=flags.default_vae,
-    validator=lambda x: isinstance(x, str),
-    expected_type=str
-)
 default_clip_skip = get_config_item_or_set_default(
     key='default_clip_skip',
     default_value=2,
@@ -1048,6 +1042,8 @@ possible_preset_keys = {
     "lora_downloads": "lora_downloads",
     "vae_downloads": "vae_downloads",
     "default_vae": "vae",
+    'default_vae_sharpness': "vae_sharpness",
+
     # "default_inpaint_method": "inpaint_method"
     # disabled so inpaint mode doesn't refresh after every preset change
     "default_inpaint_engine_version": "inpaint_engine_version",

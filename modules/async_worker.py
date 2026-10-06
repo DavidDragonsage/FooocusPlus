@@ -230,7 +230,8 @@ class AsyncTask:
 
         self.sampler_name = config.default_sampler
         self.scheduler_name = config.default_scheduler
-        self.vae_name = config.default_vae
+        self.vae_name = common.current_vae
+        self.vae_sharpness = getattr(common, 'vae_sharpness', 0.0)
 
         self.overwrite_step = config.default_overwrite_step
         self.overwrite_switch = config.default_overwrite_switch
@@ -533,6 +534,8 @@ def worker():
                 steps=steps,
                 denoise=denoising_strength,
                 seed=task['task_seed'],
+                vae_name=getattr(async_task, 'vae_name', None),
+                vae_sharpness=getattr(async_task, 'vae_sharpness', 0.0)
                 )
             default_params.update(async_task.params_backend)
             if async_task.layer_input_image is None:
@@ -544,8 +547,14 @@ def worker():
                 comfy_task = get_comfy_task(async_task.task_name, async_task.task_method,
                         default_params, input_images, options)
                 imgs = comfypipeline.process_flow(comfy_task.name, comfy_task.params, comfy_task.images, callback=callback)
+                # Thread-safe metadata sync:
+                # Read the task's private params
+                actual_vae = comfy_task.params.params.get('vae_name')
+                if actual_vae and actual_vae != 'Default (model)':
+                    async_task.vae_name = actual_vae
             except ValueError as e:
-                interpret('Task Error:', 'Comfy ' + e)
+                interpret('Task Error:', 'Comfy')
+                interpret(str(e))
                 empty_path = [np.zeros((width, height), dtype=np.uint8)]
                 imgs = empty_path
                 current_progress = int(base_progress + (100 - preparation_steps) / float(all_steps) * steps)
@@ -588,8 +597,14 @@ def worker():
                 tiled=tiled,
                 cfg_scale=async_task.cfg_scale,
                 refiner_swap_method=async_task.refiner_swap_method,
-                disable_preview=async_task.disable_preview
+                disable_preview=async_task.disable_preview,
+                vae_sharpness=async_task.vae_sharpness
             )
+            # Thread-safe metadata sync:
+            # Read directly from the loaded model in VRAM
+            if pipeline.model_base.vae_filename is not None:
+                async_task.vae_name = Path(pipeline.model_base.vae_filename).name
+
             del positive_cond, negative_cond  # Save memory
             if inpaint_worker.current_task is not None:
                 imgs = [inpaint_worker.current_task.post_process(x) for x in imgs]
@@ -776,11 +791,13 @@ def worker():
 
             d.append(('Guidance Scale', 'guidance_scale', async_task.cfg_scale))
             if async_task.task_class == 'Fooocus':
-                d.append(('Sharpness', 'sharpness', async_task.sharpness))
+                d.append(('Sampling Sharpness', 'sharpness', async_task.sharpness))
 
             d.append(('Sampler', 'sampler', async_task.sampler_name))
             d.append(('Scheduler', 'scheduler', async_task.scheduler_name))
             d.append(('VAE', 'vae', async_task.vae_name))
+            d.append(('VAE Sharpness', 'vae_sharpness', async_task.vae_sharpness))
+
             d.append(('CLIP Skip', 'clip_skip', async_task.clip_skip))
 
             if modules.patch.patch_settings[pid].adaptive_cfg != config.default_cfg_tsnr:
@@ -1779,10 +1796,40 @@ def worker():
                     checkpoint_downloads, embeddings_downloads,
                     lora_downloads, vae_downloads, clip_downloads
                 )
+                # Rescan disk immediately so newly
+                # downloaded preset files are indexed
+                common.MODELS_INFO.refresh_from_path()
             except Exception as e:
-                interpret(f'[Worker] Warning: Preset lazy downloader failed: {e}')
-        # -----------------------------------
+                interpret(f'[Worker] Warning: Preset lazy downloader failed:', e)
 
+        # --- ON-DEMAND CURATED VAE DOWNLOADER ---
+        # Automatically downloads missing curated VAEs
+        # selected in the VAE Profile dropdown
+        if async_task.vae_name and async_task.vae_name != 'Default (model)':
+            clean_vae = flags.extract_vae_filename(async_task.vae_name)
+            # Sanitize the task's VAE name so all downstream
+            # pipelines receive the clean filename
+            async_task.vae_name = clean_vae
+
+            vae_disk_path = Path(common.path_vae) / clean_vae
+            if not vae_disk_path.is_file():
+                catalog = {**flags.SDXL_VAES, **flags.SD15_VAES, **flags.FLUX_VAES}
+                download_url = None
+                for label, url in catalog.items():
+                    if flags.extract_vae_filename(label) == clean_vae:
+                        download_url = url
+                        break
+
+                if download_url:
+                    down_msg = interpret('Downloading VAE profile...', silent=True)
+                    async_task.yields.append(['preview', (1, down_msg, None)])
+                    loader.load_file_from_url(
+                        url=download_url,
+                        model_dir=str(Path(common.path_vae)),
+                        file_name=clean_vae
+                    )
+                    common.MODELS_INFO.refresh_from_path()
+        # ----------------------------------------
 
         model_management.print_memory_info()
         interpret(f'[Worker] Task Class: {async_task.task_class}, Task Name: {async_task.task_name}, Workflow: {async_task.task_method}')
@@ -1866,9 +1913,10 @@ def worker():
         print()
         interpret('[Worker] Resolution =', async_task.aspect_ratios_selection)
         interpret('[Worker] Adaptive CFG =', async_task.adaptive_cfg)
+        interpret('[Worker] Sampling Sharpness =', async_task.sharpness)
         interpret('[Worker] VAE =', async_task.vae_name)
+        interpret('[Worker] VAE Sharpness =', async_task.vae_sharpness)
         interpret('[Worker] CLIP Skip =', async_task.clip_skip)
-        interpret('[Worker] Sharpness =', async_task.sharpness)
         interpret('[Worker] ControlNet Softness =', async_task.controlnet_softness)
         interpret(f'[Worker] ADM Scale =', f'{async_task.adm_scaler_positive}:{async_task.adm_scaler_negative}:{async_task.adm_scaler_end}')
         interpret('[Worker] Seed =', async_task.seed)

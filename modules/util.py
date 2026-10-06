@@ -7,13 +7,14 @@ import random
 import math
 import os
 import re
+import struct
 import sys
 import torch
-import common
 from pathlib import Path
 from PIL import Image
 from typing import List, Tuple, AnyStr, NamedTuple
 
+import common
 import modules.config as config
 import modules.loader as loader
 import modules.sdxl_styles
@@ -686,3 +687,49 @@ def get_image_size_info(image: np.ndarray, aspect_ratios: list) -> str:
         return size_info
     except Exception as e:
         return f'Error reading image: {e}'
+
+
+def apply_optical_sharpness(img: np.ndarray, sharpness: float) -> np.ndarray:
+    """
+    Applies optical micro-contrast sharpening or dreamy soft-focus bloom
+    directly to the decoded image array exiting the VAE.
+    - Positive values (+0.1 to +0.8): Enhances edge clarity and micro-textures.
+    - Negative values (-0.1 to -0.8): Creates a dreamy, luminous glamour glow.
+    """
+    if sharpness == 0.0 or not isinstance(img, np.ndarray) or img.ndim != 3:
+        return img
+
+    img_float = img.astype(np.float32)
+
+    # 1. Isolate high-frequency optical details
+    # using a fast Gaussian filter
+    blurred = cv2.GaussianBlur(img_float, (0, 0), sigmaX=2.0, sigmaY=2.0)
+    detail = img_float - blurred
+
+    # 2. Scale the detail layer (1.5 multiplier
+    # provides a responsive, intuitive slider feel)
+    sharpened = img_float + (sharpness * 1.5) * detail
+
+    return np.clip(sharpened, 0, 255).astype(np.uint8)
+
+
+def has_embedded_vae(file_path: Path | str) -> bool:
+    """
+    Lightning-fast check (< 2ms) of a .safetensors header.
+    Returns False if the checkpoint was pruned and lacks a built-in VAE.
+    """
+    p = Path(file_path)
+    if not p.is_file():
+        return True
+    if p.suffix.lower() == '.safetensors':
+        try:
+            with open(p, 'rb') as f:
+                header_size = struct.unpack('<Q', f.read(8))[0]
+                # Read up to 500KB of header to check for VAE keys
+                read_len = min(header_size, 500000)
+                header_chunk = f.read(read_len).decode('utf-8', errors='ignore')
+                return 'first_stage_model.' in header_chunk
+        except Exception:
+            print(f'[DEBUG has_embedded_vae] Error reading header: {e}')
+            return True
+    return True

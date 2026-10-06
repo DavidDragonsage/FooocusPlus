@@ -35,6 +35,7 @@
     "default_sampler": "dpmpp_2m_sde_gpu",
     "default_scheduler": "karras",
     "default_vae": "Default (model)",
+    "default_vae_sharpness": 0.0,
     "default_clip_skip": 2,
     "default_performance": "Speed",
     "default_prompt": "",

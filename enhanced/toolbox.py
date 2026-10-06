@@ -472,6 +472,7 @@ def save_preset(*args):
     scheduler_name = args.pop()
     scheduler_name = config.default_scheduler
     vae_name = args.pop()
+    vae_sharpness = common.vae_sharpness
     seed_random = args.pop()
     image_seed = args.pop()
     inpaint_engine = args.pop()
@@ -528,6 +529,7 @@ def save_preset(*args):
         preset["lora_downloads"] = {}
         preset["vae_downloads"] = {}
         preset["default_vae"] = vae_name
+        preset["default_vae_sharpness"] = vae_sharpenss
         preset["default_inpaint_engine"] = {} # "inpaint_engine" causes junk to be added
 
         path_presets = Path('presets')

@@ -15,6 +15,7 @@ import enhanced.version
 import modules.aspect_ratios as AR
 import modules.config as config
 import modules.constants as constants
+import modules.flags as flags
 import modules.loader as loader
 import modules.preset_resource as PR
 import modules.sdxl_styles
@@ -78,7 +79,7 @@ def switch_layout_template(presetdata: dict | str, state_params, preset_url=''):
     sampler_list = enginedata_dict.get('available_sampler_name', default_params.get('available_sampler_name', default_class_params['Fooocus']['available_sampler_name']))
     scheduler_list = enginedata_dict.get('available_scheduler_name', default_params.get('available_scheduler_name', default_class_params['Fooocus']['available_scheduler_name']))
 
-    params_backend  = enginedata_dict.get('backend_params', modules.flags.get_engine_default_backend_params(template_engine))
+    params_backend  = enginedata_dict.get('backend_params', flags.get_engine_default_backend_params(template_engine))
     params_backend.update({'backend_engine': template_engine})
 
     # Safe Fallback: Check both 'task_method' and
@@ -130,22 +131,30 @@ def switch_layout_template(presetdata: dict | str, state_params, preset_url=''):
     return results
 
 
-def get_sharpness(key: str, fallback: str | None, source_dict: dict, results: list, default=None) -> None:
+def get_sampling_sharpness(source_dict: dict, results: list, default=None) -> None:
     """
-    Modular helper to parse the sharpness parameter and dynamically manage
-    its UI visibility based on whether the active engine is Comfy-based.
-    Supports both dynamic preset changes and raw log metadata imports.
+    Modular helper to parse Sampling Sharpness
+    (with legacy 'Sharpness' fallback)
+    and dynamically manage its UI visibility
+    based on whether the active engine is Comfy-based.
+    Supports both dynamic preset changes
+    and raw log metadata imports.
     """
     try:
-        # 1. Attempt to extract and convert the sharpness value
-        h = source_dict.get(key, source_dict.get(fallback, default))
+        # 1. Check 'Sampling Sharpness' first, then fallback to 'Sharpness'
+        h = source_dict.get('Sampling Sharpness',
+            source_dict.get('sampling_sharpness',
+            source_dict.get('Sharpness',
+            source_dict.get('sharpness', default))))
         assert h is not None
         h = float(h)
+        config.default_sample_sharpness = h
 
-        # 2. Determine Comfy mode using the global common state
+        # 2. Determine Comfy mode using common state
         is_comfy = bool(common.default_engine)
 
-        # 3. Fallback: If global is empty, inspect the local metadata dictionary (critical for log loads)
+        # 3. Fallback: If global is empty, inspect the local
+        # metadata dictionary (critical for log loads)
         if not is_comfy:
             engine_name = source_dict.get('Backend Engine', source_dict.get('backend_engine'))
             if not engine_name and 'engine' in source_dict:
@@ -157,7 +166,8 @@ def get_sharpness(key: str, fallback: str | None, source_dict: dict, results: li
         # 4. Append the visibility-aware update to results
         results.append(gr.update(value=h, visible=not is_comfy))
     except Exception:
-        # Fallback block: Manage visibility even if the value is missing
+        # Fallback block: Manage visibility
+        # even if the value is missing
         is_comfy = bool(common.default_engine)
         if not is_comfy:
             engine_name = source_dict.get('Backend Engine', source_dict.get('backend_engine'))
@@ -167,6 +177,29 @@ def get_sharpness(key: str, fallback: str | None, source_dict: dict, results: li
                 is_comfy = engine_name not in ['Fooocus', 'SDXL-Fooocus']
 
         results.append(gr.update(visible=not is_comfy))
+
+    return
+
+
+def get_vae_sharpness(source_dict: dict, results: list, default=0.0) -> None:
+    """
+    Modular helper to parse VAE Sharpness from metadata or
+    presets, update common.vae_sharpness,
+    and update the UI slider.
+    """
+    try:
+        val = source_dict.get('VAE Sharpness',
+              source_dict.get('vae_sharpness',
+              source_dict.get('default_vae_sharpness', default)))
+        if val is None:
+            val = default
+        val = float(val)
+        val = max(-1.0, min(1.0, val))
+        common.vae_sharpness = val
+        results.append(gr.update(value=val))
+    except Exception:
+        common.vae_sharpness = 0.0
+        results.append(gr.update(value=0.0))
 
     return
 
@@ -234,7 +267,7 @@ def process_dictionary(loaded_parameter_dict, is_generating, inpaint_mode, resul
             interpret('[MetaParser] Resolution set by preset or metadata:', arg_resolution)
     get_number('guidance_scale', 'Guidance Scale', loaded_parameter_dict, results)
 
-    get_sharpness('sharpness', 'Sharpness', loaded_parameter_dict, results)
+    get_sampling_sharpness(loaded_parameter_dict, results)
 
     get_adm_guidance('adm_guidance', 'ADM Guidance', loaded_parameter_dict, results)
     get_str('refiner_swap_method', 'Refiner Swap Method', loaded_parameter_dict, results)
@@ -252,6 +285,7 @@ def process_dictionary(loaded_parameter_dict, is_generating, inpaint_mode, resul
     if arg_scheduler:
         verify_scheduler(arg_scheduler)
     get_vae('vae', 'VAE', loaded_parameter_dict, results)
+    get_vae_sharpness(loaded_parameter_dict, results)
     get_seed('seed', 'Seed', loaded_parameter_dict, results)
     get_inpaint_engine_version('inpaint_engine_version', 'Inpaint Engine Version', loaded_parameter_dict, results, inpaint_mode)
     get_inpaint_method('inpaint_method', 'Inpaint Mode', loaded_parameter_dict, results)
@@ -407,63 +441,126 @@ def get_str(key: str, fallback: str | None, source_dict: dict, results: list, de
 
 def get_vae(key: str, fallback: str | None, source_dict: dict, results: list, default=None) -> str | None:
     try:
-        # Safe extraction of nested dictionaries (immune to None values)
-        engine_dict = (source_dict.get('engine') or {}) if isinstance(source_dict, dict) else {}
-        backend_params = (engine_dict.get('backend_params') or {}) if isinstance(engine_dict, dict) else {}
-        default_engine = (getattr(common, 'default_engine', {}) or {})
-        default_backend_params = (default_engine.get('backend_params') or {}) if isinstance(default_engine, dict) else {}
+        # 1. Structured resolution of the engine dictionary
+        engine_dict = {}
+        if isinstance(source_dict, dict):
+            if 'default_engine' in source_dict and isinstance(source_dict['default_engine'], dict):
+                engine_dict = source_dict['default_engine']
+            elif 'engine' in source_dict and isinstance(source_dict['engine'], dict):
+                engine_dict = source_dict['engine']
 
-        raw_engine = (
-            source_dict.get('Backend Engine')
-            or source_dict.get('backend_engine')
-            or engine_dict.get('backend_engine')
-            or default_engine.get('backend_engine')
-            or 'Fooocus'
-        )
-        task_method = (
-            source_dict.get('task_method')
-            or source_dict.get('Workflow')
-            or backend_params.get('task_method')
-            or default_backend_params.get('task_method')
-        )
+        # 2. Structured resolution of the
+        # active backend engine name
+        raw_engine = ''
+        if isinstance(source_dict, dict):
+            if 'Backend Engine' in source_dict and source_dict['Backend Engine']:
+                raw_engine = source_dict['Backend Engine']
+            elif 'backend_engine' in source_dict and source_dict['backend_engine']:
+                raw_engine = source_dict['backend_engine']
 
-        # 1. Extract requested VAE; fallback safely to default_vae if missing
-        h = source_dict.get(key, source_dict.get(fallback, source_dict.get('default_vae', default)))
+        if not raw_engine and 'backend_engine' in engine_dict and engine_dict['backend_engine']:
+            raw_engine = engine_dict['backend_engine']
+
+        if not raw_engine and hasattr(common, 'default_engine') and isinstance(common.default_engine, dict):
+            raw_engine = common.default_engine.get('backend_engine', '')
+
+        if not raw_engine:
+            raw_engine = 'Fooocus'
+
+        # 3. Structured resolution of backend
+        # parameters and task method
+        backend_params = {}
+        if 'backend_params' in engine_dict and isinstance(engine_dict['backend_params'], dict):
+            backend_params = engine_dict['backend_params']
+        elif hasattr(common, 'default_engine') and isinstance(common.default_engine, dict):
+            backend_params = common.default_engine.get('backend_params', {})
+
+        task_method = ''
+        if isinstance(source_dict, dict):
+            if 'task_method' in source_dict and source_dict['task_method']:
+                task_method = source_dict['task_method']
+            elif 'Workflow' in source_dict and source_dict['Workflow']:
+                task_method = source_dict['Workflow']
+
+        if not task_method and 'task_method' in backend_params and backend_params['task_method']:
+            task_method = backend_params['task_method']
+
+        # 4. Structured extraction of the requested VAE
+        h = ''
+        if isinstance(source_dict, dict):
+            if key in source_dict and source_dict[key]:
+                h = source_dict[key]
+            elif fallback and fallback in source_dict and source_dict[fallback]:
+                h = source_dict[fallback]
+            elif 'default_vae' in source_dict and source_dict['default_vae']:
+                h = source_dict['default_vae']
+
+        if not h and default:
+            h = default
+
         if not h or not isinstance(h, str):
             h = default_vae
 
+        # 5. Fetch fresh, filtered VAE list from loader
         common.MODELS_INFO.refresh_from_path()
         current_vaes = loader.get_vae_list(raw_engine, task_method)
 
-        # If h is a bare stem, match it to the real file on disk
-        if h != default_vae and not any(h.lower().endswith(ext) for ext in ['.safetensors', '.pt', '.pth', '.ckpt', '.bin']):
+        # 6. Resolve bare stems to full
+        # filenames with extensions
+        clean_target = flags.extract_vae_filename(h)
+        valid_extensions = ['.safetensors', '.pt', '.pth', '.ckpt', '.bin']
+        has_extension = any(clean_target.lower().endswith(ext) for ext in valid_extensions)
+
+        if clean_target != default_vae and not has_extension:
             for fn in current_vaes:
-                if Path(fn).stem == h:
-                    h = fn
+                clean_fn = flags.extract_vae_filename(fn)
+                if Path(clean_fn).stem == clean_target:
+                    clean_target = clean_fn
                     break
 
+        # 7. Build the sorted list of choices
         vae_list = list(current_vaes)
-        if h != default_vae and h not in vae_list:
-            vae_list.append(h)
+        target_in_choices = any(flags.extract_vae_filename(c) == clean_target for c in vae_list)
+
+        if clean_target != default_vae and not target_in_choices:
+            vae_list.append(clean_target)
 
         vae_list.sort(key=str.lower)
 
-        engine_str = str(raw_engine).lower()
-        method_str = str(task_method).lower()
-        is_flux_split = 'flux' in engine_str and ('aio' not in method_str and 'all_in_one' not in method_str)
-        is_sd3_split = 'sd3' in engine_str and ('gguf' in method_str)
+        # 8. Determine if this workflow is an
+        # All-In-One (AIO) or Split model
+        engine_lower = str(raw_engine).lower()
+        method_lower = str(task_method).lower()
+
+        is_aio = False
+        if 'aio' in method_lower or 'all_in_one' in method_lower:
+            is_aio = True
+
+        # Non-AIO (split) Flux/Z-Image workflows have no
+        # embedded VAE: omit 'Default (model)'
+        is_flux_split = ('flux' in engine_lower) and (not is_aio)
+
+        # SD3.5 modular/split workflows (or any SD3 preset
+        # specifying an external VAE) omit 'Default (model)'
+        is_sd3_split = ('sd3' in engine_lower) and (not is_aio) and (clean_target != default_vae or 'gguf' in method_lower)
 
         if is_flux_split or is_sd3_split:
             vae_choices = vae_list
         else:
             vae_choices = [default_vae] + vae_list
 
+        # 9. Match bare filename back to its
+        # friendly curated label if available
+        for choice in vae_choices:
+            if flags.extract_vae_filename(choice) == clean_target:
+                h = choice
+                break
+
         results.append(gr.update(choices=vae_choices, value=h))
         return h
 
     except Exception as e:
-        # Fallback must ALWAYS use filtered get_vae_list, never dump raw MODELS_INFO
-        safe_engine = raw_engine if 'raw_engine' in locals() else 'Fooocus'
+        safe_engine = raw_engine if 'raw_engine' in locals() and raw_engine else 'Fooocus'
         current_vaes = loader.get_vae_list(safe_engine)
         results.append(gr.update(choices=[default_vae] + current_vaes, value=default_vae))
         return default_vae
@@ -595,8 +692,8 @@ def get_seed(key: str, fallback: str | None, source_dict: dict, results: list, d
 def get_inpaint_engine_version(key: str, fallback: str | None, source_dict: dict, results: list, inpaint_mode: str, default=None) -> str | None:
     try:
         h = source_dict.get(key, source_dict.get(fallback, default))
-        assert isinstance(h, str) and h in modules.flags.inpaint_engine_versions
-        if inpaint_mode != modules.flags.inpaint_option_detail:
+        assert isinstance(h, str) and h in flags.inpaint_engine_versions
+        if inpaint_mode != flags.inpaint_option_detail:
             results.append(h)
         else:
             results.append(gr.update())
@@ -611,7 +708,7 @@ def get_inpaint_engine_version(key: str, fallback: str | None, source_dict: dict
 def get_inpaint_method(key: str, fallback: str | None, source_dict: dict, results: list, default=None) -> str | None:
     try:
         h = source_dict.get(key, source_dict.get(fallback, default))
-        assert isinstance(h, str) and h in modules.flags.inpaint_options
+        assert isinstance(h, str) and h in flags.inpaint_options
         results.append(h)
         for i in range(config.default_enhance_tabs):
             results.append(h)
@@ -1086,6 +1183,24 @@ class SIMPLEMetadataParser(MetadataParser):
             except:
                 metadata['clip_skip'] = 2
 
+        # Map Sampling Sharpness
+        sharpness_val = safe_get(metadata, ['Sampling Sharpness', 'sampling_sharpness', 'Sharpness', 'sharpness'])
+        if sharpness_val is not None:
+            try:
+                metadata['sharpness'] = float(sharpness_val)
+                config.default_sample_sharpness = float(sharpness_val)
+            except (ValueError, TypeError):
+                pass
+
+        # Map VAE Sharpness
+        vae_sharpness_val = safe_get(metadata, ['VAE Sharpness', 'vae_sharpness'])
+        if vae_sharpness_val is not None:
+            try:
+                metadata['vae_sharpness'] = float(vae_sharpness_val)
+                common.vae_sharpness = float(vae_sharpness_val)
+            except (ValueError, TypeError):
+                pass
+
         # fetch the lists required to turn
         # stems back into full paths
         model_filenames = loader.get_base_model_list(engine, task_method_val, for_import=True)
@@ -1140,6 +1255,8 @@ class SIMPLEMetadataParser(MetadataParser):
             res['Refiner Model Hash'] = self.refiner_model_hash
 
         res['VAE'] = self.vae_name
+        res['Sampling Sharpness'] = config.default_sample_sharpness
+        res['VAE Sharpness'] = common.vae_sharpness
         res['LoRAs'] = self.loras
         res['styles_definition'] = self.styles_definition
 
@@ -1254,6 +1371,27 @@ def trigger_metadata_preview(file):
     ]
 
 
+def extract_and_sync_vae_sharpness(source_dict: dict, default: float = 0.0) -> float:
+    """
+    Extracts VAE Sharpness from a metadata dictionary,
+    clamps it to [-1.0, 1.0],
+    updates common.vae_sharpness,
+    and returns the sanitized float.
+    """
+    raw_val = source_dict.get('VAE Sharpness', source_dict.get('vae_sharpness', default))
+    try:
+        val = float(raw_val)
+        if val < -1.0:
+            val = -1.0
+        elif val > 1.0:
+            val = 1.0
+    except (ValueError, TypeError):
+        val = default
+
+    common.vae_sharpness = val
+    return val
+
+
 def transform_log_metadata(raw_prompt_txt):
     """
     Extracts and transforms only the 7 key visual parameters from a JSON metadata block
@@ -1344,6 +1482,9 @@ def transform_log_metadata(raw_prompt_txt):
     # 7. Image Quantity is always set to 1
     quantity_val = 1
 
+    # 8. VAE Softness / Sharpness (Artistic filter)
+    vae_sharp_val = extract_and_sync_vae_sharpness(loaded_dict)
+
     return [
         gr.update(value=prompt_val),
         gr.update(value=negative_prompt_val),
@@ -1353,6 +1494,7 @@ def transform_log_metadata(raw_prompt_txt):
         gr.update(value=seed_val),
         res_ui_update,
         gr.update(value=quantity_val),
+        gr.update(value=vae_sharp_val),
         gr.update(visible=True),  # generate_button
         gr.update(visible=False), # load_parameter_button
         gr.update(visible=False), # transform_log_button
@@ -1457,6 +1599,9 @@ def transform_toolbox_image(state_params):
     # 7. Image Quantity is always set to 1
     quantity_val = 1
 
+    # 8. VAE Softness / Sharpness (Artistic filter)
+    vae_sharp_val = extract_and_sync_vae_sharpness(loaded_dict)
+
     return [
         gr.update(value=prompt_val),
         gr.update(value=negative_prompt_val),
@@ -1465,7 +1610,8 @@ def transform_toolbox_image(state_params):
         gr.update(value=use_random_seed),
         gr.update(value=seed_val),
         res_ui_update,
-        gr.update(value=quantity_val)
+        gr.update(value=quantity_val),
+        gr.update(value=vae_sharp_val),
     ] + radio_updates
 
 
@@ -1575,6 +1721,9 @@ def transform_params_by_meta(file_path):
     # 7. Image Quantity is always set to 1
     quantity_val = 1
 
+    # 8. VAE Softness / Sharpness (Artistic filter)
+    vae_sharp_val = extract_and_sync_vae_sharpness(loaded_dict)
+
     return [
         gr.update(value=prompt_val),
         gr.update(value=negative_prompt_val),
@@ -1583,7 +1732,8 @@ def transform_params_by_meta(file_path):
         gr.update(value=use_random_seed),
         gr.update(value=seed_val),
         res_ui_update, # hidden aspect_ratios_selection textbox update
-        gr.update(value=quantity_val)
+        gr.update(value=quantity_val),
+        gr.update(value=vae_sharp_val),
         ] + radio_updates  # individual template radio buttons updates
 
 

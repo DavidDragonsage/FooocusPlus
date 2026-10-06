@@ -41,7 +41,8 @@
     "default_sample_sharpness": 1,
     "default_sampler": "euler",
     "default_scheduler": "simple",
-    "default_vae": "Default (model)",
+	"default_vae": "UltraFlux.safetensors",
+    "default_vae_sharpness": 0.0,
     "default_clip_skip": 1,
     "default_performance": "",
     "default_styles": [
@@ -54,7 +55,5 @@
         "Z-Image/z-image-turbo-fp8-aio.safetensors": "https://huggingface.co/SeeSee21/Z-Image-Turbo-AIO/resolve/main/z-image-turbo-fp8-aio.safetensors"
     },
     "clip_downloads": {},
-    "lora_downloads": {},
-    "vae_downloads": {},
-    "default_inpaint_engine": {}
+    "lora_downloads": {}
 }

@@ -291,6 +291,9 @@ def get_lora_model_list(engine='Fooocus', task_method=None, for_import=False) ->
 
 
 def get_vae_list(engine='Fooocus', task_method=None) -> list:
+    # Returns the filtered VAE choices for the dropdown.
+    # Merges curated in-app catalogs with any
+    # user-downloaded custom VAEs.
     global base_model_name
 
     raw_vaes = common.MODELS_INFO.get_model_names('vae')
@@ -322,32 +325,49 @@ def get_vae_list(engine='Fooocus', task_method=None) -> list:
         return any(k in n for k in keywords) or 'sd1.5' in p or 'sd15' in p
 
     def is_sdxl_vae(name):
+        n = Path(name).name.lower()
+        if 'ponydiffusionv6xl_vae' in n or n.startswith('sdxl_vae.'):
+            return False
         return not (is_flux_vae(name) or is_sd3_vae(name) or is_sd15_vae(name))
 
-    # 1. Diffusers Pipelines (Kolors & HyDiT use internal VAEs only)
-    if 'kolors' in engine_lower or 'hydit' in engine_lower:
-        return []
-
-    # 2. SD3.5 Engine
+    # 1. SD3.5 Engine: Curated SD3 list
+    # plus any custom SD3 VAEs on disk
     if 'sd3' in engine_lower:
-        # AIO safetensors uses internal VAE; GGUF uses external SD3 VAE
-        if not is_gguf:
-            return []
-        return [f for f in raw_vaes if is_sd3_vae(f)]
+        curated_sd3_files = {flags.extract_vae_filename(k): k for k in flags.SD3_VAES.keys()}
+        sd3_list = list(flags.SD3_VAES.keys())
+        for f in raw_vaes:
+            if is_sd3_vae(f) and Path(f).name not in curated_sd3_files:
+                sd3_list.append(f)
+        return sd3_list
 
-    # 3. Flux / Z-Image Engine
+    # 2. Flux / Z-Image Engine: Curated Flux list
+    # plus any custom Flux VAEs on disk
     if 'flux' in engine_lower:
-        # AIO workflows use embedded VAE only
-        if is_aio:
-            return []
-        return [f for f in raw_vaes if is_flux_vae(f)]
+        curated_flux_files = {flags.extract_vae_filename(k): k for k in flags.FLUX_VAES.keys()}
+        flux_list = list(flags.FLUX_VAES.keys())
+        for f in raw_vaes:
+            if is_flux_vae(f) and Path(f).name not in curated_flux_files:
+                flux_list.append(f)
+        return flux_list
 
-    # 4. SD1.5 Mode
+    # 3. SD1.5 Mode: Curated SD1.5 list
+    # plus any custom 1.5 VAEs on disk
     if 'sd1' in engine_lower or 'sd1.5' in model_lower or 'sd15' in method_lower:
-        return [f for f in raw_vaes if is_sd15_vae(f)]
+        curated_15_files = {flags.extract_vae_filename(k): k for k in flags.SD15_VAES.keys()}
+        sd15_list = list(flags.SD15_VAES.keys())
+        for f in raw_vaes:
+            if is_sd15_vae(f) and Path(f).name not in curated_15_files:
+                sd15_list.append(f)
+        return sd15_list
 
-    # 5. Standard SDXL
-    return [f for f in raw_vaes if is_sdxl_vae(f)]
+    # 4. Standard SDXL: Curated SDXL list
+    # plus any custom SDXL VAEs on disk
+    curated_xl_files = {flags.extract_vae_filename(k): k for k in flags.SDXL_VAES.keys()}
+    sdxl_list = list(flags.SDXL_VAES.keys())
+    for f in raw_vaes:
+        if is_sdxl_vae(f) and Path(f).name not in curated_xl_files:
+            sdxl_list.append(f)
+    return sdxl_list
 
 
 def update_files(engine='Fooocus', task_method=None):
@@ -756,6 +776,19 @@ def download_sdxl_hyper_sd_lora():
         file_name=flags.PerformanceLoRA.Hyper_SD.value
     )
     return flags.PerformanceLoRA.Hyper_SD.value
+
+
+def download_sdxl_vae() -> str:
+    # Download the official SAI SDXL VAE
+    # for Fooocus and Comfy workflows.
+    model_dir = get_write_directory(common.path_vae)
+    file_name = 'sdxl_vae.safetensors'
+    load_file_from_url(
+        url='https://huggingface.co/stabilityai/sdxl-vae/resolve/main/sdxl_vae.safetensors',
+        model_dir=str(model_dir),
+        file_name=file_name
+    )
+    return str(Path(model_dir) / file_name)
 
 
 def download_siglip_vision_model():

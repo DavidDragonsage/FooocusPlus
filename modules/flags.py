@@ -194,6 +194,47 @@ COMFY_SCHEDULER_NAMES = [
 comfy_scheduler_list = COMFY_SCHEDULER_NAMES
 
 
+FLUX_VAES = {
+    'Standard | ae.safetensors': 'https://huggingface.co/lovis93/testllm/resolve/ed9cf1af7465cebca4649157f118e331cf2a084f/ae.safetensors?download=true',
+    'Greyscale | UltraFlux_greyscale_vae_FP.safetensors': 'https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/VAE/UltraFlux_greyscale_vae_FP.safetensors',
+    'HighRes | UltraFlux.safetensors': 'https://huggingface.co/Owen777/UltraFlux-v1/resolve/main/vae/diffusion_pytorch_model.safetensors?download=true',
+    'Sepia | UltraFlux_sepia_vae_FP.safetensors': 'https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/VAE/UltraFlux_sepia_vae_FP.safetensors'
+}
+
+SD15_VAES = {
+    'Anime | kl-f8-anime2.vae.safetensors': 'https://huggingface.co/Lucetepolis/FuzzyHazel/resolve/35441d242134aa7c8a8c4224f6cdb67e88262de0/kl-f8-anime2.vae.safetensors',
+    'Clear | ClearVAE_V2.3_fp16.safetensors': 'https://huggingface.co/Jonytoryzasdk/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/ClearVAE_V2.3_fp16.safetensors',
+    'Greyscale | sd15_greyscale_vae_FP.safetensors': 'https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/VAE/sd15_greyscale_vae_FP.safetensors',
+    'SAI | vae-ft-mse-840000-ema-pruned.safetensors': 'https://huggingface.co/stabilityai/sd-vae-ft-mse-original/resolve/main/vae-ft-mse-840000-ema-pruned.safetensors',
+    'Sepia | sd15_sepia_vae_FP.safetensors': 'https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/VAE/sd15_sepia_vae_FP.safetensors'
+}
+
+SD3_VAES = {
+    "Greyscale | sd3x_greyscale_vae_FP.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/VAE/sd3x_greyscale_vae_FP.safetensors",
+    "Sepia | sd3x_sepia_vae_FP.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/VAE/sd3x_sepia_vae_FP.safetensors",
+    "Standard | sd3x_fp16.vae.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/VAE/sd3x_fp16.vae.safetensors"
+}
+
+SDXL_VAES = {
+    'Bright | toonEffectHyperColor_ultrabright.safetensors': 'https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/VAE/toonEffectHyperColor_ultrabright.safetensors',
+    'Greyscale | sdxl_greyscale_vae_FP.safetensors': 'https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/VAE/sdxl_greyscale_vae_FP.safetensors',
+    'Natural | sdxlNaturalSkintone_bf16.safetensors': 'https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/VAE/sdxlNaturalSkintone_bf16.safetensors',
+    'Night | nightPhotoHDR_sdxlBASE.safetensors': 'https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/VAE/nightPhotoHDR_sdxlBASE.safetensors',
+    'Sepia | sdxl_sepia_vae_FP.safetensors': 'https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/VAE/sdxl_sepia_vae_FP.safetensors',
+    'Soft | softFastVAESDXLPONY_v10.safetensors': 'https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/VAE/softFastVAESDXLPONY_v10.safetensors',
+    'Toon | toonEffectHyperColor_toonEffectVAE.safetensors': 'https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/VAE/toonEffectHyperColor_toonEffectVAE.safetensors',
+    'Warm | hdrEffectVAE_v3BF16.safetensors': 'https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/VAE/hdrEffectVAE_v3BF16.safetensors'
+}
+
+
+def extract_vae_filename(vae_string: str) -> str:
+    # Extracts the physical filename from a curated label
+    # (e.g. 'Natural | sdxl...' -> 'sdxl...')
+    if not vae_string or vae_string == 'Default (model)':
+        return vae_string
+    return vae_string.split(' | ')[-1].strip()
+
+
 # Strings to look for in Z-Image model filenames
 Z_IMAGE_MODEL_KEYWORDS = ['z-image', 'z_image', 'zimage', 'z-img', 'z_img', 'zimg']
 TURBO_MODEL_KEYWORDS = ['turbo']

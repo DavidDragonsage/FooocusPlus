@@ -70,7 +70,7 @@
   },
   "70": {
     "inputs": {
-      "vae_name": "sdxl_fp16.vae.safetensors"
+      "vae_name": "sdxl_vae.safetensors"
     },
     "class_type": "VAELoader",
     "_meta": {

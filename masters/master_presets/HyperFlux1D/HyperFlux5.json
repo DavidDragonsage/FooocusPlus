@@ -43,6 +43,7 @@
     "default_sampler": "euler",
     "default_scheduler": "simple",
     "default_vae": "UltraFlux.safetensors",
+    "default_vae_sharpness": 0.0,
     "default_clip_skip": 1,
     "default_performance": "",
     "default_styles": [
@@ -62,8 +63,5 @@
     "lora_downloads": {
         "Flux/FluxDFaeTasticDetails.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/LoRAs/FluxDFaeTasticDetails.safetensors",
         "Flux/Flux_BlackColor_SaMay.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/LoRAs/Flux_BlackColor_SaMay.safetensors"
-    },
-    "vae_downloads": {
-        "UltraFlux.safetensors": "https://huggingface.co/Owen777/UltraFlux-v1/resolve/main/vae/diffusion_pytorch_model.safetensors?download=true"
     }
 }

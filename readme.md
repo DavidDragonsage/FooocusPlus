@@ -59,6 +59,8 @@ For Linux users, please use the [Installation Script for Linux](https://github.c
 
 And for Windows users, please use this [Installation Procedure](https://github.com/DavidDragonsage/FooocusPlus/wiki/Installation-Procedure-for-Windows), also  available in the Wiki.
 
+FooocusPlus is also available on the Pinokio platform (https://pinokio.co/search?q=FooocusPlus).
+
 ## Language Support
 
 Language and other optional startup files are available in the FooocusPlus\UserDir\batch_startups folder. _Please copy whatever you need to the FooocusPlus folder before using them._ The following language startups files offer full support - in the user interface, the Prompt Translator, dynamic status reports and the console window:

@@ -1,7 +1,15 @@
 {
-    "default_model": "elsewhereXL_v10.safetensors",
-    "default_refiner": "SD1.5/realisticVisionV60B1_v51VAE.safetensors",
-    "default_refiner_switch": 0.4,
+    "default_engine": {
+        "backend_engine": "Comfy",
+        "disvisible": ["backend_selection", "performance_selection", "refiner_model", "sharpness"],
+		"disinteractive": ["enhance_checkbox", "input_image_checkbox", "refiner_model"],
+        "backend_params": {
+            "task_method": "sd15_TG"
+        }
+    },
+    "default_model": "SD1.5/dreamshaper_8.safetensors",
+    "default_refiner": "None",
+    "default_refiner_switch": 0.6,
         "default_loras": [
             [
                 true,
@@ -29,24 +37,22 @@
                 1.0
             ]
         ],
-    "default_cfg_scale": 6.0,
+    "default_cfg_scale": 7.0,
     "default_sample_sharpness": 2.0,
     "default_sampler": "dpmpp_2m_sde_gpu",
     "default_scheduler": "karras",
     "default_vae": "Default (model)",
     "default_vae_sharpness": 0.0,
-    "default_clip_skip": 2,
+    "default_clip_skip": 1,
     "default_performance": "Speed",
-    "default_prompt_negative": "",
+    "default_prompt_negative": "__nsfw__",
     "default_styles": [
         "Fooocus V2",
         "Fooocus Enhance"
     ],
-    "v2_substyle": "Default",
+    "v2_substyle": "Unlit",
     "default_aspect_ratio": "0*0",
-    "checkpoint_downloads": {
-        "elsewhereXL_v10.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/elsewhereXL_v10.safetensors",
-        "SD1.5/realisticVisionV60B1_v51VAE.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/realisticVisionV60B1_v51VAE.safetensors"},
+    "checkpoint_downloads": {"SD1.5/dreamshaper_8.safetensors": "https://huggingface.co/digiplay/DreamShaper_8/resolve/main/dreamshaper_8.safetensors"},
     "embeddings_downloads": {},
     "lora_downloads": {}
 }

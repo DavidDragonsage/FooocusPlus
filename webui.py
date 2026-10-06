@@ -854,6 +854,31 @@ with common.GRADIO_ROOT:
                                 f"</div>"
                             )
 
+                    with gr.Tab(label='VAE Control', id='vae_tab') as vae_tab:
+                        with gr.Row():
+                            gr.Markdown(value='In the final stage of generation, the Variational Autoencoder (VAE) translates the latent data into an RGB image. Use these VAE artistic profiles to adjust color, contrast and lighting.',
+                            elem_classes='dropdown_info')
+
+                        with gr.Row():
+                            vae_name = gr.Dropdown(
+                                label='VAE Profiles',
+                                choices=[modules.flags.default_vae] + loader.vae_filenames,
+                                value=common.current_vae,
+                                show_label=True)
+
+                        with gr.Row():
+                            vae_sharpness = gr.Slider(
+                                label="VAE Softness / Sharpness",
+                                minimum=-1.00,
+                                maximum=1.00,
+                                step=0.01,
+                                value=common.vae_sharpness,
+                                info="Negative values create a soft-focus dreamy glow; positive values enhance crispness and detail."
+                            )
+
+                        with gr.Row():
+                            gr.HTML('<a href="https://github.com/DavidDragonsage/FooocusPlus/wiki/VAE-Control,-with-SD3.5-Examples" target="_blank">\U0001F4DA VAE Control</a>&emsp;')
+
             with gr.Row(visible=config.default_input_image_checkbox) as image_input_panel:
                 with gr.Tabs(selected=config.default_selected_image_input_tab_id):
                     with gr.Tab(label='Upscale or Variation', id='uov_tab') as uov_tab:
@@ -1852,7 +1877,7 @@ with common.GRADIO_ROOT:
                     info='Higher values create vivid and glossy images that may follow the prompt more closely')
 
                 sharpness = gr.Slider(
-                    label='Image Sharpness',
+                    label='Sampling Sharpness',
                     minimum=0.0, maximum=30.0, step=0.1,
                     value=config.default_sample_sharpness,
                     info='Higher values create images with more detailed textures')
@@ -1971,12 +1996,6 @@ with common.GRADIO_ROOT:
                             choices=flags.scheduler_list,
                             value=config.default_scheduler,
                             interactive=True, visible=True)
-
-                        vae_name = gr.Dropdown(
-                            label='VAE',
-                            choices=[modules.flags.default_vae] + loader.vae_filenames,
-                            value=config.default_vae,
-                            show_label=True)
 
                         clip_skip = gr.Slider(
                             label='CLIP Skip',
@@ -2441,6 +2460,7 @@ with common.GRADIO_ROOT:
         base_model, refiner_model,
         refiner_slider, sampler_selector,
         scheduler_selector, vae_name,
+        vae_sharpness,
         seed_random, image_seed,
         inpaint_engine, inpaint_engine_state,
         inpaint_mode] + enhance_inpaint_mode_ctrls +\
@@ -2670,6 +2690,7 @@ with common.GRADIO_ROOT:
             image_seed,
             aspect_ratios_selection,
             image_quantity,
+            vae_sharpness,
             generate_button,
             load_parameter_button,
             transform_log_button,
@@ -2751,7 +2772,8 @@ with common.GRADIO_ROOT:
             seed_random,
             image_seed,
             aspect_ratios_selection,
-            image_quantity
+            image_quantity,
+            vae_sharpness
         ] + aspect_ratios_selections,
         queue=False, show_progress=False
     )
@@ -2861,7 +2883,8 @@ with common.GRADIO_ROOT:
             seed_random,
             image_seed,
             aspect_ratios_selection,
-            image_quantity
+            image_quantity,
+            vae_sharpness
         ] + aspect_ratios_selections,
         queue=False, show_progress=False
     ).then(
@@ -5273,14 +5296,26 @@ with common.GRADIO_ROOT:
         show_progress=False, queue=False)
 
     def set_vae_name(arg_vae_name):
-        config.default_vae = arg_vae_name
-        return gr.update(value=config.default_vae)
+        common.current_vae = arg_vae_name
+        return gr.update(value=common.current_vae)
 
     vae_name.change(
         fn=set_vae_name,
         inputs=vae_name,
         outputs=vae_name,
         show_progress=False, queue=False)
+
+    def set_vae_sharpness(val):
+        common.vae_sharpness = float(val)
+        return gr.update(value=common.vae_sharpness)
+
+    vae_sharpness.change(
+        fn=set_vae_sharpness,
+        inputs=vae_sharpness,
+        outputs=vae_sharpness,
+        show_progress=False,
+        queue=False
+    )
 
     def set_clip_skip(arg_clip_skip):
         config.default_clip_skip = arg_clip_skip
@@ -5822,7 +5857,8 @@ with common.GRADIO_ROOT:
             preset_favorite_button,
             overwrite_step,
             lora_warning,
-            guidance_scale],
+            guidance_scale,
+            vae_sharpness],
         show_progress=False, queue=False
     ).then(
         UIS.reset_layout_params, inputs=reset_preset_inputs,

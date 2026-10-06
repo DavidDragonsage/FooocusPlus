@@ -117,7 +117,18 @@ def parse_meta_from_preset(preset_content):
             val = items.get(settings_key)
             if val is None or val == 'None' or val == '':
                 val = 'Default (model)'
-            config.default_vae = val
+            preset_prepared[meta_key] = val
+
+        elif settings_key == 'default_vae_sharpness':
+            val = items.get(settings_key)
+            if val is None or val == 'None' or val == '':
+                val = 0.0
+            try:
+                val = float(val)
+                val = max(-1.0, min(1.0, val))
+            except (ValueError, TypeError):
+                val = 0.0
+            common.vae_sharpness = val
             preset_prepared[meta_key] = val
 
         elif settings_key == "default_prompt":
@@ -250,9 +261,13 @@ def init_config_preset():
         config.default_overwrite_switch = preset_prepared.get('overwrite_switch')
         config.default_performance = preset_prepared.get('performance')
         config.default_styles = ast.literal_eval(preset_prepared.get('styles'))
-        config.default_vae = preset_prepared.get('vae')
-        if config.default_vae == None:
-            config.default_vae = 'Default (model)'
+        common.current_vae = preset_prepared.get('vae')
+        if common.current_vae == None:
+            common.current_vae = 'Default (model)'
+        try:
+            common.vae_sharpness = float(preset_prepared.get('vae_sharpness', 0.0))
+        except (ValueError, TypeError):
+            common.vae_sharpness = 0.0
         config.default_image_quantity = preset_prepared.get('image_quantity')
         config.default_aspect_ratio = normalize_AR(preset_prepared.get('resolution'))
         if not config.default_aspect_ratio:

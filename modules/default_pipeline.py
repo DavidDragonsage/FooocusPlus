@@ -8,7 +8,7 @@ import ldm_patched.modules.model_management
 import ldm_patched.modules.latent_formats
 import modules.config as config
 import modules.core as core
-import modules.flags
+import modules.flags as flags
 import modules.inpaint_worker
 import modules.loader as loader
 import modules.patch
@@ -17,7 +17,9 @@ from enhanced.translator import interpret
 from extras.expansion import FooocusExpansion
 from ldm_patched.modules.model_base import SDXL, SDXLRefiner
 from modules.sample_hijack import clip_separate
-from modules.util import get_file_from_folder_list, get_enabled_loras
+from modules.util import apply_optical_sharpness, \
+    get_file_from_folder_list, get_enabled_loras, \
+    has_embedded_vae
 
 
 model_base = core.StableDiffusionModel()
@@ -38,8 +40,12 @@ def resolve_vae_path(vae_name: str | None) -> str | None:
     Resolves the physical VAE file path using pathlib.Path.
     Immune to bare stems (e.g. 'sdxl_vae' automatically resolves to 'sdxl_vae.safetensors').
     """
-    if not vae_name or vae_name == modules.flags.default_vae:
+    if not vae_name or vae_name == flags.default_vae:
         return None
+
+    # Strip any display label
+    # (e.g. 'Natural | sdxl...' -> 'sdxl...')
+    vae_name = modules.flags.extract_vae_filename(vae_name)
 
     vae_dirs = common.path_vae if isinstance(common.path_vae, list) else [common.path_vae]
     valid_extensions = ['.safetensors', '.pt', '.pth', '.ckpt', '.bin']
@@ -70,6 +76,61 @@ def resolve_vae_path(vae_name: str | None) -> str | None:
                 return str(candidate_raw)
 
     return str(raw_path) if raw_path else None
+
+
+def patch_vae_sharpness(vae, sharpness: float):
+    """
+    Temporarily applies 2D optical unsharp-masking to the VAE's final 3x3 convolution layer.
+    Returns the original weights so they can be restored immediately after decode.
+    """
+    if sharpness == 0.0 or vae is None:
+        return None
+    try:
+        model = getattr(vae, 'first_stage_model', vae)
+        decoder = getattr(model, 'decoder', None)
+        if decoder is None:
+            return None
+        conv_out = getattr(decoder, 'conv_out', None)
+        if conv_out is None or not hasattr(conv_out, 'weight'):
+            return None
+
+        # Backup the pristine weights
+        orig_weight = conv_out.weight.data.clone()
+        W = conv_out.weight.data
+
+        # True Zero-Sum Optical Unsharp Mask
+        # (Energy delta = 0 across all channels)
+        centre = orig_weight[:, :, 1, 1]
+        delta = centre * sharpness
+
+        # Full +4x centre peak
+        W[:, :, 1, 1] += delta * 4.0
+        # -1x cardinal neighbours:
+        W[:, :, 0, 1] -= delta * 1.0
+        W[:, :, 2, 1] -= delta * 1.0
+        W[:, :, 1, 0] -= delta * 1.0
+        W[:, :, 1, 2] -= delta * 1.0
+
+        return orig_weight, conv_out
+    except Exception as e:
+        print(f'[Pipeline] Warning: Failed to patch VAE sharpness: {e}')
+        return None
+
+
+def restore_vae_sharpness(patch_info):
+    """Restores the VAE's original convolution weights to prevent cumulative drift."""
+    if patch_info is not None:
+        orig_weight, conv_out = patch_info
+        conv_out.weight.data.copy_(orig_weight)
+
+
+def decode_vae_safely(vae, latent_image, tiled=False, sharpness=0.0):
+    """Wraps core.decode_vae with non-destructive optical sharpness patching."""
+    patch_info = patch_vae_sharpness(vae, sharpness)
+    try:
+        return core.decode_vae(vae=vae, latent_image=latent_image, tiled=tiled)
+    finally:
+        restore_vae_sharpness(patch_info)
 
 
 @torch.no_grad()
@@ -109,6 +170,24 @@ def refresh_base_model(name, vae_name=None):
     filename = get_file_from_folder_list(name, common.paths_checkpoints)
     vae_filename = resolve_vae_path(vae_name)
 
+    # Auto-fallback: If Default (model) was chosen
+    # but the checkpoint is pruned,
+    # automatically supply sdxl_vae.safetensors
+    # to prevent decoding crashes!
+    if vae_filename is None and not has_embedded_vae(filename):
+        target_vae = 'sdxl_vae.safetensors'
+        vae_disk_path = Path(common.path_vae) / target_vae
+
+        if not vae_disk_path.is_file():
+            interpret('[Pipeline] Downloading fallback SDXL VAE...')
+            loader.download_sdxl_vae()
+
+        vae_filename = resolve_vae_path(target_vae)
+        interpret('[Pipeline] Pruned SDXL model detected (no built-in VAE)')
+        interpret('Automatically applied:', target_vae)
+
+    # If both model and VAE match what is
+    # already in VRAM, do nothing
     if model_base.filename == filename and model_base.vae_filename == vae_filename:
         return
 
@@ -354,10 +433,10 @@ if config.backend_engine == 'Fooocus':
 
     if default_base_path and Path(default_base_path).is_file():
         refresh_everything(
-            refiner_model_name=modules.config.default_refiner,
+            refiner_model_name=config.default_refiner,
             base_model_name=loader.base_model_name,
-            loras=get_enabled_loras(modules.config.default_loras),
-            vae_name=modules.config.default_vae,
+            loras=get_enabled_loras(config.default_loras),
+            vae_name=common.current_vae,
         )
 
 
@@ -419,7 +498,7 @@ def get_candidate_vae(steps, switch, denoise=1.0, refiner_swap_method='joint'):
 
 @torch.no_grad()
 @torch.inference_mode()
-def process_diffusion(positive_cond, negative_cond, steps, switch, width, height, image_seed, callback, sampler_name, scheduler_name, latent=None, denoise=1.0, tiled=False, cfg_scale=7.0, refiner_swap_method='joint', disable_preview=False):
+def process_diffusion(positive_cond, negative_cond, steps, switch, width, height, image_seed, callback, sampler_name, scheduler_name, latent=None, denoise=1.0, tiled=False, cfg_scale=7.0, refiner_swap_method='joint', disable_preview=False, vae_sharpness=0.0):
     target_unet, target_vae, target_refiner_unet, target_refiner_vae, target_clip \
         = final_unet, final_vae, final_refiner_unet, final_refiner_vae, final_clip
 
@@ -479,7 +558,7 @@ def process_diffusion(positive_cond, negative_cond, steps, switch, width, height
             previewer_end=steps,
             disable_preview=disable_preview
         )
-        decoded_latent = core.decode_vae(vae=target_vae, latent_image=sampled_latent, tiled=tiled)
+        decoded_latent = decode_vae_safely(vae=target_vae, latent_image=sampled_latent, tiled=tiled, sharpness=vae_sharpness)
 
     if refiner_swap_method == 'separate':
         sampled_latent = core.ksampler(
@@ -525,7 +604,7 @@ def process_diffusion(positive_cond, negative_cond, steps, switch, width, height
         target_model = target_refiner_vae
         if target_model is None:
             target_model = target_vae
-        decoded_latent = core.decode_vae(vae=target_model, latent_image=sampled_latent, tiled=tiled)
+        decoded_latent = decode_vae_safely(vae=target_model, latent_image=sampled_latent, tiled=tiled, sharpness=vae_sharpness)
 
     if refiner_swap_method == 'vae':
         modules.patch.patch_settings[getpid()].eps_record = 'vae'
@@ -593,8 +672,12 @@ def process_diffusion(positive_cond, negative_cond, steps, switch, width, height
         target_model = target_refiner_vae
         if target_model is None:
             target_model = target_vae
-        decoded_latent = core.decode_vae(vae=target_model, latent_image=sampled_latent, tiled=tiled)
+        decoded_latent = decode_vae_safely(vae=target_model, latent_image=sampled_latent, tiled=tiled, sharpness=vae_sharpness)
 
     images = core.pytorch_to_numpy(decoded_latent)
     modules.patch.patch_settings[getpid()].eps_record = None
+
+    # Apply VAE sharpness to all decoded images:
+    if vae_sharpness != 0.0:
+        images = [apply_optical_sharpness(img, vae_sharpness) for img in images]
     return images

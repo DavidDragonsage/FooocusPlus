@@ -34,6 +34,7 @@
     "default_sampler": "dpmpp_2m",
     "default_scheduler": "edm_playground_v2.5",
     "default_vae": "Default (model)",
+    "default_vae_sharpness": 0.0,
     "default_clip_skip": 2,
     "default_performance": "Quality",
     "default_overwrite_step": 40,

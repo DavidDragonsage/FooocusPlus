@@ -427,7 +427,14 @@ def select_data_from_preset(preset_content):
     preset_vae = items.get('default_vae')
     if preset_vae is None or preset_vae == 'None' or preset_vae == '':
         preset_vae = 'Default (model)'
-    config.default_vae = preset_vae
+    common.current_vae = preset_vae
+
+    # catches presets that do not set 'default_vae_sharpness'
+    preset_vae_sharpness = items.get('default_vae_sharpness', 0.0)
+    try:
+        common.vae_sharpness = float(preset_vae_sharpness)
+    except (ValueError, TypeError):
+        common.vae_sharpness = 0.0
 
     # Force global refiner name synchronization during preset loads
     preset_refiner = items.get('default_refiner', items.get('refiner_model', items.get('Refiner Model')))
@@ -708,7 +715,8 @@ def set_preset_selection(arg_preset_selection, state_params):
             info=slider_info),
         gr.update(visible=lora_warning),
         gr.update(value=cfg_value, minimum=cfg_min,
-            maximum=cfg_max, step=cfg_step))
+            maximum=cfg_max, step=cfg_step),
+        gr.update(value=common.vae_sharpness))
 
 def bar_button_change(bar_button, state_params):
     global category_selection, current_preset
