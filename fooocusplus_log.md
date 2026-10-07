@@ -46,7 +46,8 @@
     With the standardization on the UltraFlux VAE
     they are now redundant.
 * Release Date: October 6th, 2026<br/>
-* Hotfix0:
+* Hotfix1: Debugged the selection of favourite
+  presets from their preset category
 <br/><br/>
 
 

@@ -137,23 +137,27 @@ def find_preset_file(preset):
 
     active_fav = get_active_fav_cat()
 
-    # 1. Check current category selection first
-    if category_selection in ALL_FAV_CATEGORIES:
-        favorite_path = Path(presets_path / category_selection)
-        preset_file_path = US.find_file_path(favorite_path, preset_name_path)
+    # 1. Check the active category selection first
+    # (works for both Favorite folders and regular
+    # model category folders)
+    if category_selection and category_selection != 'All':
+        current_cat_path = Path(presets_path / category_selection)
+        preset_file_path = US.find_file_path(current_cat_path, preset_name_path)
 
-    # 2. Check the active favorite category for this system mode
-    if not preset_file_path:
-        favorite_path = Path(presets_path / active_fav)
-        preset_file_path = US.find_file_path(favorite_path, preset_name_path)
-
-    # 3. Fallback: Search general preset folders, ignoring ALL favorite folders
+    # 2. Fallback: Search general preset folders,
+    # ignoring ALL favorite folders
     if not preset_file_path:
         for candidate_file in Path(presets_path).rglob(preset_name_path.name):
             if any(fav in candidate_file.parts for fav in ALL_FAV_CATEGORIES):
                 continue
             preset_file_path = candidate_file.resolve()
             break
+
+    # 3. Last Fallback:
+    # Check the active favorite category
+    if not preset_file_path:
+        favorite_path = Path(presets_path / active_fav)
+        preset_file_path = US.find_file_path(favorite_path, preset_name_path)
 
     if not preset_file_path:
         if preset not in ['Default', '4GB_Default']:
