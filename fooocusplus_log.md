@@ -46,6 +46,7 @@
     With the standardization on the UltraFlux VAE
     they are now redundant.
 * Release Date: October 6th, 2026<br/>
+* Hotfix2: Codebase cleanup for Pinokio
 * Hotfix1: Enabled the selection of favourite
   presets from their home preset category
 <br/><br/>
