@@ -69,7 +69,7 @@
       "scheduler": "karras",
       "denoise": 0.9,
       "model": [
-        "105",
+        "37",
         0
       ],
       "positive": [
@@ -122,7 +122,7 @@
     "inputs": {
       "model_path": "iclight_sd15_fc_unet_ldm.safetensors",
       "model": [
-        "2",
+        "106",
         0
       ]
     },

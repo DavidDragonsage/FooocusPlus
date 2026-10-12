@@ -166,10 +166,11 @@ def get_comfy_task(task_name, task_method, default_params, input_images, options
         # IC-Light is the only active feature
         # handled by the 'default' task name
         if 'iclight_enable' in options and options["iclight_enable"]:
-            # Querying the loader global directly
-            if not common.MODELS_INFO.exists_model(catalog="checkpoints", model_path=loader.sd15_model_path):
+            iclight_unet_file = Path(common.path_unet) / 'iclight_sd15_fc_unet_ldm.safetensors'
+            base_ckpt_exists = common.MODELS_INFO.exists_model(catalog="checkpoints", model_path=loader.sd15_model_path)
+
+            if not base_ckpt_exists or not iclight_unet_file.is_file():
                 loader.download_base_sd15_model()
-                # Refresh the cache
                 common.MODELS_INFO.refresh_from_path()
 
             comfy_params.update_params({"base_model": loader.sd15_model_path})
