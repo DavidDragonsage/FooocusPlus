@@ -69,28 +69,33 @@ def announce_version():
     # 1 = hotfix, 2 = new version
     import common
     import gradio as gr
-    from args_manager import args
     from enhanced.translator import interpret
+
     global fooocusplus_ver, fooocusplus_line, hotfix, hotfix_line
+
+    # Case 2: New Major/Minor Version Release
     if common.version_update == 2 and fooocusplus_ver[0] != '0':
+        # 1. Print announcement to terminal console
         interpret('Welcome to', f'FooocusPlus {fooocusplus_ver}:')
-        temp_str1 = interpret('Welcome to', '', True)
-        if args.language.startswith('en') or args.language == 'es' \
-            or args.language == 'fr' or args.language == 'pt':
-            temp_str2 = f' FooocusPlus {fooocusplus_ver}:      ' + '\n'
-        else:
-            temp_str2 = f' FooocusPlus {fooocusplus_ver}: ' + '\n'
-        temp_str3 = interpret(fooocusplus_line)
-        gr.Info(temp_str1 + temp_str2 + temp_str3)
+
+        # 2. Build multi-line message for the UI popup
+        welcome_prefix = interpret('Welcome to', '', silent=True)
+        header = f"{welcome_prefix} FooocusPlus {fooocusplus_ver}:\n"
+        body = interpret(fooocusplus_line, '', silent=True)
+        gr.Info(f"{header}{body}")
+
         if int(hotfix) > 0:
             common.version_update = 1
+
+    # Case 1: Hotfix Update
     if common.version_update == 1:
+        # 1. Print announcement to terminal console
         interpret('Updated to', f'FooocusPlus Hotfix {hotfix}:')
-        temp_str1 = interpret('Updated to', '', True)
-        if args.language.startswith('en'):
-            temp_str2 = f' FooocusPlus Hotfix {hotfix}:     ' + '\n'
-        else:
-            temp_str2 = f' FooocusPlus Hotfix {hotfix}: ' + '\n'
-        temp_str3 = interpret(hotfix_line)
-        gr.Info(temp_str1 + temp_str2 + temp_str3)
+
+        # 2. Build multi-line message for the UI popup
+        update_prefix = interpret('Updated to', '', silent=True)
+        header = f"{update_prefix} FooocusPlus Hotfix {hotfix}:\n"
+        body = interpret(hotfix_line, '', silent=True)
+        gr.Info(f"{header}{body}")
+
     return

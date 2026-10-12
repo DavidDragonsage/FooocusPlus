@@ -211,8 +211,9 @@ def locate_value(arg_list, parameter, terminator = ''):
     trans_table = str.maketrans('','','"')
     for line in arg_list:
         if line.startswith(parameter):
-            # remove the parameter and ending space:
-            value_quote = line.strip(parameter).strip()
+            # cleanly remove only the exact
+            # prefix parameter from the start:
+            value_quote = line.removeprefix(parameter).strip()
             # remove quotation marks, if any:
             value = value_quote.translate(trans_table)
             if terminator != '':

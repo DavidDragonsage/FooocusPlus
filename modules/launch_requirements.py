@@ -7,13 +7,15 @@ import sys
 import re
 import logging
 import packaging.version
-import pygit2
 from pathlib import Path
 
 from modules.launch_util import is_win32_standalone_build, \
     python_embedded_path, run, verify_installed_version
 
 met_diff = {}
+
+verify_installed_version('pygit2', '1.18.2', False)
+import pygit2
 pygit2.option(pygit2.GIT_OPT_SET_OWNER_VALIDATION, 0)
 
 logging.getLogger("torch.distributed.nn").setLevel(logging.ERROR)  # sshh...
@@ -203,7 +205,7 @@ def requirements_met(requirements_file: str | Path) -> bool:
             # Handle special system libraries that
             # should not trigger missing errors
             if version_installed is None:
-                if package in ['cmake', 'https'] or (package == 'insightface' and sys.platform != 'win32'):
+                if package in ['cmake', 'https']:
                     continue
 
             # Compare versions if already installed

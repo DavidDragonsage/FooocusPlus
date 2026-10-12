@@ -60,8 +60,14 @@ def run_pip(command, desc=None, live=default_command_live):
     result = True
     try:
         index_url_line = f' --index-url {index_url}' if index_url != '' else ''
-        return run(f'"{python}" -m pip {command} {target_path_install} --prefer-binary --disable-pip-version-check {index_url_line}', desc=f"Installing {desc}",
-                   errdesc=f"Could not install {desc}", live=live)
+        use_target = '' if ('.whl' in command or 'https://' in command) else target_path_install
+        build_isolation_flag = ' --no-build-isolation' if (sys.platform == 'darwin' and 'insightface' in command) else ''
+
+        run(f'"{python}" -m pip {command} {use_target} {build_isolation_flag} --prefer-binary --disable-pip-version-check {index_url_line}', desc=f"Installing {desc}",
+            errdesc=f"Could not install {desc}", live=live)
+
+        importlib.invalidate_caches()
+        return True
     except Exception as e:
         print(e)
         print(f'Pip {desc} command failed: {command}')
@@ -108,7 +114,8 @@ def verify_installed_version(package_name, package_ver, dependencies = False, us
     if not is_installed_version(package_name, package_ver):
         run(f'"{python}" -m pip uninstall -y {package_name}')
         if dependencies:
-            result = run_pip(f"install -U -I {package_line} {index_url_line} --no-warn-script-location", {package_name}, live=True)
+            pip_success = run_pip(f"install -U -I {package_line} {index_url_line} --no-warn-script-location", {package_name}, live=True)
         else:
-            result = run_pip(f"install -U -I --no-deps {package_line} {index_url_line} --no-warn-script-location", {package_name}, live=True)
+            pip_success = run_pip(f"install -U -I --no-deps {package_line} {index_url_line} --no-warn-script-location", {package_name}, live=True)
+        result = bool(pip_success)
     return result

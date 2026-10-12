@@ -1,3 +1,4 @@
 # Windows-specific dependencies
 cuda-python==11.7.1
+insightface @ https://github.com/Gourieff/Assets/raw/main/Insightface/insightface-0.7.3-cp310-cp310-win_amd64.whl
 onnxruntime-gpu==1.20.0

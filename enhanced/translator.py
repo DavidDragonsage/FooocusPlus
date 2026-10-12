@@ -1,5 +1,4 @@
 import os
-import gradio as gr
 import logging
 from pathlib import Path
 from modules.launch_util import verify_installed_version
@@ -32,11 +31,13 @@ def interpret(txt_translate, txt_no_translate = '', silent = False):
     return txt_translated
 
 def interpret_info(txt_translate, txt_no_translate = '', silent = False):
+    import gradio as gr
     txt_translated = interpret(txt_translate, txt_no_translate, silent)
     gr.Info(txt_translated)
     return
 
 def interpret_warn(txt_translate, txt_no_translate = '', silent = False):
+    import gradio as gr
     txt_translated = interpret(txt_translate, txt_no_translate, silent)
     gr.Warning(txt_translated)
     return
