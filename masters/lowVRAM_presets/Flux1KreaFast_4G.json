@@ -13,7 +13,7 @@
     "default_refiner_switch": 0.6,
     "default_loras": [
         [
-            false,
+            true,
             "Flux/Hyper-FLUX.1-dev-8steps-lora.safetensors",
             0.125
         ],
@@ -50,9 +50,10 @@
     "default_styles": [
         "Fooocus V2"
     ],
-    "v2_substyle": "Default",
+    "v2_substyle": "Unlit",
     "default_aspect_ratio": "0*0",
-    "default_overwrite_step": 20,
+    "default_overwrite_step": 8
+    ,
     "checkpoint_downloads": {
      "FluxKrea/flux1-krea-dev-Q4_K_M.gguf": "https://huggingface.co/QuantStack/FLUX.1-Krea-dev-GGUF/resolve/main/flux1-krea-dev-Q4_K_M.gguf"
     },

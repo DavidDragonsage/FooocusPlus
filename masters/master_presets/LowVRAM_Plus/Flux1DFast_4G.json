@@ -8,19 +8,19 @@
             "clip_model": "t5xxl_fp8_e4m3fn.safetensors"
         }
     },
-    "default_model": "FluxDev/hyperfluxDiversity_q4KS.gguf",
+    "default_model": "FluxDev/flux1-dev-Q4_K_S.gguf",
     "default_refiner": "None",
     "default_refiner_switch": 0.6,
     "default_loras": [
         [
-            false,
-            "Flux/FluxDFaeTasticDetails.safetensors",
-            0.8
+            true,
+            "Flux/Hyper-FLUX.1-dev-8steps-lora.safetensors",
+            0.125
         ],
         [
             false,
-            "Flux/Flux_BlackColor_SaMay.safetensors",
-            0.7
+            "Flux/AntiBlur.safetensors",
+            3.0
         ],
         [
             true,
@@ -46,14 +46,15 @@
     "default_vae_sharpness": 0.0,
     "default_clip_skip": 1,
     "default_performance": "",
+    "default_prompt": "",
     "default_styles": [
         "Fooocus V2"
     ],
-    "v2_substyle": "Default",
+    "v2_substyle": "Unlit",
     "default_aspect_ratio": "0*0",
-    "default_overwrite_step": 20,
+    "default_overwrite_step": 8,
     "checkpoint_downloads": {
-        "FluxDev/hyperfluxDiversity_q4KS.gguf": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/hyperfluxDiversity_q4KS.gguf"
+     "FluxDev/flux1-dev-Q4_K_S.gguf": "https://huggingface.co/lllyasviel/FLUX.1-dev-gguf/resolve/main/flux1-dev-Q4_K_S.gguf"
     },
     "clip_downloads": {
         "clip_l.safetensors": "https://huggingface.co/lllyasviel/flux_text_encoders/resolve/main/clip_l.safetensors",
@@ -61,7 +62,7 @@
     },
     "embeddings_downloads": {},
     "lora_downloads": {
-        "Flux/FluxDFaeTasticDetails.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/LoRAs/FluxDFaeTasticDetails.safetensors",
-        "Flux/Flux_BlackColor_SaMay.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/LoRAs/Flux_BlackColor_SaMay.safetensors"
+        "Flux/Hyper-FLUX.1-dev-8steps-lora.safetensors": "https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-FLUX.1-dev-8steps-lora.safetensors",
+        "Flux/AntiBlur.safetensors": "https://huggingface.co/DavidDragonsage/FooocusPlus/resolve/main/support/LoRAs/AntiBlur.safetensors"
     }
 }

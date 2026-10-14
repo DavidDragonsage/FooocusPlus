@@ -99,19 +99,20 @@ def check_remote_pinokio_update() -> str | None:
     # Calculate full remote version for
     # mathematical comparison
     remote_hotfix_num = int(remote_hotfix) if remote_hotfix.isdigit() else 0
-    remote_full_ver = f"{remote_ver}.{remote_hotfix_num:02d}"
+    remote_full_ver = f'{remote_ver}.{remote_hotfix_num:02d}'
 
     # Calculate full local version
     local_ver, local_hotfix, _ = get_fooocusplus_ver()
     local_hotfix_num = int(local_hotfix) if local_hotfix.isdigit() else 0
-    local_full_ver = f"{local_ver}.{local_hotfix_num:02d}"
+    local_full_ver = f'{local_ver}.{local_hotfix_num:02d}'
 
     # Compare versions using packaging.version
     try:
         if parse_version(remote_full_ver) > parse_version(local_full_ver):
-            # Format friendly display label (e.g., "1.1.8" or "1.1.7 Hotfix 03")
+            # Format friendly display label
+            # (e.g., '1.1.8' or '1.1.7 Hotfix 03')
             if remote_hotfix_num > 0:
-                display_label = f"{remote_ver} Hotfix {remote_hotfix_num:02d}"
+                display_label = f'{remote_ver} Hotfix {remote_hotfix_num:02d}'
             else:
                 display_label = remote_ver
             return display_label
@@ -140,7 +141,7 @@ def announce_version():
             msg_p2 = interpret('is now available.', '', silent=True)
             msg_p3 = interpret('Please use the Pinokio dashboard to install the latest release.', '', silent=True)
 
-            gr.Info(f"{msg_p1} {remote_ver_label} {msg_p2}  {msg_p3}")
+            gr.Info(f'{msg_p1} {remote_ver_label} {msg_p2}  {msg_p3}')
             return  # Skip standard announce_version
                     # if an update is pending
     # -------------------------------
@@ -152,9 +153,9 @@ def announce_version():
 
         # 2. Build multi-line message for the UI popup
         welcome_prefix = interpret('Welcome to', '', silent=True)
-        header = f"{welcome_prefix} FooocusPlus {fooocusplus_ver}:\n"
+        header = f'{welcome_prefix} FooocusPlus {fooocusplus_ver}:\n'
         body = interpret(fooocusplus_line, '', silent=True)
-        gr.Info(f"{header}{body}")
+        gr.Info(f'{header}{body}')
 
         if int(hotfix) > 0:
             common.version_update = 1
@@ -166,8 +167,8 @@ def announce_version():
 
         # 2. Build multi-line message for the UI popup
         update_prefix = interpret('Updated to', '', silent=True)
-        header = f"{update_prefix} FooocusPlus Hotfix {hotfix}:\n"
+        header = f'{update_prefix} FooocusPlus Hotfix {hotfix}:\n'
         body = interpret(hotfix_line, '', silent=True)
-        gr.Info(f"{header}{body}")
+        gr.Info(f'{header}{body}')
 
     return

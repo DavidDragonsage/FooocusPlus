@@ -46,6 +46,7 @@
     With the standardization on the UltraFlux VAE
     they are now redundant.
 * Release Date: October 6th, 2026<br/>
+* Hotfix6: Introduced "Fast" Flux1D, HyperFlux & Krea
 * Hotfix5: Pinokio users are now advised of updates
   * Also debugged a Pinokio startup issue
 * Hotfix4: Restored IC-Light functions
