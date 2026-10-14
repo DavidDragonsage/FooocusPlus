@@ -208,6 +208,17 @@ def requirements_met(requirements_file: str | Path) -> bool:
                 if package in ['cmake', 'https']:
                     continue
 
+            # cffi cannot be modified at runtime
+            # once loaded into memory by pygit2
+            if package == 'cffi':
+                try:
+                    import _cffi_backend
+                    import cffi
+                    # If CFFI is already active and functional in memory, leave it alone
+                    continue
+                except Exception:
+                    pass
+
             # Compare versions if already installed
             if version_installed is not None:
                 if not version_required:

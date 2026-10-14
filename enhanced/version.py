@@ -65,13 +65,85 @@ def get_fooocusplus_ver():
     return fooocusplus_ver, hotfix, hotfix_title
 
 
+def check_remote_pinokio_update() -> str | None:
+    """
+    Checks the remote GitHub repository's fooocusplus_log.md for updates.
+    Returns the formatted remote version string if an update is available, otherwise None.
+    """
+    import httpx
+    from packaging.version import parse as parse_version
+
+    raw_log_url = 'https://raw.githubusercontent.com/DavidDragonsage/FooocusPlus/main/fooocusplus_log.md'
+
+    try:
+        # Strict 3-second timeout ensures
+        # startup is never stalled if offline
+        with httpx.Client(timeout=3.0) as client:
+            response = client.get(raw_log_url)
+            if response.status_code != 200:
+                return None
+            remote_text = response.text
+    except Exception:
+        # Fails silently if user has no internet
+        # access or GitHub is unreachable
+        return None
+
+    # Parse the remote changelog lines
+    remote_lines = remote_text.splitlines()
+    remote_ver = US.locate_value(remote_lines, '# ', terminator=' ')
+    remote_hotfix = US.locate_value(remote_lines, '* Hotfix', terminator=':')
+
+    if not remote_ver:
+        return None
+
+    # Calculate full remote version for
+    # mathematical comparison
+    remote_hotfix_num = int(remote_hotfix) if remote_hotfix.isdigit() else 0
+    remote_full_ver = f"{remote_ver}.{remote_hotfix_num:02d}"
+
+    # Calculate full local version
+    local_ver, local_hotfix, _ = get_fooocusplus_ver()
+    local_hotfix_num = int(local_hotfix) if local_hotfix.isdigit() else 0
+    local_full_ver = f"{local_ver}.{local_hotfix_num:02d}"
+
+    # Compare versions using packaging.version
+    try:
+        if parse_version(remote_full_ver) > parse_version(local_full_ver):
+            # Format friendly display label (e.g., "1.1.8" or "1.1.7 Hotfix 03")
+            if remote_hotfix_num > 0:
+                display_label = f"{remote_ver} Hotfix {remote_hotfix_num:02d}"
+            else:
+                display_label = remote_ver
+            return display_label
+    except Exception:
+        pass
+
+    return None
+
+
 def announce_version():
     # 1 = hotfix, 2 = new version
     import common
     import gradio as gr
+    from args_manager import args as cli_args
     from enhanced.translator import interpret
 
     global fooocusplus_ver, fooocusplus_line, hotfix, hotfix_line
+
+    # --- PINOKIO UPDATE NOTIFIER ---
+    if getattr(cli_args, 'gpu_type', '') == 'none':
+        remote_ver_label = check_remote_pinokio_update()
+        if remote_ver_label:
+            # Construct multilingual toast using
+            # interpret(..., silent=True)
+            msg_p1 = interpret('FooocusPlus', '', silent=True)
+            msg_p2 = interpret('is now available.', '', silent=True)
+            msg_p3 = interpret('Please use the Pinokio dashboard to install the latest release.', '', silent=True)
+
+            gr.Info(f"{msg_p1} {remote_ver_label} {msg_p2}  {msg_p3}")
+            return  # Skip standard announce_version
+                    # if an update is pending
+    # -------------------------------
 
     # Case 2: New Major/Minor Version Release
     if common.version_update == 2 and fooocusplus_ver[0] != '0':

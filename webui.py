@@ -1482,6 +1482,38 @@ with common.GRADIO_ROOT:
                             with gr.Column():
                                 gr.HTML('* The FreeU project page: <a href="https://github.com/ChenyangSi/FreeU" target="_blank">Free Lunch in Diffusion U-Net</a>')
 
+            with gr.Row(visible=config.default_input_image_checkbox and comfy_active) as comfy_input_panel:
+                with gr.Tabs(selected=config.default_selected_image_input_tab_id):
+                    with gr.Tab(label='Comfy Upscale', id='comfy_upscale_tab') as comfy_upscale_tab:
+                        with gr.Row():
+                            with gr.Column():
+                                uov_input_image = grh.Image(
+                                label='Image', source='upload',
+                                type='numpy', show_label=False)
+
+                            with gr.Column():
+                                mixing_uov_checkbox = gr.Checkbox(
+                                label='Mix Image Prompt & Vary/Upscale',
+                                value=False)
+
+                                uov_method = gr.Radio(
+                                    label='Upscale or Variation:',
+                                    choices=flags.uov_list,
+                                    value=config.default_uov_method)
+
+                        with gr.Row():
+                            overwrite_upscale_strength = gr.Slider(label='Adjust the Strength of Upscale Variation',
+                                minimum=0, maximum=1.0, step=0.001,
+                                value=config.default_overwrite_upscale,
+                                info='Variation Strength is also called "Denoising Strength"')
+
+                            overwrite_vary_strength = gr.Slider(label='Adjust the Strength of Image Variation',
+                                minimum=0, maximum=1.0, step=0.001, value=0.50,
+                                info='0.0="None", 0.50="Subtle", 0.85="Strong", 1.0="Max"')
+
+                        gr.HTML('<a href="https://github.com/lllyasviel/Fooocus/discussions/390" target="_blank">\U0001F4DA Documentation</a>')
+
+
 
             with gr.Accordion(label='Wildcards', visible=True, open=False) as prompt_wildcards:
                 wildcards_list = gr.Dataset(components=[prompt], type='index',

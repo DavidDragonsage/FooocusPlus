@@ -46,6 +46,8 @@
     With the standardization on the UltraFlux VAE
     they are now redundant.
 * Release Date: October 6th, 2026<br/>
+* Hotfix5: Pinokio users are now advised of updates
+  * Also debugged a Pinokio startup issue
 * Hotfix4: Restored IC-Light functions
 * Hotfix3: Clean up python_embedded
   * Also improved Version & Hotfix reporting
