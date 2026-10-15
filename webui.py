@@ -1494,27 +1494,27 @@ with common.GRADIO_ROOT:
                     with gr.Tab(label='Comfy Upscale', id='comfy_upscale_tab') as comfy_upscale_tab:
                         with gr.Row():
                             with gr.Column():
-                                uov_input_image = grh.Image(
+                                upscale_comfy_image = grh.Image(
                                 label='Image', source='upload',
                                 type='numpy', show_label=False)
 
                             with gr.Column():
-                                mixing_uov_checkbox = gr.Checkbox(
+                                mixing_uov_checkbox2 = gr.Checkbox(
                                 label='Mix Image Prompt & Vary/Upscale',
                                 value=False)
 
-                                uov_method = gr.Radio(
+                                uov_method2 = gr.Radio(
                                     label='Upscale or Variation:',
                                     choices=flags.uov_list,
                                     value=config.default_uov_method)
 
                         with gr.Row():
-                            overwrite_upscale_strength = gr.Slider(label='Adjust the Strength of Upscale Variation',
+                            overwrite_upscale_strength2 = gr.Slider(label='Adjust the Strength of Upscale Variation',
                                 minimum=0, maximum=1.0, step=0.001,
                                 value=config.default_overwrite_upscale,
                                 info='Variation Strength is also called "Denoising Strength"')
 
-                            overwrite_vary_strength = gr.Slider(label='Adjust the Strength of Image Variation',
+                            overwrite_vary_strength2 = gr.Slider(label='Adjust the Strength of Image Variation',
                                 minimum=0, maximum=1.0, step=0.001, value=0.50,
                                 info='0.0="None", 0.50="Subtle", 0.85="Strong", 1.0="Max"')
 
