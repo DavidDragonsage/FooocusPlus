@@ -46,6 +46,7 @@
     With the standardization on the UltraFlux VAE
     they are now redundant.
 * Release Date: October 6th, 2026<br/>
+* Hotfix9: Improve Pinokio version reporting
 * Hotfix8: Restored Upscale/Variation functionality
 * Hotfix7: Restored the Upscale/Variation UI
 * Hotfix6: Introduced "Fast" Flux1D, HyperFlux & Krea
