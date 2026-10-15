@@ -885,28 +885,35 @@ with common.GRADIO_ROOT:
                         with gr.Row():
                             with gr.Column():
                                 uov_input_image = grh.Image(
-                                label='Image', source='upload',
-                                type='numpy', show_label=False)
+                                    label='Image', source='upload',
+                                    type='numpy', show_label=False,
+                                    interactive=True)
 
                             with gr.Column():
                                 mixing_uov_checkbox = gr.Checkbox(
-                                label='Mix Image Prompt & Vary/Upscale',
-                                value=False)
+                                    label='Mix Image Prompt & Vary/Upscale',
+                                    value=False,
+                                    interactive=True)
 
                                 uov_method = gr.Radio(
                                     label='Upscale or Variation:',
                                     choices=flags.uov_list,
-                                    value=config.default_uov_method)
+                                    value=config.default_uov_method,
+                                    interactive=True)
 
                         with gr.Row():
-                            overwrite_upscale_strength = gr.Slider(label='Adjust the Strength of Upscale Variation',
+                            overwrite_upscale_strength = gr.Slider(
+                                label='Adjust the Strength of Upscale Variation',
                                 minimum=0, maximum=1.0, step=0.001,
                                 value=config.default_overwrite_upscale,
-                                info='Variation Strength is also called "Denoising Strength"')
+                                info='Variation Strength is also called "Denoising Strength"',
+                                interactive=True)
 
-                            overwrite_vary_strength = gr.Slider(label='Adjust the Strength of Image Variation',
+                            overwrite_vary_strength = gr.Slider(
+                                label='Adjust the Strength of Image Variation',
                                 minimum=0, maximum=1.0, step=0.001, value=0.50,
-                                info='0.0="None", 0.50="Subtle", 0.85="Strong", 1.0="Max"')
+                                info='0.0="None", 0.50="Subtle", 0.85="Strong", 1.0="Max"',
+                                interactive=True)
 
                         gr.HTML('<a href="https://github.com/lllyasviel/Fooocus/discussions/390" target="_blank">\U0001F4DA Documentation</a>')
 
@@ -5875,6 +5882,15 @@ with common.GRADIO_ROOT:
         queue=False, show_progress=False
     )
 
+
+    def sync_input_panels_with_active_engine(
+        is_input_image_checked):
+        is_comfy = bool(common.default_engine)
+        show_fooocus = is_input_image_checked and not is_comfy
+        show_comfy = is_input_image_checked and is_comfy
+        return gr.update(visible=show_fooocus), gr.update(visible=show_comfy)
+
+
     preset_selection.change(
         fn=PR.set_preset_selection,
         inputs=[preset_selection, state_topbar],
@@ -5895,6 +5911,13 @@ with common.GRADIO_ROOT:
     ).then(
         UIS.reset_layout_params, inputs=reset_preset_inputs,
             outputs=reset_layout_params, show_progress=False
+    ).then(
+        # Seamlessly swap input panels
+        # if Input Image is already checked
+        fn=sync_input_panels_with_active_engine,
+        inputs=[input_image_checkbox],
+        outputs=[image_input_panel, comfy_input_panel],
+        show_progress=False, queue=False
     ).then(
         fn=lambda x: x,
         inputs=state_topbar,

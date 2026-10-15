@@ -26,6 +26,10 @@ comfy_capable = False
 # throughout the program
 comfy_active = False
 
+# comfy_input_panel tracking
+comfy_input_tab_name = 'comfy_upscale'
+comfy_input_image_buffer = None
+
 # use for Comfy port tracking
 # now that it is dynamic
 comfy_port = 8187
